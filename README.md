@@ -389,7 +389,7 @@ $gitpromptsettings.defaultpromptbeforesuffix.foregroundcolor = 0x87CEFA
 $gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
 
 $gitpromptsettings.windowtitle = $null
-$host.ui.rawui.windowtitle = "$username@$hostname"
+$host.ui.rawui.windowtitle = $hostname
 
 import-module psreadline
 
