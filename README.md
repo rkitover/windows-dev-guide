@@ -1,7 +1,7 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Windows Native Development Environment Setup for Linux Users](#windows-native-development-environment-setup-for-linux-users)
+- [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
   - [Configure the Terminal](#configure-the-terminal)
@@ -15,7 +15,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Windows Native Development Environment Setup for Linux Users
+## Windows Native Development Environment Setup Guide for Linux Users
 
 ### Install Chocolatey and Some Packages
 
@@ -465,8 +465,7 @@ settings I recommend:
 git config --global user.name "John Doe"
 git config --global user.email johndoe@example.com
 
-git config --global core.autocrlf  input
-git config --global core.safecrlf  false
+git config --global core.autocrlf  false
 git config --global push.default   simple
 git config --global pull.rebase    true
 git config --global commit.gpgsign true
