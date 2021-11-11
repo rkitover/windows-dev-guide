@@ -237,6 +237,11 @@ syntax enable
 
 au BufRead COMMIT_EDITMSG,*.md setlocal spell
 au BufRead *.md setlocal tw=80
+" Return to last edit position when opening files.
+autocmd BufReadPost *
+     \ if line("'\"") > 0 && line("'\"") <= line("$") |
+     \   exe "normal! g`\"" |
+     \ endif
 ```
 
 I use this color scheme, which is a fork of Apprentice for black backgrounds:
