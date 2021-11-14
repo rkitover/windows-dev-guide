@@ -130,9 +130,16 @@ In the `"profiles"` `"defaults"` section add:
 },
 ```
 
-I prefer `IBM Plex Mono` which you can install from:
+I prefer the 'SF Mono' font which you can get here:
+
+https://github.com/supercomputra/SF-Mono-Font
+
+Other fonts you might like are `IBM Plex Mono` which you can install from:
 
 https://github.com/IBM/plex
+,
+
+and 'DejaVu Sans Mono' which was in the list of Chocolatey packages above.
 
 In the `"actions"` section add these keybindings:
 
