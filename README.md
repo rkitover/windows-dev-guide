@@ -607,6 +607,16 @@ For a `find` replacement, use the `-Recurse` flag to `gci`, e.g.:
 ```powershell
 gci -rec *.cpp
 ```
+.
+
+To search under a specific directory, prepend it to the glob, for example:
+
+```powershell
+gci -rec /windows/*.dll
+```
+
+would find all DLL files in all levels under `C:\Windows`.
+
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
