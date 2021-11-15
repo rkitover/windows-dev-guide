@@ -383,10 +383,10 @@ import-module ~/source/repos/posh-git/src/posh-git.psd1
 
 function global:PromptWriteErrorInfo() {
     if ($global:gitpromptvalues.dollarquestion) {
-        ([char]27) + '[0;32mv' + ([char]27) + '[0m'
+        [char]27 + '[0;32mv' + [char]27 + '[0m'
     }
     else {
-        ([char]27) + '[0;31mx' + ([char]27) + '[0m'
+        [char]27 + '[0;31mx' + [char]27 + '[0m'
     }
 }
 
@@ -398,8 +398,7 @@ $username = $env:USERNAME
 $hostname = $env:COMPUTERNAME.ToLower()
 
 $gitpromptsettings.defaultpromptwritestatusfirst             = $false
-$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n$username@$hostname "
-$gitpromptsettings.defaultpromptbeforesuffix.foregroundcolor = 0x87CEFA
+$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n" + [char]27 + '[38;2;140;206;250m' + $username + [char]27 + '[1;97m' + '@' + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $hostname + ' '
 $gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
 
 $gitpromptsettings.windowtitle = $null
