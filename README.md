@@ -398,7 +398,7 @@ $username = $env:USERNAME
 $hostname = $env:COMPUTERNAME.ToLower()
 
 $gitpromptsettings.defaultpromptwritestatusfirst             = $false
-$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n" + [char]27 + '[38;2;140;206;250m' + $username + [char]27 + '[1;97m' + '@' + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $hostname + ' '
+$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n" + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $username + [char]27 + '[1;97m' + '@' + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $hostname + ' '
 $gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
 
 $gitpromptsettings.windowtitle = $null
