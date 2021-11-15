@@ -211,7 +211,7 @@ set encoding=utf8
 set langmenu=en_US.UTF-8
 let g:is_bash=1
 set formatlistpat=^\\s*\\%([-*][\ \\t]\\\|\\d+[\\]:.)}\\t\ ]\\)\\s*
-set ruler bg=dark nohlsearch bs=2 noea ai fo+=n undofile modeline belloff=all
+set ruler bg=dark nohlsearch bs=2 noea ai fo+=n undofile modeline belloff=all modeline modelines=5
 set fileformats=unix,dos
 
 set mouse=a
