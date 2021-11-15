@@ -304,6 +304,8 @@ if (test-path ~/source/repos/vcpkg) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg
 }
 
+$env:DISPLAY = '127.0.0.1:0.0'
+
 function megs {
     gci -rec $args | select mode, lastwritetime, @{name="MegaBytes"; expression = { [math]::round($_.length / 1MB, 2) }}, name
 }
