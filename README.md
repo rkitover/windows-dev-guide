@@ -11,6 +11,8 @@
   - [Setting up sshd](#setting-up-sshd)
   - [Setting up git](#setting-up-git)
   - [PowerShell Usage Notes](#powershell-usage-notes)
+  - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Miscellaneous](#miscellaneous)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -22,7 +24,7 @@
 Make sure developer mode is turned on in Windows settings, this is necessary for
 making unprivileged symlinks.
 
-- Press Win+X and open Windows PowerShell (administrator).
+- Press Win+X and open PowerShell (Administrator).
 
 - Run these commands:
 
@@ -31,14 +33,14 @@ Set-ExecutionPolicy -Scope LocalMachine -Force RemoteSigned
 iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 ```
 
-Close the administrator PowerShell window and open it again.
+Close the Administrator PowerShell window and open it again.
 
 Install some chocolatey packages:
 
 ```powershell
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
-choco install -y hackfont dejavufonts ripgrep git gpg4win microsoft-windows-terminal powershell-core vim neovim zip unzip notepadplusplus diffutils patch ntop.portable grep gawk sed less gzip
+choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -395,7 +397,7 @@ $gitpromptsettings.defaultpromptabbreviatehomedirectory      = $true
 $gitpromptsettings.defaultpromptprefix.text                  = '$(PromptWriteErrorInfo) '
 
 $username = $env:USERNAME
-$hostname = $env:COMPUTERNAME.ToLower()
+$hostname = $env:COMPUTERNAME.tolower()
 
 $gitpromptsettings.defaultpromptwritestatusfirst             = $false
 $gitpromptsettings.defaultpromptbeforesuffix.text            = "`n" + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $username + [char]27 + '[1;97m' + '@' + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $hostname + ' '
@@ -551,15 +553,6 @@ etc., for example:
 ri .*.un~,.*.sw?
 ```
 
-The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
-`unzip`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux and were
-installed in the list of packages installed from Chocolatey above.
-
-The commands `curl` and `tar` are now standard Windows commands.
-
-For an `htop` replacement, use `ntop` (installed in the list of Chocolatey
-packages above.) with my wrapper function in the sample `$profile`.
-
 Redirection for files and commands works like in POSIX on a basic level, that
 is, you can expect `<`, `>` and `|` to redirect files and commands like you
 would expect on a POSIX shell. The file descriptors `0`, `1` and `2` are
@@ -598,6 +591,14 @@ ni -itemtype symboliclink name-of-link -target path-to-source
 ```
 
 again the parameters `-ItemType` and `SymbolicLink` can be `tab` completed.
+
+**WARNING**: Do not use `ri` to delete a symbolic link to a directory, do this
+instead:
+
+```powershell
+cmd /c rmdir symlink-to-directory
+```
+.
 
 Errors for most PowerShell commands can be suppressed as follows:
 
@@ -667,6 +668,65 @@ alias se* | select name, resolvedcommand
 gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
   %{ $_.name; dumpbin -headers $_ | grep MessageBox }
 ```
+
+### Available Command-Line Tools and Utilities
+
+The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
+`unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux and
+were installed in the list of packages installed from Chocolatey above.
+
+You get `node` and `npm` from the nodejs package. You can install any NodeJS
+utilities you need with `npm install -g <utility>`, and they will be available
+in your `$env:PATH`.
+
+The `python` tool (version 3) comes from the Chocolatey python package.
+
+The tools `cmake` and `ninja` come with Visual Studio, if you used my sample
+`$profile` section to set up the Visual Studio environment. You can get
+dependencies from Conan or VCPKG, I recommend Conan because it has binary
+packages. More on all that later when I expand this guide. Be sure to pass `-G
+Ninja` to `cmake`.
+
+The tool `make` is a native port of GNU Make from Chocolatey. It will generally
+not run regular Linux Makefiles because it expects `cmd.exe` shell commands.
+However, it is possible to write Makefiles that work in both environments if the
+commands are the same, for example the one in this repository.
+
+The commands `curl` and `tar` are now standard Windows commands. The
+implementation of `tar` is not particularly wonderful, it currently does not
+handle symbolic links correctly and will not save your ACLs. You can save your
+ACLs with `icacls`.
+
+For an `htop` replacement, use `ntop` (installed in the list of Chocolatey
+packages above.) with my wrapper function in the sample `$profile`.
+
+You can run any `cmd.exe` commands with `cmd /c <command>`.
+
+Many more things are available from Chocolatey and other sources of course, at
+varying degrees of functionality.
+
+### Mounting SMB/SSHFS Folders
+
+This is as simple as making a symbolic link to a UNC path.
+
+For example, to mount a share on an SMB file server:
+
+```powershell
+sl ~
+ni -itemtype symboliclink work-documents -target //corporate-server/documents
+```
+.
+
+To mount my NAS over SSHFS I can do this, assuming the Chocolatey sshfs package
+is installed:
+
+```powershell
+sl ~
+ni -itemtype symboliclink nas -target //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/rkitover
+```
+
+here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr` to specify
+a path relative to your home directory.
 
 ### Miscellaneous
 
