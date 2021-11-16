@@ -307,7 +307,7 @@ if (test-path ~/source/repos/vcpkg) {
 $env:DISPLAY = '127.0.0.1:0.0'
 
 function megs {
-    gci -rec $args | select mode, lastwritetime, @{name="MegaBytes"; expression = { [math]::round($_.length / 1MB, 2) }}, name
+    gci -r $args | select mode, lastwritetime, @{name="MegaBytes"; expression = { [math]::round($_.length / 1MB, 2) }}, name
 }
 
 function cmconf {
@@ -351,7 +351,7 @@ set-alias -name notepad -val '/program files/notepad++/notepad++'
 # To use neovim instead of vim for mouse support:
 set-alias -name vim     -val nvim
 
-if (test-path alias:diff) { remove-item -force alias:diff }
+if (test-path alias:diff) { ri -fo alias:diff }
 
 # Load VS env only once.
 foreach ($vs_type in 'buildtools','community') {
@@ -511,17 +511,18 @@ Here is a few:
 | PowerShell alias | Full cmdlet + Params          | POSIX command     |
 |------------------|-------------------------------|-------------------|
 | sl               | Set-Location                  | cd                |
-| gci              | Get-ChildItem                 | ls                |
+| gci -n           | Get-ChildItem -Name           | ls                |
+| gci              | Get-ChildItem                 | ls -l             |
 | gi               | Get-Item                      | ls -d             |
 | cpi              | Copy-Item                     | cp -r             |
 | ri               | Remove-Item                   | rm                |
-| ri -for          | Remove-Item -Force            | rm -f             |
-| ri -rec -for     | Remove-Item -Force -Recurse   | rm -rf            |
+| ri -fo           | Remove-Item -Force            | rm -f             |
+| ri -r -fo        | Remove-Item -Force -Recurse   | rm -rf            |
 | gc               | Get-Content                   | cat               |
 | mi               | Move-Item                     | mv                |
 | mkdir            | New-Item -ItemType Directory  | mkdir             |
 | which (custom)   | Get-Command                   | command -v, which |
-| gci -rec         | Get-ChildItem -Recurse        | find              |
+| gci -r           | Get-ChildItem -Recurse        | find              |
 | ni               | New-Item                      | touch <new-file>  |
 | sort             | Sort-Object                   | sort              |
 | sort -u          | Sort-Object -Unique           | sort -u           |
@@ -550,7 +551,8 @@ etc., for example:
 ri .*.un~,.*.sw?
 ```
 
-The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`, `unzip`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux and were
+The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
+`unzip`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux and were
 installed in the list of packages installed from Chocolatey above.
 
 The commands `curl` and `tar` are now standard Windows commands.
@@ -560,7 +562,9 @@ packages above.) with my wrapper function in the sample `$profile`.
 
 Redirection for files and commands works like in POSIX on a basic level, that
 is, you can expect `<`, `>` and `|` to redirect files and commands like you
-would expect on a POSIX shell. `/dev/null` is `$null`, so the equivalent of
+would expect on a POSIX shell. The file descriptors `0`, `1` and `2` are
+`stdin`, `stdout` and `stderr` just like in POSIX.  The equivalent of
+`/dev/null` is `$null`, so a command such as:
 
 ```bash
 cmd >/dev/null 2>&1
@@ -606,18 +610,19 @@ this sets `ErrorAction` to `Ignore`.
 For a `find` replacement, use the `-Recurse` flag to `gci`, e.g.:
 
 ```powershell
-gci -rec *.cpp
+gci -r *.cpp
 ```
 .
 
 To search under a specific directory, prepend it to the glob, for example:
 
 ```powershell
-gci -rec /windows/*.dll
+gci -r /windows/*.dll
 ```
 
 would find all DLL files in all levels under `C:\Windows`.
 
+Be aware that `-r` (`-Recurse`) does not currently work with `-n` (`-Name`).
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
@@ -626,7 +631,7 @@ properties, call methods on them, etc..
 Here is an example of using the object pipeline to delete all vim undo files:
 
 ```powershell
-gci -rec .*.un~ | ri
+gci -r .*.un~ | ri
 ```
 
 it's that simple, `ri` notices that the input objects are files, and removes
@@ -638,7 +643,7 @@ variable, like in the `head` example in the profile above.
 Here is a more typical example:
 
 ```powershell
-get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -uniq
+get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 ```
 
 here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
