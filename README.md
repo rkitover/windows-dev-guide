@@ -32,6 +32,7 @@ making unprivileged symlinks.
 Set-ExecutionPolicy -Scope LocalMachine -Force RemoteSigned
 iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 ```
+.
 
 Close the Administrator PowerShell window and open it again.
 
@@ -46,6 +47,7 @@ stop-service ssh-agent
 sc.exe delete ssh-agent
 choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
 ```
+.
 
 ### Chocolatey Usage Notes
 
@@ -56,18 +58,21 @@ To search for a package:
 ```powershell
 choco search patch
 ```
+.
 
 To get the description of a package:
 
 ```powershell
 choco info patch
 ```
+.
 
 To install a package:
 
 ```powershell
 choco install -y patch
 ```
+.
 
 To uninstall a package:
 
@@ -75,18 +80,21 @@ To uninstall a package:
 ```powershell
 choco uninstall -y patch
 ```
+.
 
 To list installed packages:
 
 ```powershell
 choco list --local
 ```
+.
 
 To update all installed packages:
 
 ```powershell
 choco update -y all
 ```
+.
 
 ### Configure the Terminal
 
@@ -109,6 +117,7 @@ In the global settings, above the `"profiles"` section, add:
 "multiLinePasteWarning": false,
 "windowingBehavior": "useAnyExisting",
 ```
+.
 
 In the `"profiles"` `"defaults"` section add:
 
@@ -131,10 +140,12 @@ In the `"profiles"` `"defaults"` section add:
     "closeOnExit": "always"
 },
 ```
+.
 
 I prefer the 'SF Mono' font which you can get here:
 
 https://github.com/supercomputra/SF-Mono-Font
+.
 
 Other fonts you might like are `IBM Plex Mono` which you can install from:
 
@@ -150,11 +161,12 @@ In the `"actions"` section add these keybindings:
 { "command": { "action": "nextTab" }, "keys": "ctrl+shift+right" },
 { "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" }
 ```
+.
 
 And **REMOVE** the `ctrl+v` binding, if you want to use `ctrl+v` in vim (visual
 line selection.)
 
-This gives you a sort of "tmux" for powershell using tabs.
+This gives you a sort of "tmux" for PowerShell using tabs.
 
 Restart the terminal.
 
@@ -177,6 +189,7 @@ ni -itemtype symboliclink ~/AppData/Local/nvim -target $(resolve-path ~/.vim)
 ri ~/.vim/init.vim -ea ignore
 ni -itemtype symboliclink ~/.vim/init.vim      -target $(resolve-path ~/.vimrc)
 ```
+.
 
 You can edit your powershell profile with `vim $profile`, and reload it with `.
 $profile`.
@@ -187,6 +200,7 @@ Add the following to your `$profile`:
 if ($env:TERM) { ri env:TERM }
 $env:EDITOR = resolve-path ~/.local/bin/vim.bat
 ```
+.
 
 In `~/.local/bin/vim.bat` put the following for neovim:
 
@@ -195,6 +209,7 @@ In `~/.local/bin/vim.bat` put the following for neovim:
 set TERM=
 nvim %*
 ```
+,
 
 or the following for regular vim:
 
@@ -203,6 +218,7 @@ or the following for regular vim:
 set TERM=
 c:\windows\vim.bat %*
 ```
+.
 
 This is needed for git to work correctly with native vim.
 
@@ -252,6 +268,7 @@ autocmd BufReadPost *
      \   exe "normal! g`\"" |
      \ endif
 ```
+.
 
 I use this color scheme, which is a fork of Apprentice for black backgrounds:
 
@@ -275,6 +292,7 @@ or
 ```powershell
 notepad $profile
 ```
+.
 
 If you use my posh-git prompt, you'll need the git version of posh-git:
 
@@ -283,6 +301,7 @@ mkdir ~/source/repos -ea ignore
 cd ~/source/repos
 git clone https://github.com/dahlbyk/posh-git
 ```
+.
 
 Here is a profile to get you started, it has a few examples of functions and
 aliases which you will invariably write for yourself:
@@ -422,6 +441,7 @@ to copy it there too:
 mkdir ~/Documents/WindowsPowerShell
 cpi ~/Documents/PowerShell/Microsoft.Powershell_profile.ps1 ~/Documents/WindowsPowerShell
 ```
+.
 
 ### Setting up gpg
 
@@ -433,6 +453,7 @@ mkdir .gnupg -ea ignore
 cmd /c rmdir /Q /S $(resolve-path ~/AppData/Roaming/gnupg)
 ni -itemtype symboliclink ~/AppData/Roaming/gnupg -target $(resolve-path ~/.gnupg)
 ```
+.
 
 Then you can copy your `.gnupg` over, without the socket files.
 
@@ -442,6 +463,7 @@ To configure git to use it, do the following:
 git config --global commit.gpgsign true
 git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
 ```
+.
 
 ### Setting up sshd
 
@@ -451,12 +473,14 @@ Edit `\ProgramData\ssh\sshd_config` and remove or comment out this section:
 Match Group administrators
        AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
 ```
+.
 
 Then run:
 
 ```powershell
 restart-service sshd
 ```
+.
 
 If you've installed openssh before copying over your `~/.ssh`, you will need to
 fix permissions on your `authorized_keys` files, the easiest way to do
@@ -485,6 +509,7 @@ git config --global push.default   simple
 git config --global pull.rebase    true
 git config --global commit.gpgsign true
 ```
+.
 
 ### PowerShell Usage Notes
 
@@ -529,6 +554,8 @@ Here is a few:
 | sort             | Sort-Object                   | sort              |
 | sort -u          | Sort-Object -Unique           | sort -u           |
 
+.
+
 This will get you around and doing stuff, the usage is slightly different
 however.
 
@@ -539,12 +566,14 @@ example, to copy `file1` and `file2` to `dest-dir`, you would do:
 ```powershell
 cpi file1,file2 dest-dir
 ```
+.
 
 To remove `file1` and `file2` you would do:
 
 ```powershell
 ri file1,file2
 ```
+.
 
 You can list multiple globs in these lists as well as files and directories
 etc., for example:
@@ -552,6 +581,7 @@ etc., for example:
 ```powershell
 ri .*.un~,.*.sw?
 ```
+.
 
 Redirection for files and commands works like in POSIX on a basic level, that
 is, you can expect `<`, `>` and `|` to redirect files and commands like you
@@ -568,6 +598,7 @@ would be:
 ```powershell
 cmd *> $null
 ```
+.
 
 For `ls -ltr` use:
 
@@ -580,9 +611,30 @@ Or the alias in my profile:
 ```powershell
 gci | ltr
 ```
+.
 
 Parameters can be completed with `tab`, so in the case above you could write
 `lastw<tab>`.
+
+To see hidden files, pass `-Force` to `gci`:
+
+```powershell
+gci -fo
+```
+.
+
+To make a file or directory hidden do:
+
+```powershell
+(gi -fo file).attributes += 'hidden'
+```
+
+and to make it visible do:
+
+```powershell
+(gi -fo file).attributes -= 'hidden'
+```
+.
 
 To make a symbolic link, do:
 
@@ -605,6 +657,7 @@ Errors for most PowerShell commands can be suppressed as follows:
 ```powershell
 mkdir existing-dir -ea ignore
 ```
+,
 
 this sets `ErrorAction` to `Ignore`.
 
@@ -621,7 +674,7 @@ To search under a specific directory, prepend it to the glob, for example:
 gci -r /windows/*.dll
 ```
 
-would find all DLL files in all levels under `C:\Windows`.
+will find all DLL files in all levels under `C:\Windows`.
 
 Be aware that `-r` (`-Recurse`) does not currently work with `-n` (`-Name`).
 
@@ -668,6 +721,7 @@ alias se* | select name, resolvedcommand
 gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
   %{ $_.name; dumpbin -headers $_ | grep MessageBox }
 ```
+.
 
 ### Available Command-Line Tools and Utilities
 
@@ -724,8 +778,9 @@ is installed:
 sl ~
 ni -itemtype symboliclink nas -target //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/rkitover
 ```
+.
 
-here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr` to specify
+Here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr` to specify
 a path relative to your home directory.
 
 ### Miscellaneous
@@ -747,8 +802,13 @@ If (TransLevel = 255) {
 }
 return
 ```
+.
 
 This will toggle transparency in a window when you press `Ctrl+Win+Esc`, you
 have to press it twice the first time.
 
 Thanks to @munael for this tip.
+
+Note that this will not work for the Administrator PowerShell window unless you
+run AutoHotkey with Administrator privileges, you can do that on startup by
+creating a task.
