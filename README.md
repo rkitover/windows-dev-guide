@@ -671,15 +671,13 @@ gci -r *.cpp
 ```
 .
 
-To search under a specific directory, prepend it to the glob, for example:
+To search under a specific directory, use this syntax:
 
 ```powershell
-gci -r /windows/*.dll
+gci -r /windows -i *.dll
 ```
 
 will find all DLL files in all levels under `C:\Windows`.
-
-Be aware that `-r` (`-Recurse`) does not currently work with `-n` (`-Name`).
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
