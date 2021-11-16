@@ -434,6 +434,7 @@ set-psreadlinekeyhandler -key tab       -function complete
 set-psreadlinekeyhandler -key uparrow   -function historysearchbackward
 set-psreadlinekeyhandler -key downarrow -function historysearchforward
 ```
+.
 
 This profile works for "Windows PowerShell", the powershell you launch from the
 `Win+X` menu as well. But the profile is in a different file, so you will need
@@ -689,8 +690,9 @@ Here is an example of using the object pipeline to delete all vim undo files:
 ```powershell
 gci -r .*.un~ | ri
 ```
+.
 
-it's that simple, `ri` notices that the input objects are files, and removes
+It's that simple, `ri` notices that the input objects are files, and removes
 them.
 
 You can access the piped-in input in your own functions as the special `$input`
@@ -701,8 +703,9 @@ Here is a more typical example:
 ```powershell
 get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 ```
+.
 
-here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
+Here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
 
 In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
