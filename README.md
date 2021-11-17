@@ -190,9 +190,9 @@ If you are using neovim, run the following:
 mkdir ~/.vim,~/AppData/Local/nvim -ea ignore
 ni ~/.vimrc -ea ignore
 cmd /c rmdir /Q /S $(resolve-path ~/AppData/Local/nvim)
-ni -itemtype symboliclink ~/AppData/Local/nvim -target $(resolve-path ~/.vim)
+ni -it sym ~/AppData/Local/nvim -tar $(resolve-path ~/.vim)
 ri ~/.vim/init.vim -ea ignore
-ni -itemtype symboliclink ~/.vim/init.vim      -target $(resolve-path ~/.vimrc)
+ni -it sym ~/.vim/init.vim      -tar $(resolve-path ~/.vimrc)
 ```
 .
 
@@ -457,7 +457,7 @@ Make this symlink:
 sl ~
 mkdir .gnupg -ea ignore
 cmd /c rmdir /Q /S $(resolve-path ~/AppData/Roaming/gnupg)
-ni -itemtype symboliclink ~/AppData/Roaming/gnupg -target $(resolve-path ~/.gnupg)
+ni -it sym ~/AppData/Roaming/gnupg -tar $(resolve-path ~/.gnupg)
 ```
 .
 
@@ -648,10 +648,12 @@ attrib -h file
 To make a symbolic link, do:
 
 ```powershell
-ni -itemtype symboliclink name-of-link -target path-to-source
+ni -it sym name-of-link -tar path-to-source
 ```
+.
 
-again the parameters `-ItemType` and `SymbolicLink` can be `tab` completed.
+Make sure the `path-to-source` is an absolute path, you can use `$(resolve-path
+file)` to ensure this.
 
 **WARNING**: Do not use `ri` to delete a symbolic link to a directory, do this
 instead:
@@ -809,7 +811,7 @@ For example, to mount a share on an SMB file server:
 
 ```powershell
 sl ~
-ni -itemtype symboliclink work-documents -target //corporate-server/documents
+ni -it sym work-documents -tar //corporate-server/documents
 ```
 .
 
@@ -818,7 +820,7 @@ is installed:
 
 ```powershell
 sl ~
-ni -itemtype symboliclink nas -target //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/rkitover
+ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/rkitover
 ```
 .
 
