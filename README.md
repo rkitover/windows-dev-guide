@@ -629,13 +629,13 @@ gci -fo
 To make a file or directory hidden do:
 
 ```powershell
-(gi -fo file).attributes += 'hidden'
+attrib +h file
 ```
 
 and to make it visible do:
 
 ```powershell
-(gi -fo file).attributes -= 'hidden'
+attrib -h file
 ```
 .
 
