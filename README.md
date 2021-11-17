@@ -172,6 +172,9 @@ Restart the terminal.
 
 You can toggle full-screen mode with `F11`.
 
+`SHIFT`+`ALT`+`+` will open a split pane vertically, while `SHIFT`+`ALT`+`-`
+will open a split pane horizontally. This works in full-screen as well.
+
 ### Setting up Vim
 
 I recommend using neovim on Windows because it has working mouse support and is
