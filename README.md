@@ -556,6 +556,9 @@ Here is a few:
 | ni               | New-Item                      | touch <new-file>  |
 | sort             | Sort-Object                   | sort              |
 | sort -u          | Sort-Object -Unique           | sort -u           |
+| measure -l       | Measure-Object -Line          | wc -l             |
+| measure -w       | Measure-Object -Word          | wc -w             |
+| measure -c       | Measure-Object -Character     | wc -m             |
 
 .
 
@@ -704,6 +707,22 @@ get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 .
 
 Here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
+
+The equivalent of `wc -l file` to count lines is:
+
+```powershell
+gc file | measure -l
+```
+,
+while `-w` will count words and `-c` will count characters. You can combine any
+of the three in one command, the output is a table.
+
+To get just the number of lines, you can do this:
+
+```powershell
+(gc file | measure -l).lines
+```
+.
 
 In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
