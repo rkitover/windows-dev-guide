@@ -652,8 +652,8 @@ ni -it sym name-of-link -tar path-to-source
 ```
 .
 
-Make sure the `path-to-source` is an absolute path, you can use `$(resolve-path
-file)` to ensure this.
+Make sure the `path-to-source` is an absolute path, you can use tab completion
+or `$(resolve-path file)` to ensure this.
 
 **WARNING**: Do not use `ri` to delete a symbolic link to a directory, do this
 instead:
