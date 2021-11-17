@@ -724,6 +724,14 @@ To get just the number of lines, you can do this:
 ```
 .
 
+Command substitution is pretty much the same as in POSIX shells, using `$( ...
+)`. For example:
+
+```powershell
+vim $(gci -r *.h)
+echo "This file contains $((gc README.md | measure -l).lines) lines."
+```
+
 In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
 regular expressions, the backslash `\` is the escape character, like everywhere
