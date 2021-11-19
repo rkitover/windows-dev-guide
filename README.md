@@ -529,27 +529,30 @@ above for `which`.
 
 Here is a few:
 
-| PowerShell alias | Full cmdlet + Params          | POSIX command     |
-|------------------|-------------------------------|-------------------|
-| sl               | Set-Location                  | cd                |
-| gci -n           | Get-ChildItem -Name           | ls                |
-| gci              | Get-ChildItem                 | ls -l             |
-| gi               | Get-Item                      | ls -d             |
-| cpi              | Copy-Item                     | cp -r             |
-| ri               | Remove-Item                   | rm                |
-| ri -fo           | Remove-Item -Force            | rm -f             |
-| ri -r -fo        | Remove-Item -Force -Recurse   | rm -rf            |
-| gc               | Get-Content                   | cat               |
-| mi               | Move-Item                     | mv                |
-| mkdir            | New-Item -ItemType Directory  | mkdir             |
-| which (custom)   | Get-Command                   | command -v, which |
-| gci -r           | Get-ChildItem -Recurse        | find              |
-| ni               | New-Item                      | touch <new-file>  |
-| sort             | Sort-Object                   | sort              |
-| sort -u          | Sort-Object -Unique           | sort -u           |
-| measure -l       | Measure-Object -Line          | wc -l             |
-| measure -w       | Measure-Object -Word          | wc -w             |
-| measure -c       | Measure-Object -Character     | wc -m             |
+| PowerShell alias              | Full cmdlet + Params                       | POSIX command                  |
+|-------------------------------|--------------------------------------------|--------------------------------|
+| sl                            | Set-Location                               | cd                             |
+| gci -n                        | Get-ChildItem -Name                        | ls                             |
+| gci                           | Get-ChildItem                              | ls -l                          |
+| gi                            | Get-Item                                   | ls -d                          |
+| cpi                           | Copy-Item                                  | cp -r                          |
+| ri                            | Remove-Item                                | rm                             |
+| ri -fo                        | Remove-Item -Force                         | rm -f                          |
+| ri -r -fo                     | Remove-Item -Force -Recurse                | rm -rf                         |
+| gc                            | Get-Content                                | cat                            |
+| mi                            | Move-Item                                  | mv                             |
+| mkdir                         | New-Item -ItemType Directory               | mkdir                          |
+| which (custom)                | Get-Command                                | command -v, which              |
+| gci -r                        | Get-ChildItem -Recurse                     | find                           |
+| ni                            | New-Item                                   | touch <new-file>               |
+| sort                          | Sort-Object                                | sort                           |
+| sort -u                       | Sort-Object -Unique                        | sort -u                        |
+| measure -l                    | Measure-Object -Line                       | wc -l                          |
+| measure -w                    | Measure-Object -Word                       | wc -w                          |
+| measure -c                    | Measure-Object -Character                  | wc -m                          |
+| gc file | select -first 10    | Get-Content file | Select-Object -First 10 | head -n 10 file                |
+| gc file | select -last  10    | Get-Content file | Select-Object -Last  10 | tail -n 10 file                |
+| gc -tail 20 -wait some.log    | Get-Content -Tail 20 -Wait some.log        | tail -f -n 20 some.log         |
 
 .
 
@@ -733,6 +736,7 @@ Command substitution is pretty much the same as in POSIX shells, using `$( ...
 vim $(gci -r *.h)
 echo "This file contains $((gc README.md | measure -l).lines) lines."
 ```
+.
 
 In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
