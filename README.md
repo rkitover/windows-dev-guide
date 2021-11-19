@@ -46,6 +46,8 @@ choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git 
 stop-service ssh-agent
 sc.exe delete ssh-agent
 choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
+sed -i 's/.*administrators.*/#&/g' /programdata/ssh/sshd_config
+restart-service sshd
 ```
 .
 
@@ -472,21 +474,6 @@ git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
 .
 
 ### Setting up sshd
-
-Edit `\ProgramData\ssh\sshd_config` and remove or comment out this section:
-
-```
-Match Group administrators
-       AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
-```
-.
-
-Then run:
-
-```powershell
-restart-service sshd
-```
-.
 
 If you've installed openssh before copying over your `~/.ssh`, you will need to
 fix permissions on your `authorized_keys` files, the easiest way to do
