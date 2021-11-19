@@ -47,7 +47,7 @@ stop-service ssh-agent
 sc.exe delete ssh-agent
 choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
 refreshenv
-sed -i 's/.*administrators.*/#&/g' /programdata/ssh/sshd_config
+sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
 ```
 .
