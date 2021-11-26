@@ -196,8 +196,16 @@ cmd /c rmdir /Q /S $(resolve-path ~/AppData/Local/nvim)
 ni -it sym ~/AppData/Local/nvim -tar $(resolve-path ~/.vim)
 ri ~/.vim/init.vim -ea ignore
 ni -it sym ~/.vim/init.vim      -tar $(resolve-path ~/.vimrc)
+ni -it sym ~/vimfiles           -tar $(resolve-path ~/.vim)
 ```
 .
+
+For regular vim run the following:
+
+```powershell
+mkdir ~/.vim -ea ignore
+ni -it sym ~/vimfiles -tar $(resolve-path ~/.vim)
+```
 
 You can edit your powershell profile with `vim $profile`, and reload it with `.
 $profile`.
@@ -206,11 +214,23 @@ Add the following to your `$profile`:
 
 ```powershell
 if ($env:TERM) { ri env:TERM }
-$env:EDITOR = resolve-path ~/.local/bin/vim.bat
+
+$vim = resolve-path ~/.local/bin/nvim.bat
+set-alias -name vim -val nvim
+
+# Neovim is broken in ssh sessions, use regular vim.
+if ($env:SSH_CONNECTION) {
+    $vim = resolve-path ~/.local/bin/vim.bat
+    ri alias:vim
+}
+
+$env:EDITOR = $vim -replace '\\','/'
+
+ri variable:vim
 ```
 .
 
-In `~/.local/bin/vim.bat` put the following for neovim:
+In `~/.local/bin/nvim.bat` put the following for neovim:
 
 ```bat
 @echo off
@@ -219,7 +239,7 @@ nvim %*
 ```
 ,
 
-or the following for regular vim:
+and in `~/.local/bin/vim.bat` put the following for regular vim:
 
 ```bat
 @echo off
@@ -228,7 +248,7 @@ c:\windows\vim.bat %*
 ```
 .
 
-This is needed for git to work correctly with native vim.
+This is needed for git to work correctly with native vim/neovim.
 
 Some suggestions for your `~/.vimrc`:
 
@@ -327,7 +347,19 @@ $env:PATH = ($env:PATH -split ';' | ?{ $_ -notmatch '\\Strawberry\\c\\bin$' }) -
 $terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json
 
 if ($env:TERM) { ri env:TERM }
-$env:EDITOR = (resolve-path ~/.local/bin/vim.bat).path -replace '\\','/'
+
+$vim = resolve-path ~/.local/bin/nvim.bat
+set-alias -name vim -val nvim
+
+# Neovim is broken in ssh sessions, use regular vim.
+if ($env:SSH_CONNECTION) {
+    $vim = resolve-path ~/.local/bin/vim.bat
+    ri alias:vim
+}
+
+$env:EDITOR = $vim -replace '\\','/'
+
+ri variable:vim
 
 if (test-path ~/source/repos/vcpkg) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg
