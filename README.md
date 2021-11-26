@@ -550,8 +550,8 @@ Here is a few:
 | measure -l                    | Measure-Object -Line                       | wc -l                          |
 | measure -w                    | Measure-Object -Word                       | wc -w                          |
 | measure -c                    | Measure-Object -Character                  | wc -m                          |
-| gc file | select -first 10    | Get-Content file | Select-Object -First 10 | head -n 10 file                |
-| gc file | select -last  10    | Get-Content file | Select-Object -Last  10 | tail -n 10 file                |
+| gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10 | head -n 10 file                |
+| gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10 | tail -n 10 file                |
 | gc -wait -tail 20 some.log    | Get-Content -Wait -Tail 20 some.log        | tail -f -n 20 some.log         |
 
 .
