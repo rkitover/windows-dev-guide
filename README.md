@@ -418,6 +418,11 @@ function head {
     }
 }
 
+# Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
+function hexcolortorgb {
+    'rgb(' + (((($args[0] -replace '^#','') -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
+}
+
 function less_paged_help {
     get-help @args -detailed | less
 }
