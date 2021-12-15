@@ -383,12 +383,24 @@ function pkill {
     pgrep $args | %{ stop-process $_.processid }
 }
 
-function syslog {
-    get-winevent -log system | less
+function format-eventlog {
+    $input | %{
+        echo ("`e[95m[`e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
+        "`e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
+        "`e[95m]`e[0m " + `
+        ($_.message -replace "`n.*",''))
+    }
 }
 
-function taskslog {
-    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' 
+function syslog {
+    get-winevent -log system -oldest | format-eventlog | oh -p -ea ignore
+}
+
+# You have to enable the tasks log first as admin, see:
+# https://stackoverflow.com/q/13965997/262458
+
+function tasklog {
+    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog | oh -p -ea ignore
 }
 
 function ltr { $input | sort lastwritetime }
@@ -405,6 +417,12 @@ function head {
         gc $args | select -first $lines
     }
 }
+
+function less_paged_help {
+    get-help @args -detailed | less
+}
+
+set-alias -name help    -val less_paged_help
 
 set-alias -name which   -val get-command
 set-alias -name notepad -val '/program files/notepad++/notepad++'
@@ -444,10 +462,10 @@ import-module ~/source/repos/posh-git/src/posh-git.psd1
 
 function global:PromptWriteErrorInfo() {
     if ($global:gitpromptvalues.dollarquestion) {
-        [char]27 + '[0;32mv' + [char]27 + '[0m'
+        "`e[0;32mv`e[0m"
     }
     else {
-        [char]27 + '[0;31mx' + [char]27 + '[0m'
+        "`e[0;31mx`e[0m"
     }
 }
 
@@ -459,7 +477,7 @@ $username = $env:USERNAME
 $hostname = $env:COMPUTERNAME.tolower()
 
 $gitpromptsettings.defaultpromptwritestatusfirst             = $false
-$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n" + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $username + [char]27 + '[1;97m' + '@' + [char]27 + '[0m' + [char]27 + '[38;2;140;206;250m' + $hostname + ' '
+$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n`e[0m`e[38;2;140;206;250m$username`e[1;97m@`e[0m`e[38;2;140;206;250m$hostname "
 $gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
 
 $gitpromptsettings.windowtitle = $null
