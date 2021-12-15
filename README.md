@@ -426,12 +426,6 @@ function hexcolortorgb {
     'rgb(' + (((($args[0] -replace '^#','') -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
 }
 
-function less_paged_help {
-    get-help @args -detailed | less
-}
-
-set-alias -name help    -val less_paged_help
-
 set-alias -name which   -val get-command
 set-alias -name notepad -val '/program files/notepad++/notepad++'
 
@@ -577,10 +571,9 @@ You can get a list of aliases with `alias` and lookup specific aliases with e.g.
 `alias ri`. It allows globs, e.g. to see aliases starting with `s` do `alias
 s*`.
 
-You can get help text for any cmdlet via its long name or alias with `help`. To
-use `less` instead of the default pager, do e.g.: `help gci | less`.
-
-The profile above overrides `help` to add `-detailed` and pipe to less.
+You can get help text for any cmdlet via its long name or alias with `help -d
+<cmdlet>`. To use `less` instead of the default pager, do e.g.: `help -d gci |
+less`.
 
 For the `git` man pages, do `git help <command>` to open the man page in your
 browser, e.g. `git help config`.
