@@ -383,11 +383,14 @@ function pkill {
     pgrep $args | %{ stop-process $_.processid }
 }
 
+# Windows PowerShell does not support the `e special character sequence for Escape, so we use a variable $e for this.
+$e = [char]27
+
 function format-eventlog {
     $input | %{
-        echo ("`e[95m[`e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
-        "`e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
-        "`e[95m]`e[0m " + `
+        echo ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
+        "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
+        "$e[95m]$e[0m " + `
         ($_.message -replace "`n.*",''))
     }
 }
@@ -467,10 +470,10 @@ import-module ~/source/repos/posh-git/src/posh-git.psd1
 
 function global:PromptWriteErrorInfo() {
     if ($global:gitpromptvalues.dollarquestion) {
-        "`e[0;32mv`e[0m"
+        "$e[0;32mv$e[0m"
     }
     else {
-        "`e[0;31mx`e[0m"
+        "$e[0;31mx$e[0m"
     }
 }
 
@@ -482,7 +485,7 @@ $username = $env:USERNAME
 $hostname = $env:COMPUTERNAME.tolower()
 
 $gitpromptsettings.defaultpromptwritestatusfirst             = $false
-$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n`e[0m`e[38;2;140;206;250m$username`e[1;97m@`e[0m`e[38;2;140;206;250m$hostname "
+$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n$e[0m$e[38;2;140;206;250m$username$e[1;97m@$e[0m$e[38;2;140;206;250m$hostname "
 $gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
 
 $gitpromptsettings.windowtitle = $null
@@ -497,15 +500,18 @@ set-psreadlinekeyhandler -key downarrow -function historysearchforward
 ```
 .
 
-This profile works for "Windows PowerShell", the powershell you launch from the
-`Win+X` menu as well. But the profile is in a different file, so you will need
-to copy it there too:
+This profile works for "Windows PowerShell" as well. But the profile is in a
+different file, so you will need to make a symlink there to your PowerShell
+`$profile`.
 
 ```powershell
 mkdir ~/Documents/WindowsPowerShell
-cpi ~/Documents/PowerShell/Microsoft.Powershell_profile.ps1 ~/Documents/WindowsPowerShell
+ni -it sym ~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1 -tar $profile
 ```
 .
+
+Be aware that if your Documents are in OneDrive, OneDrive will ignore and not
+sync symlinks.
 
 ### Setting up gpg
 
@@ -573,6 +579,8 @@ s*`.
 
 You can get help text for any cmdlet via its long name or alias with `help`. To
 use `less` instead of the default pager, do e.g.: `help gci | less`.
+
+The profile above overrides `help` to add `-detailed` and pipe to less.
 
 For the `git` man pages, do `git help <command>` to open the man page in your
 browser, e.g. `git help config`.
