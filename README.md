@@ -13,6 +13,7 @@
   - [PowerShell Usage Notes](#powershell-usage-notes)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Working With virt-manager VMs using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Miscellaneous](#miscellaneous)
 
@@ -972,6 +973,80 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 
 Many more things are available from Chocolatey and other sources of course, at
 varying degrees of functionality.
+
+### Working With virt-manager VMs using virt-viewer
+
+Unfortunately `virt-manager` is unavailable as a native utility, if you like you
+can run it using WSL or even Cygwin.
+
+However, `virt-viewer` is available from Chocolatey and with a bit of setup can
+allow you to work with your remote `virt-manager` VMs conveniently.
+
+The first step is to edit the XML for your VMs and assign non-conflicting spice
+ports bound to localhost for each one.
+
+For example, for my Windows build VM I have:
+
+```xml
+<graphics type='spice' port='5901' autoport='no' listen='127.0.0.1'>
+  <listen type='address' address='127.0.0.1'/>
+</graphics>
+```
+
+, while my macOS VM uses port 5900.
+
+Edit your sshd config and make sure the following is enabled:
+
+```
+GatewayPorts yes
+```
+.
+
+Then, forward the spice ports for the VMs you are interested in working with over ssh. To do that, edit your `~/.ssh/config` and set your server entry to something like the following:
+
+```
+Host your-server
+  ForwardX11 yes
+  ForwardX11Trusted yes
+  LocalForward 5900 localhost:5900
+  LocalForward 5901 localhost:5901
+  LocalForward 5902 localhost:5902
+```
+, then if you have a tab open in the terminal with an ssh connection to your server, the ports will be forwarded.
+
+You can also make a separate entry just for forwarding the ports with a different alias, for example:
+
+```
+Host your-server-ports
+  HostName your-server
+  LocalForward 5900 localhost:5900
+  LocalForward 5901 localhost:5901
+  LocalForward 5902 localhost:5902
+```
+, and then create a continuously running task to keep the ports open, with a command such as:
+
+```powershell
+ssh -NT your-server-ports
+```
+.
+
+Once that is done, the last step is to install `virt-viewer` from Chocolatey and add the functions to your `$profile` for launching it for your VMs. I use these:
+
+```powershell
+function winbuilder {
+    &(resolve-path 'C:\Program Files\VirtViewer*\bin\remote-viewer.exe') -f spice://localhost:5901 *> $null
+}
+
+function macbuilder {
+    &(resolve-path 'C:\Program Files\VirtViewer*\bin\remote-viewer.exe') -f spice://localhost:5900 *> $null
+}
+```
+.
+
+Launching the function will open a full screen graphics console to your VM.
+
+Moving your mouse cursor to the top-middle will pop down the control panel with
+control and disconnect functions.
 
 ### Mounting SMB/SSHFS Folders
 
