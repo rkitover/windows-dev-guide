@@ -14,6 +14,7 @@
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
   - [Working With virt-manager VMs using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
+  - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Miscellaneous](#miscellaneous)
 
@@ -1000,7 +1001,7 @@ Edit your sshd config and make sure the following is enabled:
 ```
 GatewayPorts yes
 ```
-.
+. Restart sshd.
 
 Then, forward the spice ports for the VMs you are interested in working with over ssh. To do that, edit your `~/.ssh/config` and set your server entry to something like the following:
 
@@ -1047,6 +1048,98 @@ Launching the function will open a full screen graphics console to your VM.
 
 Moving your mouse cursor to the top-middle will pop down the control panel with
 control and disconnect functions.
+
+### Using X11 Forwarding Over SSH
+
+Install `vcxsrv` from Chocolatey.
+
+It is necessary to disable DPI scaling for this app. First, run this command in
+an admin terminal:
+
+```powershell
+setx __COMPAT_LAYER HighDpiAware /M
+```
+.
+
+Open the app folder:
+
+```powershell
+explorer $(resolve-path /progr*s/vcxsrv)
+```
+
+and open the properties for `vcxsrv.exe` and go to `Compatibility -> Change High
+DPI settings` at the bottom under `High DPI scaling override` check the checkbox
+for `Override high DPI scaling behavior` and under `Scaling performed by:`
+select `Application`.
+
+Reboot your computer.
+
+Open your startup shortcuts:
+
+```powershell
+explorer shell:startup
+```
+and create a shortcut to `vcxsrv.exe` with the target set to:
+
+```powershell
+"C:\Program Files\VcXsrv\vcxsrv.exe" -multiwindow -clipboard -wgl
+```
+.
+
+Launch the shortcut.
+
+On your remote computer, add this function to your `~/.bashrc`:
+
+```bash
+x() {
+    (
+        scale=1.2
+        export GDK_DPI_SCALE=$scale
+        export QT_SCALE_FACTOR=$scale
+        export QT_FONT_DPI=96
+        export ELM_SCALE=$scale
+        export XAUTHORITY=$HOME/.Xauthority
+        export GTK_THEME=Adwaita:dark
+        # Install libqt5-qtstyleplugins and qt5ct and configure your Qt style with the qt5ct GUI.
+        export QT_PLATFORM_PLUGIN=qt5ct
+        export QT_QPA_PLATFORMTHEME=qt5ct
+        ("$@" >/dev/null 2>&1 &) &
+    ) >/dev/null 2>&1
+}
+```
+.
+
+Edit your remote computer sshd config and make sure the following is enabled:
+
+```
+X11Forwarding yes
+```
+. Restart sshd.
+
+On the local computer, edit `~/.ssh/config` and set the configuration for your
+remote computer as follows:
+
+```
+Host remote-computer
+  ForwardX11 yes
+  ForwardX11Trusted yes
+```
+.
+
+Open a new ssh session to the remote computer.
+
+You can now open X11 apps with the `x` function you added to your `~/.bashrc`,
+e.g.:
+
+```bash
+x gedit ~/.bashrc
+```
+
+Set your desired scale in the `~/.bashrc` function and configure the appearance
+for your Qt apps with qt5ct.
+
+One huge benefit of this setup is that you can use `xclip` on your remote
+computer to put things into your local clipboard.
 
 ### Mounting SMB/SSHFS Folders
 
