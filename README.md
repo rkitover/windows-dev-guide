@@ -11,6 +11,7 @@
   - [Setting up sshd](#setting-up-sshd)
   - [Setting up git](#setting-up-git)
   - [PowerShell Usage Notes](#powershell-usage-notes)
+  - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Miscellaneous](#miscellaneous)
@@ -177,6 +178,10 @@ You can toggle full-screen mode with `F11`.
 
 `SHIFT`+`ALT`+`+` will open a split pane vertically, while `SHIFT`+`ALT`+`-`
 will open a split pane horizontally. This works in full-screen as well.
+
+`CTRL`+`SHIFT`+`F` will open a search box in the top right corner to search your
+backlog and highlight the matches. Be aware that if the word you are searching for is in the top right
+corner under the search box, you will not see it.
 
 ### Setting up Vim
 
@@ -388,7 +393,7 @@ $e = [char]27
 
 function format-eventlog {
     $input | %{
-        echo ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
+        write ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
         "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
         "$e[95m]$e[0m " + `
         ($_.message -replace "`n.*",''))
@@ -790,7 +795,7 @@ Command substitution is pretty much the same as in POSIX shells, using `$( ...
 
 ```powershell
 vim $(gci -r *.h)
-echo "This file contains $((gc README.md | measure -l).lines) lines."
+write "This file contains $((gc README.md | measure -l).lines) lines."
 ```
 .
 
@@ -798,6 +803,29 @@ In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
 regular expressions, the backslash `\` is the escape character, like everywhere
 else.
+
+The backtick is also used for special character sequences, here are some useful ones:
+
+| Sequence     | Character                                    |
+|--------------|----------------------------------------------|
+| `n           | Newline                                      |
+| `r           | Carriage Return                              |
+| `b           | Backspace                                    |
+| `t           | Tab                                          |
+| `u{hex code} | Unicode Character by Hex Code Point          |
+| `e           | Escape (not supported by Windows PowerShell) |
+| `0           | Null                                         |
+| `a           | Alert (bell)                                 |
+
+.
+
+
+For example, this will print an emoji between two blank lines, indented by a tab:
+
+```powershell
+write "`n`t`u{1F47D}`n"
+```
+.
 
 Here are a couple more example of PowerShell one-liners:
 
@@ -812,6 +840,29 @@ alias se* | select name, resolvedcommand
 # 'MessageBox'.
 gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
   %{ $_.name; dumpbin -headers $_ | grep MessageBox }
+```
+.
+
+### Using PowerShell Gallery
+
+To enable PowerShell Gallery to install third-party modules, run this command:
+
+```powershell
+set-psrepository psgallery -installationpolicy trusted
+```
+.
+
+You can then install modules using `install-module`, for example:
+
+```powershell
+install-module PSWriteColor
+```
+.
+
+You can then immediately use the new module, e.g.:
+
+```powershell
+write-color -t 'foo' -c 'magenta'
 ```
 .
 
