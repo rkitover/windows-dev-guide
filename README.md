@@ -217,6 +217,9 @@ can change this to any number of lines by adjusting the `rowsToScroll`
 parameter. You can even make additional keybindings for the same action but a
 different keybind with a different `rowsToScroll` value.
 
+You can scroll with your mouse scrollwheel, assuming that there is no active
+application controlling the mouse.
+
 For searching scrollback with my provided configuration, follow the following process:
 
 1. Press `CTRL+SHIFT+F` and type in your search term in the search box that pops
@@ -509,6 +512,9 @@ foreach ($vs_type in 'buildtools','community') {
 
 if ($vs_path -and -not $env:VSCMD_VER) {
     pushd $vs_path
+# vcvars64.bat        for x86_64 native builds.
+# vcvars32.bat        for x86_32 native builds.
+# vcvarsx86_arm64.bat for ARM64  cross  builds.
     cmd /c 'vcvars64.bat & set' | where { $_ -match '=' } | %{
         $var,$val = $_.split('=')
         set-item -force "env:$var" -value $val
@@ -663,30 +669,30 @@ above for `which`.
 
 Here is a few:
 
-| PowerShell alias              | Full cmdlet + Params                       | POSIX command                  |
-|-------------------------------|--------------------------------------------|--------------------------------|
-| sl                            | Set-Location                               | cd                             |
-| gci -n                        | Get-ChildItem -Name                        | ls                             |
-| gci                           | Get-ChildItem                              | ls -l                          |
-| gi                            | Get-Item                                   | ls -d                          |
-| cpi                           | Copy-Item                                  | cp -r                          |
-| ri                            | Remove-Item                                | rm                             |
-| ri -fo                        | Remove-Item -Force                         | rm -f                          |
-| ri -r -fo                     | Remove-Item -Force -Recurse                | rm -rf                         |
-| gc                            | Get-Content                                | cat                            |
-| mi                            | Move-Item                                  | mv                             |
-| mkdir                         | New-Item -ItemType Directory               | mkdir                          |
-| which (custom)                | Get-Command                                | command -v, which              |
-| gci -r                        | Get-ChildItem -Recurse                     | find                           |
-| ni                            | New-Item                                   | touch <new-file>               |
-| sort                          | Sort-Object                                | sort                           |
-| sort -u                       | Sort-Object -Unique                        | sort -u                        |
-| measure -l                    | Measure-Object -Line                       | wc -l                          |
-| measure -w                    | Measure-Object -Word                       | wc -w                          |
-| measure -c                    | Measure-Object -Character                  | wc -m                          |
-| gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10 | head -n 10 file                |
-| gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10 | tail -n 10 file                |
-| gc -wait -tail 20 some.log    | Get-Content -Wait -Tail 20 some.log        | tail -f -n 20 some.log         |
+| PowerShell alias                   | Full cmdlet + Params                            | POSIX command          |
+|------------------------------------|-------------------------------------------------|------------------------|
+| sl                                 | Set-Location                                    | cd                     |
+| gci -n                             | Get-ChildItem -Name                             | ls                     |
+| gci                                | Get-ChildItem                                   | ls -l                  |
+| gi                                 | Get-Item                                        | ls -d                  |
+| cpi                                | Copy-Item                                       | cp -r                  |
+| ri                                 | Remove-Item                                     | rm                     |
+| ri -fo                             | Remove-Item -Force                              | rm -f                  |
+| ri -r -fo                          | Remove-Item -Force -Recurse                     | rm -rf                 |
+| gc                                 | Get-Content                                     | cat                    |
+| mi                                 | Move-Item                                       | mv                     |
+| mkdir                              | New-Item -ItemType Directory                    | mkdir                  |
+| which (custom)                     | Get-Command                                     | command -v, which      |
+| gci -r                             | Get-ChildItem -Recurse                          | find                   |
+| ni                                 | New-Item                                        | touch <new-file>       |
+| sort                               | Sort-Object                                     | sort                   |
+| sort -u                            | Sort-Object -Unique                             | sort -u                |
+| measure -l                         | Measure-Object -Line                            | wc -l                  |
+| measure -w                         | Measure-Object -Word                            | wc -w                  |
+| measure -c                         | Measure-Object -Character                       | wc -m                  |
+| gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10 | head -n 10 file        |
+| gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10 | tail -n 10 file        |
+| gc -wait -tail 20 some.log         | Get-Content -Wait -Tail 20 some.log             | tail -f -n 20 some.log |
 
 .
 
@@ -805,8 +811,9 @@ example, to make a file or directory hidden do:
 attrib +h file
 gi -fo file
 ```
+, `-Force` is required for `gci` and `gi` to access hidden filesystem objects.
 
-and to make it visible do:
+To make it visible do:
 
 ```powershell
 attrib -h file
@@ -828,7 +835,7 @@ one simple fix is to use a glob, for example:
 sl /prog*s/nodejs
 ```
 
-will change the directory to `C:\Program Files\nodejs`.
+, will change the directory to `C:\Program Files\nodejs`.
 
 To make a symbolic link, do:
 
@@ -853,9 +860,7 @@ Errors for most PowerShell commands can be suppressed as follows:
 ```powershell
 mkdir existing-dir -ea ignore
 ```
-,
-
-this sets `ErrorAction` to `Ignore`.
+, this sets `ErrorAction` to `Ignore`.
 
 For a `find` replacement, use the `-Recurse` flag to `gci`, e.g.:
 
@@ -870,7 +875,7 @@ To search under a specific directory, use this syntax:
 gci -r /windows -i *.dll
 ```
 
-will find all DLL files in all levels under `C:\Windows`.
+to find all DLL files in all levels under `C:\Windows`.
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
@@ -892,7 +897,7 @@ If the cmdlet works on files, they can be strings as well, for example:
 gc file-list | cpi -r -dest e:/backup
 ```
 
-copies the files and directories listed in my file to a directory on a USB
+, copies the files and directories listed in my file to a directory on a USB
 stick.
 
 You can access the piped-in input in your own functions as the special `$input`
