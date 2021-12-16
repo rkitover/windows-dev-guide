@@ -1007,8 +1007,6 @@ Then, forward the spice ports for the VMs you are interested in working with ove
 
 ```
 Host your-server
-  ForwardX11 yes
-  ForwardX11Trusted yes
   LocalForward 5900 localhost:5900
   LocalForward 5901 localhost:5901
   LocalForward 5902 localhost:5902
@@ -1123,6 +1121,13 @@ remote computer as follows:
 Host remote-computer
   ForwardX11 yes
   ForwardX11Trusted yes
+```
+.
+
+Make sure `$env:DISPLAY` is set in your `$profile` as follows:
+
+```powershell
+$env:DISPLAY = '127.0.0.1:0.0'
 ```
 .
 
