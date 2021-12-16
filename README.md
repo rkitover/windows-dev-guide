@@ -588,6 +588,20 @@ less`.
 If you use the settings in my `$profile`, `less` will be the default pager for
 `help` via `$env:PAGER`, and `-full` will be enabled by default via `$PSDefaultParameterValues`.
 
+You can get documentation for external utilities in this way:
+
+```powershell
+icacls /? | less
+```
+.
+
+For documentation for cmd builtins, you can do this:
+
+```powershell
+cmd /c help for | less
+```
+.
+
 For the `git` man pages, do `git help <command>` to open the man page in your
 browser, e.g. `git help config`.
 
@@ -682,28 +696,77 @@ gci | ltr
 ```
 .
 
-Parameters can be completed with `tab`, so in the case above you could write
-`lastw<tab>`.
+`Get-Child-Item` (`gci`) and `Get-Item` (`gi`) do not only operate
+on filesystem objects, but on many other kinds of objects. For example, you can
+operate on registry values like a filesystem, e.g.:
 
-To see hidden files, pass `-Force` to `gci`:
+```powershell
+gi  HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion
+gci HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion | less
+```
+
+, here `HKLM` stands for the `HKEY_LOCAL_MACHINE` section of the registry.
+`HKCU` stands for `HKEY_CURRENT_USER`.
+
+You can go into these objects and work with them similar to a filesystem, for
+example try this:
+
+```powershell
+sl HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion
+gci | less
+sl WindowsUpdate
+gci
+sl ..
+```
+
+, etc..
+
+The properties displayed and their contents will depend on the types of objects
+you are working with.
+
+The first column in filesystem directory listings from `gci` or `gi` is the mode
+or attributes of the object. The positions of the letters will vary, but here is
+their meaning:
+
+| Mode Letter | Attribute Set On Object |
+|-------------|-------------------------|
+| l           | Link                    |
+| d           | Directory               |
+| a           | Archive                 |
+| r           | Read-Only               |
+| h           | Hidden                  |
+| s           | System                  |
+
+To see hidden files, pass `-Force` to `gci` or `gi`:
 
 ```powershell
 gci -fo
+gi -fo hidden-file
 ```
 .
 
-To make a file or directory hidden do:
+The best way to manipulate these attributes is with the `attrib` utility, for
+example, to make a file or directory hidden do:
 
 ```powershell
 attrib +h file
+gi -fo file
 ```
 
 and to make it visible do:
 
 ```powershell
 attrib -h file
+gi file
 ```
 .
+
+Parameters can be completed with `tab`, so in the case above you could write
+`lastw<tab>`.
+
+PowerShell relies very heavily on tab completion, and just about everything can
+be tab completed. The style I present here uses short forms and abbreviations
+instead, when possible.
 
 To make a symbolic link, do:
 
