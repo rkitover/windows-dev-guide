@@ -181,7 +181,8 @@ will open a split pane horizontally. This works in full-screen as well.
 
 `CTRL`+`SHIFT`+`F` will open a search box in the top right corner to search your
 backlog and highlight the matches. Be aware that if the word you are searching for is in the top right
-corner under the search box, you will not see it.
+corner under the search box, you will not see it. You can scroll the terminal
+while the search box is open as well.
 
 ### Setting up Vim
 
@@ -431,6 +432,10 @@ function hexcolortorgb {
     'rgb(' + (((($args[0] -replace '^#','') -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
 }
 
+# Make help nicer.
+$PSDefaultParameterValues = @{"help:Full"=$true}
+$env:PAGER = 'less'
+
 set-alias -name which   -val get-command
 set-alias -name notepad -val '/program files/notepad++/notepad++'
 
@@ -576,9 +581,12 @@ You can get a list of aliases with `alias` and lookup specific aliases with e.g.
 `alias ri`. It allows globs, e.g. to see aliases starting with `s` do `alias
 s*`.
 
-You can get help text for any cmdlet via its long name or alias with `help -d
-<cmdlet>`. To use `less` instead of the default pager, do e.g.: `help -d gci |
+You can get help text for any cmdlet via its long name or alias with `help -full
+<cmdlet>`. To use `less` instead of the default pager, do e.g.: `help -full gci |
 less`.
+
+If you use the settings in my `$profile`, `less` will be the default pager for
+`help` via `$env:PAGER`, and `-full` will be enabled by default via `$PSDefaultParameterValues`.
 
 For the `git` man pages, do `git help <command>` to open the man page in your
 browser, e.g. `git help config`.
