@@ -5,6 +5,7 @@
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
   - [Configure the Terminal](#configure-the-terminal)
+    - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
   - [Setting up Vim](#setting-up-vim)
   - [Set up PowerShell Profile](#set-up-powershell-profile)
   - [Setting up gpg](#setting-up-gpg)
@@ -13,7 +14,7 @@
   - [PowerShell Usage Notes](#powershell-usage-notes)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
-  - [Working With virt-manager VMs using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
+  - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Miscellaneous](#miscellaneous)
@@ -166,13 +167,24 @@ In the `"actions"` section add these keybindings:
 { "command": { "action": "newTab"  }, "keys": "ctrl+shift+t" },
 { "command": { "action": "nextTab" }, "keys": "ctrl+shift+right" },
 { "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" }
+{ "command": { "action": "findMatch", "direction": "next" },          "keys": "ctrl+shift+n" },
+{ "command": { "action": "findMatch", "direction": "prev" },          "keys": "ctrl+shift+p" },
+{ "command": { "action": "scrollUp", "rowsToScroll": 1 },
+  "keys": "ctrl+shift+up" },
+{ "command": { "action": "scrollDown", "rowsToScroll": 1 },
+  "keys": "ctrl+shift+down" }
 ```
 .
 
-And **REMOVE** the `ctrl+v` binding, if you want to use `ctrl+v` in vim (visual
+And **REMOVE** the `CTRL+V` binding, if you want to use `CTRL+V` in vim (visual
 line selection.)
 
-This gives you a sort of "tmux" for PowerShell using tabs.
+This gives you a sort of "tmux" for PowerShell using tabs, and binds keys to
+find next/previous match.
+
+Note that `CTRL+SHIFT+N` is bound by default to opening a new window and
+`CTRL+SHIFT+P` is bound by default to opening the command palette, if you need
+these, rebind them or the original actions to something else.
 
 Restart the terminal.
 
@@ -181,10 +193,47 @@ You can toggle full-screen mode with `F11`.
 `SHIFT`+`ALT`+`+` will open a split pane vertically, while `SHIFT`+`ALT`+`-`
 will open a split pane horizontally. This works in full-screen as well.
 
-`CTRL`+`SHIFT`+`F` will open a search box in the top right corner to search your
-backlog and highlight the matches. Be aware that if the word you are searching for is in the top right
-corner under the search box, you will not see it. You can scroll the terminal
-while the search box is open as well.
+You can paste with both `SHIFT+INSERT` and `CTRL+SHIFT+V`. To copy text with my
+provided configuration, simply select it.
+
+The documentation for the terminal and a lot of other good information is here:
+
+https://docs.microsoft.com/en-us/windows/terminal/
+.
+
+#### Scrolling and Searching in the Terminal
+
+These are the scrolling keybinds available:
+
+| Key                 | Action                 |
+|---------------------|------------------------|
+| CTRL+SHIFT+PGUP     | Scroll one page up.    |
+| CTRL+SHIFT+PGDN     | Scroll one page down.  |
+| CTRL+SHIFT+UP       | Scroll X lines up.     |
+| CTRL+SHIFT+DOWN     | Scroll X lines down.   |
+
+In my provided configuration, `CTRL+SHIFT+UP/DOWN` will scroll by 1 line, you
+can change this to any number of lines by adjusting the `rowsToScroll`
+parameter. You can even make additional keybindings for the same action but a
+different keybind with a different `rowsToScroll` value.
+
+For searching scrollback with my provided configuration, follow the following process:
+
+1. Press `CTRL+SHIFT+F` and type in your search term in the search box that pops
+   up in the upper right, the term is case-insensitive.
+2. Press `ESC` to close the search box.
+3. Press `CTRL+SHIFT+N` to find the first match going up, the match will be
+   highlighted.
+4. Press `CTRL+SHIFT+P` to find the first match going down below the current
+   match.
+5. To change the search term, press `CTRL+SHIFT+F` again, type in the new term,
+   and press `ESC`.
+
+You can scroll the terminal while a search is active and your match position
+will be preserved.
+
+This system is powerful enough to give you most of the functionality of a pager
+without using a pager.
 
 ### Setting up Vim
 
@@ -404,14 +453,14 @@ function format-eventlog {
 }
 
 function syslog {
-    get-winevent -log system -oldest | format-eventlog | oh -p -ea ignore
+    get-winevent -log system -oldest | format-eventlog
 }
 
 # You have to enable the tasks log first as admin, see:
 # https://stackoverflow.com/q/13965997/262458
 
 function tasklog {
-    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog | oh -p -ea ignore
+    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog
 }
 
 function ltr { $input | sort lastwritetime }
@@ -668,6 +717,8 @@ ri .*.un~,.*.sw?
 ```
 .
 
+Note that globs in PowerShell are case-insensitive.
+
 Redirection for files and commands works like in POSIX on a basic level, that
 is, you can expect `<`, `>` and `|` to redirect files and commands like you
 would expect on a POSIX shell. The file descriptors `0`, `1` and `2` are
@@ -769,6 +820,15 @@ Parameters can be completed with `tab`, so in the case above you could write
 PowerShell relies very heavily on tab completion, and just about everything can
 be tab completed. The style I present here uses short forms and abbreviations
 instead, when possible.
+
+Tab completing directories and files with spaces in them can be very annoying,
+one simple fix is to use a glob, for example:
+
+```powershell
+sl /prog*s/nodejs
+```
+
+will change the directory to `C:\Program Files\nodejs`.
 
 To make a symbolic link, do:
 
@@ -975,7 +1035,7 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 Many more things are available from Chocolatey and other sources of course, at
 varying degrees of functionality.
 
-### Working With virt-manager VMs using virt-viewer
+### Working With virt-manager VMs Using virt-viewer
 
 Unfortunately `virt-manager` is unavailable as a native utility, if you like you
 can run it using WSL or even Cygwin.
