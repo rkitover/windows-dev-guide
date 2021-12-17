@@ -940,7 +940,15 @@ at the end of a line, escaping the line end as a line continuation character. In
 regular expressions, the backslash `\` is the escape character, like everywhere
 else.
 
-The backtick is also used for special character sequences, here are some useful ones:
+The backtick is also used to escape nested double quotes, but not single quotes,
+for example:
+
+```powershell
+write "this `"is`" a test"
+```
+.
+
+It is also used for special character sequences, here are some useful ones:
 
 | Sequence     | Character                                    |
 |--------------|----------------------------------------------|
@@ -971,6 +979,19 @@ can run them directly:
 ```
 .
 
+Reading a PowerShell script into your current session works the same way as in
+bash, e.g.:
+
+```powershell
+. ~/source/PowerShell/some_functions.ps1
+```
+, this will also work to reload your `$profile` after making changes to it:
+
+```powershell
+. $profile
+```
+.
+
 Another couple of extremely useful cmdlets are `get-clipboard` and
 `set-clipboard` to access the clipboard, for example:
 
@@ -987,6 +1008,14 @@ To open the explorer file manager for the current or any folder you can just run
 explorer .
 explorer $(resolve-path /prog*s)
 explorer shell:startup
+```
+.
+
+To open a file in its associated program, similarly to `xdg-open` on Linux, use the `start` command, e.g.:
+
+```powershell
+start some_text.txt
+start some_code.cpp
 ```
 .
 
@@ -1081,6 +1110,14 @@ not run regular Linux Makefiles because it expects `cmd.exe` shell commands.
 However, it is possible to write Makefiles that work in both environments if the
 commands are the same, for example the one in this repository.
 
+For an `ldd` replacement, you can do this:
+
+```powershell
+dumpbin /dependents prog.exe
+dumpbin /dependents somelib.dll
+```
+.
+
 The commands `curl` and `tar` are now standard Windows commands. The
 implementation of `tar` is not particularly wonderful, it currently does not
 handle symbolic links correctly and will not save your ACLs. You can save your
@@ -1119,7 +1156,7 @@ This will allow you to use the `tasklog` function from the sample `$profile`
 above to view the Task Scheduler log.
 
 This is a script called `register-task.ps1` that I use for the nightly builds
-for a projects. The script must be run in an elevated shell.
+for a project. The script must be run in an elevated shell.
 
 ```powershell
 $TASKNAME = 'Nightly Build'
