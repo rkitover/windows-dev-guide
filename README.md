@@ -9,9 +9,10 @@
   - [Setting up Vim](#setting-up-vim)
   - [Set up PowerShell Profile](#set-up-powershell-profile)
   - [Setting up gpg](#setting-up-gpg)
-  - [Setting up sshd](#setting-up-sshd)
+  - [Setting up ssh](#setting-up-ssh)
   - [Setting up git](#setting-up-git)
   - [PowerShell Usage Notes](#powershell-usage-notes)
+  - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
@@ -596,19 +597,16 @@ git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
 ```
 .
 
-### Setting up sshd
+### Setting up ssh
 
-If you've installed openssh before copying over your `~/.ssh`, you will need to
-fix permissions on your `authorized_keys` files, the easiest way to do
-that is to re-run the installer with `--force`:
+To make sure the permissions are correct on the files in your `~/.ssh`
+directory, run the following:
 
 ```powershell
-choco install -y --force openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
+&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
+import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
+repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
-
-If you need to fix permissions on your private key, follow these instructions:
-
-https://superuser.com/a/1329702/226829
 
 ### Setting up git
 
@@ -832,10 +830,10 @@ Tab completing directories and files with spaces in them can be very annoying,
 one simple fix is to use a glob, for example:
 
 ```powershell
-sl /prog*s/nodejs
+sl /prog*s/node<TAB>
 ```
 
-, will change the directory to `C:\Program Files\nodejs`.
+, will complete `'C:\Program Files\nodejs'`.
 
 To make a symbolic link, do:
 
@@ -978,6 +976,35 @@ alias se* | select name, resolvedcommand
 # 'MessageBox'.
 gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
   %{ $_.name; dumpbin -headers $_ | grep MessageBox }
+```
+.
+
+### Elevated Access (sudo)
+
+There is currently no sudo-like utility to get elevated access in a terminal
+session that is not complete garbage, however a reasonable workaround is connect
+to localhost with ssh, as ssh gives you elevated access. This will not allow you
+to run GUI apps with elevated access, but most commands should work. This
+assumes you installed the ssh server as described in the [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages) section.
+
+To set this up:
+
+```powershell
+sl ~/.ssh
+gc id_rsa.pub >> authorized_keys
+```
+
+then make sure the permissions are correct by running the commands in the
+[Setting up ssh](#setting-up-ssh) section.
+
+Test connecting to localhost with `ssh localhost` for the first time, if
+everything went well ssh will prompt you to trust the host key, and on
+subsequent connections you will connect with no prompts.
+
+Now you can run console elevated commands, for example:
+
+```powershell
+ssh localhost choco upgrade -y all
 ```
 .
 
