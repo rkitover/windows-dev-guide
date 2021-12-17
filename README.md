@@ -1231,6 +1231,23 @@ ssh -NT your-server-ports
 See the [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
 section for information on using tasks.
 
+As an alternative to creating a task, you can make a startup folder shortcut,
+first open the folder:
+
+```powershell
+explorer shell:startup
+```
+
+, and then create a shortcut to `pwsh`, then open the properties for the
+shortcut and set the target to something like:
+
+```powershell
+"C:\Program Files\PowerShell\7\pwsh.exe" -windowstyle hidden -c "ssh -NT server-ports"
+```
+.
+
+Make sure `Run:` is changed from `Normal window` to `Minimized`.
+
 Once that is done, the last step is to install `virt-viewer` from Chocolatey and add the functions to your `$profile` for launching it for your VMs. I use these:
 
 ```powershell
