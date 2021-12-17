@@ -15,6 +15,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
@@ -46,7 +47,7 @@ Install some chocolatey packages:
 ```powershell
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
-choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
+choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -460,8 +461,7 @@ function syslog {
     get-winevent -log system -oldest | format-eventlog
 }
 
-# You have to enable the tasks log first as admin, see:
-# https://stackoverflow.com/q/13965997/262458
+# You have to enable the tasks log first as admin, see the Scheduled Tasks section below.
 
 function tasklog {
     get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog
@@ -963,6 +963,33 @@ write "`n`t`u{1F47D}`n"
 ```
 .
 
+PowerShell script files are any sequence of commands in a `.ps1` file, and you
+can run them directly:
+
+```powershell
+./script.ps1
+```
+.
+
+Another couple of extremely useful cmdlets are `get-clipboard` and
+`set-clipboard` to access the clipboard, for example:
+
+```powershell
+get-clipboard > clipboard-contents.txt
+gc somefile.txt | set-clipboard
+```
+.
+
+To open the explorer file manager for the current or any folder you can just run
+`explorer`, e.g.:
+
+```powershell
+explorer .
+explorer $(resolve-path /prog*s)
+explorer shell:startup
+```
+.
+
 Here are a couple more example of PowerShell one-liners:
 
 ```powershell
@@ -1034,8 +1061,8 @@ write-color -t 'foo' -c 'magenta'
 ### Available Command-Line Tools and Utilities
 
 The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
-`unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux and
-were installed in the list of packages installed from Chocolatey above.
+`nc`, `unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux
+and were installed in the list of packages installed from Chocolatey above.
 
 You get `node` and `npm` from the nodejs package. You can install any NodeJS
 utilities you need with `npm install -g <utility>`, and they will be available
@@ -1066,6 +1093,86 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 
 Many more things are available from Chocolatey and other sources of course, at
 varying degrees of functionality.
+
+### Creating Scheduled Tasks (cron)
+
+You can create and update tasks for the Windows Task Scheduler to run on a
+certain schedule or on certain conditions with a small PowerShell script. I will
+provide a couple of examples here.
+
+First, enable the tasks log by running the following in an admin shell:
+
+```powershell
+$logname = 'Microsoft-Windows-TaskScheduler/Operational'
+$log = new-object System.Diagnostics.Eventing.Reader.EventLogConfiguration $logname
+$log.isenabled=$true
+$log.savechanges()
+```
+.
+
+This is from:
+
+https://stackoverflow.com/questions/23227964/how-can-i-enable-all-tasks-history-in-powershell/23228436#23228436
+.
+
+This will allow you to use the `tasklog` function from the sample `$profile`
+above to view the Task Scheduler log.
+
+This is a script called `register-task.ps1` that I use for the nightly builds
+for a projects. The script must be run in an elevated shell.
+
+```powershell
+$TASKNAME = 'Nightly Build'
+$RUNAT    = '23:00'
+
+$trigger = new-scheduledtasktrigger -at $RUNAT -daily
+
+if (-not (test-path /logs)) { mkdir /logs }
+
+$action  = new-scheduledtaskaction `
+    -execute (get-command pwsh).source `
+    -argument "-noprofile -executionpolicy remotesigned -command `"& '$(resolve-path $psscriptroot/build-nightly.ps1)' *>> /logs/build-nightly.log`""
+
+$password = (get-credential $env:username).getnetworkcredential().password
+
+register-scheduledtask -force `
+    -taskname $TASKNAME `
+    -trigger $trigger -action $action `
+    -user $env:username `
+    -password $password `
+    -runlevel highest `
+    -ea stop | out-null
+
+write "Task '$TASKNAME' successfully registered to run daily at $RUNAT."
+
+# vim:sw=4 et:
+```
+.
+
+With the `-force` parameter to `register-scheduledtask`, you can update your
+task settings and re-run the script and the task will be updated.
+
+With `-runlevel` set to `highest` the task runs elevated, omit this parameter to
+run with standard permissions.
+
+You can also pass a `-settings` parameter to `register-scheduledtask` taking a
+task settings object created with `new-scheduledtasksettingsset`, which allows
+you to change many options for how the task is run.
+
+You can use:
+
+```powershell
+start-scheduledtask 'Task Name'
+```
+
+, to test running your task.
+
+To delete a task, run:
+
+```powershell
+unregister-scheduledtask -confirm:$false 'Task Name'
+```
+.
 
 ### Working With virt-manager VMs Using virt-viewer
 
@@ -1120,6 +1227,9 @@ Host your-server-ports
 ssh -NT your-server-ports
 ```
 .
+
+See the [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
+section for information on using tasks.
 
 Once that is done, the last step is to install `virt-viewer` from Chocolatey and add the functions to your `$profile` for launching it for your VMs. I use these:
 
