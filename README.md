@@ -5,7 +5,9 @@
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
   - [Configure the Terminal](#configure-the-terminal)
+    - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
+    - [Transparency](#transparency)
   - [Setting up Vim](#setting-up-vim)
   - [Set up PowerShell Profile](#set-up-powershell-profile)
   - [Setting up gpg](#setting-up-gpg)
@@ -19,7 +21,6 @@
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
-  - [Miscellaneous](#miscellaneous)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -190,6 +191,8 @@ these, rebind them or the original actions to something else.
 
 Restart the terminal.
 
+#### Terminal Usage
+
 You can toggle full-screen mode with `F11`.
 
 `SHIFT`+`ALT`+`+` will open a split pane vertically, while `SHIFT`+`ALT`+`-`
@@ -240,25 +243,61 @@ will be preserved.
 This system is powerful enough to give you most of the functionality of a pager
 without using a pager.
 
+#### Transparency
+
+To get transparency in Microsoft terminal, use this AutoHotkey script:
+
+```autohotkey
+#NoEnv
+SendMode Input
+SetWorkingDir %A_ScriptDir%
+
+; Toggle window transparency.
+#^Esc::
+WinGet, TransLevel, Transparent, A
+If (TransLevel = 255) {
+    WinSet, Transparent, 205, A
+} Else {
+    WinSet, Transparent, 255, A
+}
+return
+```
+.
+
+You can install the `autohotkey` package from Chocolatey.
+
+This will toggle transparency in a window when you press `CTRL+WIN+ESC`, you
+have to press it twice the first time.
+
+Thanks to @munael for this tip.
+
+Note that this will not work for the Administrator PowerShell window unless you
+run AutoHotkey with Administrator privileges, you can do that on startup by
+creating a task in the Task Scheduler.
+
 ### Setting up Vim
 
 I recommend using neovim on Windows because it has working mouse support and is
-almost 100% compatible with vim anyway.
+almost 100% compatible with vim anyway, except in an ssh session where neovim
+does not currently work for some reason.
 
 If you don't use vim, just add an alias for your favorite editor in your
 powershell `$profile`, and set `$env:EDITOR` so that git can open it for commit
 messages etc.. I will explain how to do this below.
 
-If you are using neovim, run the following:
+If you are using neovim or both, run the following:
 
 ```powershell
-mkdir ~/.vim,~/AppData/Local/nvim -ea ignore
-ni ~/.vimrc -ea ignore
+mkdir ~/.vim -ea ignore
+ni -it sym ~/vimfiles -tar $(resolve-path ~/.vim) -ea ignore
 cmd /c rmdir /Q /S $(resolve-path ~/AppData/Local/nvim)
 ni -it sym ~/AppData/Local/nvim -tar $(resolve-path ~/.vim)
-ri ~/.vim/init.vim -ea ignore
-ni -it sym ~/.vim/init.vim      -tar $(resolve-path ~/.vimrc)
-ni -it sym ~/vimfiles           -tar $(resolve-path ~/.vim)
+if (-not (test-path ~/.vim/init.vim)) {
+    ni ~/.vimrc -ea ignore
+    ni -it sym ~/.vim/init.vim  -tar $(resolve-path ~/.vimrc)
+} elseif (-not (test-path ~/.vimrc)) {
+    ni -it sym ~/.vimrc         -tar $(resolve-path ~/.vim/init.vim)
+}
 ```
 .
 
@@ -277,7 +316,8 @@ Add the following to your `$profile`:
 ```powershell
 if ($env:TERM) { ri env:TERM }
 
-$vim = resolve-path ~/.local/bin/nvim.bat
+$private:vim = resolve-path ~/.local/bin/nvim.bat
+
 set-alias -name vim -val nvim
 
 # Neovim is broken in ssh sessions, use regular vim.
@@ -287,8 +327,6 @@ if ($env:SSH_CONNECTION) {
 }
 
 $env:EDITOR = $vim -replace '\\','/'
-
-ri variable:vim
 ```
 .
 
@@ -410,7 +448,8 @@ $terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerm
 
 if ($env:TERM) { ri env:TERM }
 
-$vim = resolve-path ~/.local/bin/nvim.bat
+$private:vim = resolve-path ~/.local/bin/nvim.bat
+
 set-alias -name vim -val nvim
 
 # Neovim is broken in ssh sessions, use regular vim.
@@ -420,8 +459,6 @@ if ($env:SSH_CONNECTION) {
 }
 
 $env:EDITOR = $vim -replace '\\','/'
-
-ri variable:vim
 
 if (test-path ~/source/repos/vcpkg) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg
@@ -445,7 +482,7 @@ function pkill {
     pgrep $args | %{ stop-process $_.processid }
 }
 
-# Windows PowerShell does not support the `e special character sequence for Escape, so we use a variable $e for this.
+# "Windows PowerShell" does not support the `e special character sequence for Escape, so we use a variable $e for this.
 $e = [char]27
 
 function format-eventlog {
@@ -485,6 +522,10 @@ function head {
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
 function hexcolortorgb {
     'rgb(' + (((($args[0] -replace '^#','') -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
+}
+
+function sudo {
+    ssh localhost "sl $(pwd); $($args -join " ")"
 }
 
 # Make help nicer.
@@ -610,7 +651,7 @@ repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 
 ### Setting up git
 
-You can copy over your `~/.gitconfig`, and run the following to set some
+You can copy over your `~/.gitconfig` and/or run the following to set some
 settings I recommend:
 
 ```powershell
@@ -627,7 +668,7 @@ git config --global commit.gpgsign true
 
 ### PowerShell Usage Notes
 
-PowerShell is very different from unix shells, in both usage and programming.
+PowerShell is very different from POSIX shells, in both usage and programming.
 
 This section won't teach you PowerShell, but it will give you enough
 information to use it as a shell and a springboard for further exploration.
@@ -641,7 +682,8 @@ You can get help text for any cmdlet via its long name or alias with `help -full
 less`.
 
 If you use the settings in my `$profile`, `less` will be the default pager for
-`help` via `$env:PAGER`, and `-full` will be enabled by default via `$PSDefaultParameterValues`.
+`help` via `$env:PAGER`, and `-full` will be enabled by default via
+`$PSDefaultParameterValues`.
 
 You can get documentation for external utilities in this way:
 
@@ -665,14 +707,14 @@ aliases, this forces your brain into PowerShell mode so you will mix things up
 less often, with the exception of a couple of things like `mkdir` and the alias
 above for `which`.
 
-Here is a few:
+Here are a few:
 
 | PowerShell alias                   | Full cmdlet + Params                            | POSIX command          |
 |------------------------------------|-------------------------------------------------|------------------------|
 | sl                                 | Set-Location                                    | cd                     |
 | gci -n                             | Get-ChildItem -Name                             | ls                     |
 | gci                                | Get-ChildItem                                   | ls -l                  |
-| gi                                 | Get-Item                                        | ls -d                  |
+| gi                                 | Get-Item                                        | ls -ld                 |
 | cpi                                | Copy-Item                                       | cp -r                  |
 | ri                                 | Remove-Item                                     | rm                     |
 | ri -fo                             | Remove-Item -Force                              | rm -f                  |
@@ -753,6 +795,22 @@ gci | ltr
 ```
 .
 
+Parameters can be completed with `tab`, so in the case above you could write
+`lastw<TAB>`.
+
+PowerShell relies very heavily on tab completion, and just about everything can
+be tab completed. The style I present here uses short forms and abbreviations
+instead, when possible.
+
+Tab completing directories and files with spaces in them can be very annoying,
+one simple fix is to use a glob, for example:
+
+```powershell
+sl /prog*s/node<TAB>
+```
+
+, will complete `'C:\Program Files\nodejs'`.
+
 `Get-Child-Item` (`gci`) and `Get-Item` (`gi`) do not only operate
 on filesystem objects, but on many other kinds of objects. For example, you can
 operate on registry values like a filesystem, e.g.:
@@ -819,21 +877,6 @@ gi file
 ```
 .
 
-Parameters can be completed with `tab`, so in the case above you could write
-`lastw<tab>`.
-
-PowerShell relies very heavily on tab completion, and just about everything can
-be tab completed. The style I present here uses short forms and abbreviations
-instead, when possible.
-
-Tab completing directories and files with spaces in them can be very annoying,
-one simple fix is to use a glob, for example:
-
-```powershell
-sl /prog*s/node<TAB>
-```
-
-, will complete `'C:\Program Files\nodejs'`.
 
 To make a symbolic link, do:
 
@@ -873,7 +916,7 @@ To search under a specific directory, use this syntax:
 gci -r /windows -i *.dll
 ```
 
-to find all DLL files in all levels under `C:\Windows`.
+, for example, to find all DLL files in all levels under `C:\Windows`.
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
@@ -950,16 +993,16 @@ write "this `"is`" a test"
 
 It is also used for special character sequences, here are some useful ones:
 
-| Sequence     | Character                                    |
-|--------------|----------------------------------------------|
-| `n           | Newline                                      |
-| `r           | Carriage Return                              |
-| `b           | Backspace                                    |
-| `t           | Tab                                          |
-| `u{hex code} | Unicode Character by Hex Code Point          |
-| `e           | Escape (not supported by Windows PowerShell) |
-| `0           | Null                                         |
-| `a           | Alert (bell)                                 |
+| Sequence     | Character                                      |
+|--------------|------------------------------------------------|
+| `n           | Newline                                        |
+| `r           | Carriage Return                                |
+| `b           | Backspace                                      |
+| `t           | Tab                                            |
+| `u{hex code} | Unicode Character by Hex Code Point            |
+| `e           | Escape (not supported by "Windows PowerShell") |
+| `0           | Null                                           |
+| `a           | Alert (bell)                                   |
 
 .
 
@@ -1040,8 +1083,14 @@ gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
 There is currently no sudo-like utility to get elevated access in a terminal
 session that is not complete garbage, however a reasonable workaround is connect
 to localhost with ssh, as ssh gives you elevated access. This will not allow you
-to run GUI apps with elevated access, but most commands should work. This
-assumes you installed the ssh server as described in the [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages) section.
+to run GUI apps with elevated access, or preserve your current location, but
+most commands should work.
+
+If you use the sudo function defined in the `$profile` I provide, then your
+current location will be preserved.
+
+This assumes you installed the ssh server as described in the [Install
+Chocolatey and Some Packages](#install-chocolatey-and-some-packages) section.
 
 To set this up:
 
@@ -1050,19 +1099,20 @@ sl ~/.ssh
 gc id_rsa.pub >> authorized_keys
 ```
 
-then make sure the permissions are correct by running the commands in the
+, then make sure the permissions are correct by running the commands in the
 [Setting up ssh](#setting-up-ssh) section.
 
 Test connecting to localhost with `ssh localhost` for the first time, if
 everything went well ssh will prompt you to trust the host key, and on
 subsequent connections you will connect with no prompts.
 
-Now you can run console elevated commands, for example:
+You can now run console elevated commands, for example:
 
 ```powershell
-ssh localhost choco upgrade -y all
+sudo choco upgrade -y all
 ```
-.
+, the `sudo` function is defined in the sample `$profile` in the [Set up
+PowerShell Profile](#set-up-powershell-profile) section.
 
 ### Using PowerShell Gallery
 
@@ -1094,10 +1144,11 @@ The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
 and were installed in the list of packages installed from Chocolatey above.
 
 You get `node` and `npm` from the nodejs package. You can install any NodeJS
-utilities you need with `npm install -g <utility>`, and they will be available
-in your `$env:PATH`.
+utilities you need with `npm install -g <utility>`, and it will be available in
+your `$env:PATH`.
 
-The `python` tool (version 3) comes from the Chocolatey python package.
+The `python` and `pip` tools (version 3) come from the Chocolatey python
+package. There is nothing special you have to do to install modules with `pip`.
 
 The tools `cmake` and `ninja` come with Visual Studio, if you used my sample
 `$profile` section to set up the Visual Studio environment. You can get
@@ -1135,7 +1186,7 @@ varying degrees of functionality.
 
 You can create and update tasks for the Windows Task Scheduler to run on a
 certain schedule or on certain conditions with a small PowerShell script. I will
-provide a couple of examples here.
+provide an example here.
 
 First, enable the tasks log by running the following in an admin shell:
 
@@ -1414,44 +1465,14 @@ ni -it sym work-documents -tar //corporate-server/documents
 ```
 .
 
-To mount my NAS over SSHFS I can do this, assuming the Chocolatey sshfs package
-is installed:
+To mount my NAS over SSHFS I can do this, assuming the Chocolatey `sshfs`
+package is installed:
 
 ```powershell
 sl ~
-ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/rkitover
+ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 ```
 .
 
 Here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr` to specify
 a path relative to your home directory.
-
-### Miscellaneous
-
-To get transparency in Microsoft terminal, use this AutoHotkey script:
-
-```autohotkey
-#NoEnv
-SendMode Input
-SetWorkingDir %A_ScriptDir%
-
-; Toggle window transparency.
-#^Esc::
-WinGet, TransLevel, Transparent, A
-If (TransLevel = 255) {
-    WinSet, Transparent, 205, A
-} Else {
-    WinSet, Transparent, 255, A
-}
-return
-```
-.
-
-This will toggle transparency in a window when you press `Ctrl+Win+Esc`, you
-have to press it twice the first time.
-
-Thanks to @munael for this tip.
-
-Note that this will not work for the Administrator PowerShell window unless you
-run AutoHotkey with Administrator privileges, you can do that on startup by
-creating a task.
