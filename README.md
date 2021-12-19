@@ -46,6 +46,7 @@ Close the Administrator PowerShell window and open it again.
 Install some chocolatey packages:
 
 ```powershell
+[environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
@@ -526,6 +527,10 @@ function hexcolortorgb {
 
 function sudo {
     ssh localhost "sl $(pwd); $($args -join " ")"
+}
+
+function nproc {
+    [environment]::processorcount
 }
 
 # Make help nicer.
@@ -1362,7 +1367,7 @@ It is necessary to disable DPI scaling for this app. First, run this command in
 an admin terminal:
 
 ```powershell
-setx __COMPAT_LAYER HighDpiAware /M
+[environment]::setenvironmentvariable('__COMPAT_LAYER', 'HighDpiAware /M', 'machine')
 ```
 .
 
