@@ -1190,6 +1190,23 @@ cl hello.c /o hello
 ```
 .
 
+To start the Visual Studio IDE you can use the `devenv` command.
+
+To open a cmake project, go into the directory containing `CMakeLists.txt` and
+run:
+
+```powershell
+devenv .
+```
+.
+
+To debug an executable built with `-DCMAKE_BUILD_TYPE=Debug`, you can do this:
+
+```powershell
+devenv /debugexe file.exe arg1 arg2 ...
+```
+.
+
 The tool `make` is a native port of GNU Make from Chocolatey. It will generally
 not run regular Linux Makefiles because it expects `cmd.exe` shell commands.
 However, it is possible to write Makefiles that work in both environments if the
