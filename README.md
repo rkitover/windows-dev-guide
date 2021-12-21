@@ -983,6 +983,15 @@ write "This file contains $((gc README.md | measure -l).lines) lines."
 ```
 .
 
+There isn't really a parallel to subshells in POSIX shells, because Windows does
+not use `fork()`, but immediately executed script blocks can be used for similar
+purposes. The syntax is:
+
+```powershell
+&{ write "this is running in a script block" }
+```
+.
+
 In PowerShell, the backtick `` ` `` is the escape character, and you can use it
 at the end of a line, escaping the line end as a line continuation character. In
 regular expressions, the backslash `\` is the escape character, like everywhere
@@ -1160,6 +1169,13 @@ The tools `cmake` and `ninja` come with Visual Studio, if you used my sample
 dependencies from Conan or VCPKG, I recommend Conan because it has binary
 packages. More on all that later when I expand this guide. Be sure to pass `-G
 Ninja` to `cmake`.
+
+The Visual Studio C and C++ compiler command is `cl`. Here is a simple example:
+
+```powershell
+cl hello.c /o hello
+```
+.
 
 The tool `make` is a native port of GNU Make from Chocolatey. It will generally
 not run regular Linux Makefiles because it expects `cmd.exe` shell commands.
