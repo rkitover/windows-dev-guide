@@ -772,8 +772,8 @@ ri .*.un~,.*.sw?
 Note that globs in PowerShell are case-insensitive.
 
 Redirection for files and commands works like in POSIX on a basic level, that
-is, you can expect `<`, `>` and `|` to redirect files and commands like you
-would expect on a POSIX shell. The file descriptors `0`, `1` and `2` are
+is, you can expect `>` and `|` to redirect files and commands like you
+would expect on a POSIX shell. The `<` operator is not yet available. The file descriptors `0`, `1` and `2` are
 `stdin`, `stdout` and `stderr` just like in POSIX.  The equivalent of
 `/dev/null` is `$null`, so a command such as:
 
@@ -816,6 +816,15 @@ sl /prog*s/node<TAB>
 ```
 
 , will complete `'C:\Program Files\nodejs'`.
+
+The cmdlet `Get-Command` (aliased to `which` in the `$profile` above) will tell
+you the type of a command, like `type` on bash. To get the path of an executable
+use, e.g.:
+
+```powershell
+(which git).source
+```
+.
 
 `Get-Child-Item` (`gci`) and `Get-Item` (`gi`) do not only operate
 on filesystem objects, but on many other kinds of objects. For example, you can
