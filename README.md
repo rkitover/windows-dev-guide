@@ -49,7 +49,7 @@ Install some chocolatey packages:
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
-choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable patch powershell-core python ripgrep sed sshfs unzip vim zip
+choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -539,6 +539,7 @@ $env:PAGER = 'less'
 
 set-alias -name which   -val get-command
 set-alias -name notepad -val '/program files/notepad++/notepad++'
+set-alias -name patch   -val $(resolve-path /prog*s/git/usr/bin/patch.exe)
 
 # To use neovim instead of vim for mouse support:
 set-alias -name vim     -val nvim
@@ -1156,6 +1157,9 @@ write-color -t 'foo' -c 'magenta'
 The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
 `nc`, `unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux
 and were installed in the list of packages installed from Chocolatey above.
+
+The `patch` command comes with Git for Windows, the `$profile` above adds an
+alias to it.
 
 You get `node` and `npm` from the nodejs package. You can install any NodeJS
 utilities you need with `npm install -g <utility>`, and it will be available in
