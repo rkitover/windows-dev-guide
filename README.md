@@ -111,7 +111,8 @@ choco update -y all
 
 Sometimes after you install a package, your terminal session will not have it in
 `$env:PATH`, you can restart your terminal or run `refreshenv` re-read your
-environment settings.
+environment settings. This is also in the `$profile` below, so starting a new
+tab will also work.
 
 ### Configure the Terminal
 
@@ -637,7 +638,12 @@ if ($vs_path -and -not $env:VSCMD_VER) {
 # Chocolatey profile
 $chocolatey_profile = "$env:chocolateyinstall\helpers\chocolateyprofile.psm1"
 
-if (test-path $chocolatey_profile) { import-module $chocolatey_profile }
+if (test-path $chocolatey_profile) {
+    import-module $chocolatey_profile
+}
+
+# Update environment in case the terminal session environment is not up to date.
+update-sessionenvironment
 
 import-module ~/source/repos/posh-git/src/posh-git.psd1
 
