@@ -51,7 +51,7 @@ Install some chocolatey packages:
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
-choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs unzip vim zip
+choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip vim zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -108,6 +108,10 @@ To update all installed packages:
 choco update -y all
 ```
 .
+
+Sometimes after you install a package, your terminal session will not have it in
+`$env:PATH`, you can restart your terminal or run `refreshenv` re-read your
+environment settings.
 
 ### Configure the Terminal
 
@@ -1247,6 +1251,10 @@ your `$env:PATH`.
 
 The `python` and `pip` tools (version 3) come from the Chocolatey python
 package. There is nothing special you have to do to install modules with `pip`.
+
+The `perl` command comes from StrawberryPerl from Chocolatey, it is mostly fully
+functional and allows you to install many modules from CPAN without issues. See
+the `$env:PATH` override for it in the `$profile` above.
 
 The tools `cmake` and `ninja` come with Visual Studio, if you used my sample
 `$profile` section to set up the Visual Studio environment. You can get
