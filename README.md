@@ -429,21 +429,16 @@ You can add it with Plug or pathogen or whatever you prefer.
 Run the following:
 
 ```powershell
-mkdir ~/Downloads/nano -ea ignore
-pushd ~/Downloads/nano
-curl -sLO ("https://files.lhmouse.com/nano-win/" + $(curl -sL -o - 'https://files.lhmouse.com/nano-win/' | sed -nE 's/.*"(nano.*\.7z).*/\1/p' | select -last 1))
-7z x nano*.7z
-cpi pkg_x86_64*/bin/nano.exe ~/.local/bin
-popd
-ri -r -fo ~/Downloads/nano
-mkdir ~/.nano -ea ignore
-mkdir ~/source/repos -ea ignore
-pushd ~/source/repos
-git clone https://github.com/scopatz/nanorc
-pushd nanorc
-gci -r *.nanorc | %{ cpi $_ ~/.nano }
-popd
-ri -r -fo nanorc
+ri -r -fo ~/Downloads/nano-installer -ea ignore
+mkdir ~/Downloads/nano-installer | out-null
+pushd ~/Downloads/nano-installer
+curl -sLO ("https://files.lhmouse.com/nano-win/" + $(curl -sL -o - "https://files.lhmouse.com/nano-win/" | ?{ $_ -match '.*"(nano.*\.7z)".*' } | %{ $matches[1] } | select -last 1))
+7z x nano*.7z *> $null
+mkdir ~/.local/bin -ea ignore | out-null
+cpi -fo pkg_x86_64*/bin/nano.exe ~/.local/bin
+mkdir ~/.nano -ea ignore | out-null
+git clone https://github.com/scopatz/nanorc *> $null
+gci -r nanorc -i *.nanorc | %{ cpi $_ ~/.nano }
 popd
 write ("include `"" + (($env:USERPROFILE -replace '\\','/') -replace '^[^/]+','').tolower() + "/.nano/*.nanorc`"") >> ~/.nanorc
 ```
