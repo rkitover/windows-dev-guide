@@ -8,7 +8,9 @@
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
     - [Transparency](#transparency)
-  - [Setting up Vim](#setting-up-vim)
+  - [Setting up an Editor](#setting-up-an-editor)
+    - [Setting up Vim](#setting-up-vim)
+    - [Setting up nano](#setting-up-nano)
   - [Set up PowerShell Profile](#set-up-powershell-profile)
   - [Setting up gpg](#setting-up-gpg)
   - [Setting up ssh](#setting-up-ssh)
@@ -276,15 +278,26 @@ Note that this will not work for the Administrator PowerShell window unless you
 run AutoHotkey with Administrator privileges, you can do that on startup by
 creating a task in the Task Scheduler.
 
-### Setting up Vim
+### Setting up an Editor
+
+Here I will describe how to set up a few editors. You can use nano, vim, emacs
+or vscode etc..
+
+You can also edit files in the Visual Studio IDE using the `devenv` command.
+
+I use vim, and the examples here are geared towards that.
+
+If you want a very simple terminal editor that doesn't require learning how to
+use it, you can use nano, see below for how to install it.
+
+Make sure `$env:EDITOR` is set to the executable or script that launches your
+editor with backslashes replaced with forward slashes so that git can use it for commit messages. See the `$profile` example below.
+
+#### Setting up Vim
 
 I recommend using neovim on Windows because it has working mouse support and is
 almost 100% compatible with vim anyway, except in an ssh session where neovim
 does not currently work for some reason.
-
-If you don't use vim, just add an alias for your favorite editor in your
-powershell `$profile`, and set `$env:EDITOR` so that git can open it for commit
-messages etc.. I will explain how to do this below.
 
 If you are using neovim or both, run the following:
 
@@ -405,6 +418,39 @@ https://github.com/rkitover/Apprentice
 
 You can add it with Plug or pathogen or whatever you prefer.
 
+#### Setting up nano
+
+Run the following:
+
+```powershell
+mkdir ~/Downloads/nano -ea ignore
+pushd ~/Downloads/nano
+curl -sLO ("https://files.lhmouse.com/nano-win/" + $(curl -sL -o - 'https://files.lhmouse.com/nano-win/' | sed -nE 's/.*"(nano.*\.7z).*/\1/p' | select -last 1))
+7z x nano*.7z
+cpi pkg_x86_64*/bin/nano.exe ~/.local/bin
+popd
+ri -r -fo ~/Downloads/nano
+mkdir ~/.nano -ea ignore
+mkdir ~/source/repos -ea ignore
+pushd ~/source/repos
+git clone https://github.com/scopatz/nanorc
+pushd nanorc
+gci -r *.nanorc | %{ cpi $_ ~/.nano }
+popd
+ri -r -fo nanorc
+popd
+write ("include `"" + (($env:USERPROFILE -replace '\\','/') -replace '^[^/]+','').tolower() + "/.nano/*.nanorc`"") >> ~/.nanorc
+```
+.
+
+Make sure `~/.local/bin` is in your `$env:PATH` and set `$env:EDITOR` in your
+`$profile` as follows:
+
+```powershell
+$env:EDITOR = (get-command nano).source -replace '\\','/'
+```
+.
+
 ### Set up PowerShell Profile
 
 Now add some useful things to your powershell profile, I will present some of
@@ -442,6 +488,17 @@ set-executionpolicy -scope currentuser remotesigned
 
 set-culture en-US
 
+$private:append_paths = `
+    '~/.local/bin'
+
+foreach ($path in $append_paths) {
+    $path = resolve-path $path
+
+    if (-not ((($env:PATH -split ';') | ?{ $_.length } | %{ (resolve-path $_).path 2>$null }) -contains $path)) {
+        $env:PATH += ";$path"
+    }
+}
+
 # Remove Strawberry Perl MinGW stuff from PATH.
 $env:PATH = ($env:PATH -split ';' | ?{ $_ -notmatch '\\Strawberry\\c\\bin$' }) -join ';'
 
@@ -460,6 +517,9 @@ if ($env:SSH_CONNECTION) {
 }
 
 $env:EDITOR = $vim -replace '\\','/'
+
+# For nano:
+#$env:EDITOR = (get-command nano).source -replace '\\','/'
 
 if (test-path ~/source/repos/vcpkg) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg
@@ -1045,6 +1105,17 @@ can run them directly:
 ./script.ps1
 ```
 .
+
+The equivalent of `set -e` in POSIX shells is:
+
+```powershell
+$erroractionpreference = 'stop'
+```
+.
+
+I highly recommend it adding it to the top of your scripts.
+
+The bash commands `pushd` and `popd` are also available for use in your scripts.
 
 Reading a PowerShell script into your current session works the same way as in
 bash, e.g.:
