@@ -154,8 +154,9 @@ In the `"profiles"` `"defaults"` section add:
     "colorScheme": "Tango Dark",
     "intenseTextStyle": "bold",
     "padding": "0",
-    "scrollbarState": "hidden"
-    "closeOnExit": "always"
+    "scrollbarState": "hidden",
+    "closeOnExit": "always",
+    "bellStyle": "none"
 },
 ```
 .
@@ -493,6 +494,16 @@ set-executionpolicy -scope currentuser remotesigned
 
 set-culture en-US
 
+# Chocolatey profile
+$chocolatey_profile = "$env:chocolateyinstall\helpers\chocolateyprofile.psm1"
+
+if (test-path $chocolatey_profile) {
+    import-module $chocolatey_profile
+}
+
+# Update environment in case the terminal session environment is not up to date.
+update-sessionenvironment
+
 $private:append_paths = `
     '~/.local/bin'
 
@@ -634,16 +645,6 @@ if ($vs_path -and -not $env:VSCMD_VER) {
     }
     popd
 }
-
-# Chocolatey profile
-$chocolatey_profile = "$env:chocolateyinstall\helpers\chocolateyprofile.psm1"
-
-if (test-path $chocolatey_profile) {
-    import-module $chocolatey_profile
-}
-
-# Update environment in case the terminal session environment is not up to date.
-update-sessionenvironment
 
 import-module ~/source/repos/posh-git/src/posh-git.psd1
 
