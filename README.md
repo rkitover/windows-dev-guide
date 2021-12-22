@@ -433,7 +433,7 @@ ri -r -fo ~/Downloads/nano-installer -ea ignore
 mkdir ~/Downloads/nano-installer | out-null
 pushd ~/Downloads/nano-installer
 curl -sLO ("https://files.lhmouse.com/nano-win/" + $(curl -sL -o - "https://files.lhmouse.com/nano-win/" | ?{ $_ -match '.*"(nano.*\.7z)".*' } | %{ $matches[1] } | select -last 1))
-7z x nano*.7z *> $null
+7z x nano*.7z | out-null
 mkdir ~/.local/bin -ea ignore | out-null
 cpi -fo pkg_x86_64*/bin/nano.exe ~/.local/bin
 mkdir ~/.nano -ea ignore | out-null
@@ -838,7 +838,7 @@ ri .*.un~,.*.sw?
 Note that globs in PowerShell are case-insensitive.
 
 Redirection for files and commands works like in POSIX on a basic level, that
-is, you can expect `>` and `|` to redirect files and commands like you
+is, you can expect `>`, `>>` and `|` to redirect files and commands like you
 would expect on a POSIX shell. The `<` operator is not yet available. The file descriptors `0`, `1` and `2` are
 `stdin`, `stdout` and `stderr` just like in POSIX.  The equivalent of
 `/dev/null` is `$null`, so a command such as:
@@ -1424,7 +1424,7 @@ GatewayPorts yes
 
 Then, forward the spice ports for the VMs you are interested in working with over ssh. To do that, edit your `~/.ssh/config` and set your server entry to something like the following:
 
-```
+```sshconfig
 Host your-server
   LocalForward 5900 localhost:5900
   LocalForward 5901 localhost:5901
@@ -1434,7 +1434,7 @@ Host your-server
 
 You can also make a separate entry just for forwarding the ports with a different alias, for example:
 
-```
+```sshconfig
 Host your-server-ports
   HostName your-server
   LocalForward 5900 localhost:5900
@@ -1556,7 +1556,7 @@ X11Forwarding yes
 On the local computer, edit `~/.ssh/config` and set the configuration for your
 remote computer as follows:
 
-```
+```sshconfig
 Host remote-computer
   ForwardX11 yes
   ForwardX11Trusted yes
