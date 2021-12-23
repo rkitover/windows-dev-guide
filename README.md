@@ -291,6 +291,9 @@ or vscode etc..
 
 You can also edit files in the Visual Studio IDE using the `devenv` command.
 
+You can use `notepad` which is in your `$env:PATH` already, and `wordpad`, for
+which I added an alias in the `$profile` below.
+
 I use vim, and the examples here are geared towards that.
 
 If you want a very simple terminal editor that doesn't require learning how to
@@ -499,17 +502,16 @@ if (test-path $chocolatey_profile) {
 # Update environment in case the terminal session environment is not up to date.
 update-sessionenvironment
 
-$private:append_paths = `
+$private:prepend_paths = `
     '~/.local/bin'
 
-foreach ($path in $append_paths) {
+foreach ($path in $prepend_paths) {
     $path = resolve-path $path
 
-    if (-not ((($env:PATH -split ';') | ?{ $_.length } | %{ (resolve-path $_).path 2>$null }) -contains $path)) {
-        $env:PATH += ";$path"
+    if (-not ((($env:PATH -split ';') | ? length | %{ (resolve-path $_ -ea ignore).path }) -contains $path)) {
+        $env:PATH = "$path;" + $env:PATH
     }
 }
-
 # Remove Strawberry Perl MinGW stuff from PATH.
 $env:PATH = ($env:PATH -split ';' | ?{ $_ -notmatch '\\Strawberry\\c\\bin$' }) -join ';'
 
@@ -611,6 +613,7 @@ $env:PAGER = 'less'
 set-alias -name which   -val get-command
 set-alias -name notepad -val '/program files/notepad++/notepad++'
 set-alias -name patch   -val $(resolve-path /prog*s/git/usr/bin/patch.exe)
+set-alias -name wordpad -val $(resolve-path /prog*s/win*nt/accessories/wordpad.exe)
 
 # To use neovim instead of vim for mouse support:
 set-alias -name vim     -val nvim
