@@ -787,6 +787,8 @@ help about_*
 ```
 .
 
+Run `update-help` once in a while to update all your help files.
+
 You can get documentation for external utilities in this way:
 
 ```powershell
@@ -1267,6 +1269,13 @@ You can then immediately use the new module, e.g.:
 
 ```powershell
 write-color -t 'foo' -c 'magenta'
+```
+.
+
+To update all your modules, you can do this:
+
+```powershell
+get-installedmodule | update-module
 ```
 .
 
