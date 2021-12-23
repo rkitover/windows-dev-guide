@@ -770,6 +770,23 @@ If you use the settings in my `$profile`, `less` will be the default pager for
 `help` via `$env:PAGER`, and `-full` will be enabled by default via
 `$PSDefaultParameterValues`.
 
+You can search for documentation using globs, for example to see a list of
+articles containing the word "where":
+
+```powershell
+help *where*
+```
+.
+
+The conceptual documentation not related to a specific command or function takes
+the form `about_XXXXX` e.g. `about_Operators`, modules you install will often
+also have such a document, to see a list:
+
+```powershell
+help about_*
+```
+.
+
 You can get documentation for external utilities in this way:
 
 ```powershell
