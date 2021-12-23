@@ -610,7 +610,17 @@ function nproc {
 $PSDefaultParameterValues = @{"help:Full"=$true}
 $env:PAGER = 'less'
 
-set-alias -name which   -val get-command
+function get-command-wrapper {
+    $cmd = get-command @args
+    if ($cmd.commandtype -eq 'Application') {
+        $cmd.source
+    }
+    else {
+        $cmd
+    }
+}
+
+set-alias -name which   -val get-command-wrapper
 set-alias -name notepad -val '/program files/notepad++/notepad++'
 set-alias -name patch   -val $(resolve-path /prog*s/git/usr/bin/patch.exe)
 set-alias -name wordpad -val $(resolve-path /prog*s/win*nt/accessories/wordpad.exe)
@@ -779,8 +789,8 @@ browser, e.g. `git help config`.
 
 I suggest using the short forms of PowerShell aliases instead of the POSIX
 aliases, this forces your brain into PowerShell mode so you will mix things up
-less often, with the exception of a couple of things like `mkdir` and the alias
-above for `which`.
+less often, with the exception of a couple of things like `mkdir` and the
+wrapper above for `which`.
 
 Here are a few:
 
@@ -886,14 +896,16 @@ sl /prog*s/node<TAB>
 
 , will complete `'C:\Program Files\nodejs'`.
 
-The cmdlet `Get-Command` (aliased to `which` in the `$profile` above) will tell
+The cmdlet `Get-Command` (wrapped by `which` in the `$profile` above) will tell
 you the type of a command, like `type` on bash. To get the path of an executable
 use, e.g.:
 
 ```powershell
-(which git).source
+(get-command git).source
 ```
 .
+
+The `which` wrapper does this automatically.
 
 `Get-Child-Item` (`gci`) and `Get-Item` (`gi`) do not only operate
 on filesystem objects, but on many other kinds of objects. For example, you can
