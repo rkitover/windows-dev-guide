@@ -356,19 +356,20 @@ $env:EDITOR = $vim -replace '\\','/'
 
 In `~/.local/bin/nvim.bat` put the following for neovim:
 
-```bat
+```dosbatch
 @echo off
 set TERM=
-nvim %*
+/tools/neovim/neovim/bin/nvim %*
 ```
 ,
 
 and in `~/.local/bin/vim.bat` put the following for regular vim:
 
-```bat
+```dosbatch
 @echo off
 set TERM=
-c:\windows\vim.bat %*
+for /f "tokens=*" %%f in ('dir /b \tools\vim\vim*') do @call set vimdir=%%f
+/tools/vim/%vimdir%/vim %*
 ```
 .
 
@@ -611,17 +612,16 @@ function nproc {
 $PSDefaultParameterValues = @{"help:Full"=$true}
 $env:PAGER = 'less'
 
-function get-command-wrapper {
-    $cmd = get-command @args
+function which {
+    $cmd = try { get-command @args -ea stop }
+           catch { write-error $_ -ea stop }
+
     if ($cmd.commandtype -eq 'Application') {
-        $cmd.source
+        $cmd = $cmd.source
     }
-    else {
-        $cmd
-    }
+    $cmd
 }
 
-set-alias -name which   -val get-command-wrapper
 set-alias -name notepad -val '/program files/notepad++/notepad++'
 set-alias -name patch   -val $(resolve-path /prog*s/git/usr/bin/patch.exe)
 set-alias -name wordpad -val $(resolve-path /prog*s/win*nt/accessories/wordpad.exe)
