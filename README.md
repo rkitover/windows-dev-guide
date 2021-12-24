@@ -771,8 +771,8 @@ If you use the settings in my `$profile`, `less` will be the default pager for
 `help` via `$env:PAGER`, and `-full` will be enabled by default via
 `$PSDefaultParameterValues`.
 
-You can search for documentation using globs, for example to see a list of
-articles containing the word "where":
+You can use tab completion to find help topics and search for documentation
+using globs, for example to see a list of articles containing the word "where":
 
 ```powershell
 help *where*
@@ -1026,13 +1026,22 @@ gci -r *.cpp
 ```
 .
 
-To search under a specific directory, use this syntax:
+To search under a specific directory, specify the glob with `-Include`, e.g.:
 
 ```powershell
 gci -r /windows -i *.dll
 ```
 
 , for example, to find all DLL files in all levels under `C:\Windows`.
+
+Another useful parameter for the file operation commands is `-Exclude`, which
+also takes globs, e.g.:
+
+```powershell
+gci ~/source/repos -exclude vcpkg
+gci -r /some/dir -exclude .*
+```
+.
 
 PowerShell supports an amazing new system called the "object pipeline", what
 this means is that you can pass objects around via pipelines and inspect their
