@@ -49,6 +49,7 @@ Install some chocolatey packages:
 
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
+choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
