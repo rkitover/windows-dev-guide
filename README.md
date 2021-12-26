@@ -49,11 +49,12 @@ Install some chocolatey packages:
 
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
+set-service beep -startuptype disabled
 choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip zip
+choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -267,7 +268,7 @@ SetWorkingDir %A_ScriptDir%
 #^Esc::
 WinGet, TransLevel, Transparent, A
 If (TransLevel = 255) {
-    WinSet, Transparent, 205, A
+    WinSet, Transparent, 180, A
 } Else {
     WinSet, Transparent, 255, A
 }
@@ -529,7 +530,7 @@ $env:PATH = ($env:PATH -split ';' | ?{ $_ -notmatch '\\Strawberry\\c\\bin$' }) -
 
 $terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json
 
-if ($env:TERM) { ri env:TERM }
+ri env:TERM -ea ignore
 
 $private:vim = resolve-path ~/.local/bin/nvim.bat
 
@@ -591,6 +592,8 @@ function tasklog {
 }
 
 function ltr { $input | sort lastwritetime }
+
+function count { $input | measure | % count }
 
 function ntop { ntop.exe -s 'CPU%' $args }
 
@@ -1088,6 +1091,48 @@ get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 
 Here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
 
+In PowerShell pipelines you will generally be working with object streams and
+their properties rather than lines of text. I will describe a few tricks for
+doing this here.
+
+You can use the `% property` shorthand to select a single property from an
+object stream, for example:
+
+```powershell
+gci | % name
+```
+, will do the same thing as `gci -n`. The input does not have to be a stream of
+multiple objects, using this on a single object will work just fine.
+
+This also works with `?` aka `Where-Object`, which has parameters mimicking
+PowerShell operators, allowing you to do things like this:
+
+```powershell
+gci | ? length -lt 1000
+```
+, which will show all filesystem objects less than `1000` bytes.
+
+Or, e.g.:
+
+```powershell
+get-process | ? name -match 'win'
+```
+.
+
+There are many useful parameters to the `select` aka `Select-Object` command for
+manipulating object streams, including `-first` and `-last` as you saw for the
+`head`/`tail` equivalents, as well as `-skip`, `-skiplast`, `-unique`, `-index`,
+`-skipindex` and `-expand`. The last one, `-expand`, will select a property from
+the objects selected.
+
+For example,
+
+```powershell
+gci ~/Downloads/*.zip | sort length | select -skiplast 1 | select -last 1 -expand name
+```
+, will give me the name of the second biggest `.zip` file in my `~/Downloads`
+folder.
+
 The equivalent of `wc -l file` to count lines is:
 
 ```powershell
@@ -1100,16 +1145,24 @@ of the three in one command, the output is a table.
 To get just the number of lines, you can do this:
 
 ```powershell
-(gc file | measure -l).lines
+gc file | measure -l | % lines
 ```
 .
+
+Note that if you are working with objects and not lines of text, `meaure -l`
+will still do what you expect, but it's better to do something like:
+
+```powershell
+gci | measure | % count
+```
+, I define the function `count` in the `$profile` above that does this.
 
 Command substitution is pretty much the same as in POSIX shells, using `$( ...
 )`. For example:
 
 ```powershell
 vim $(gci -r *.h)
-write "This file contains $((gc README.md | measure -l).lines) lines."
+write "This file contains $(gc README.md | measure -l | % lines) lines."
 ```
 .
 
@@ -1301,9 +1354,10 @@ get-installedmodule | update-module
 
 ### Available Command-Line Tools and Utilities
 
-The commands `grep`, `sed`, `awk`, `rg`, `diff`, `patch`, `less`, `zip`, `gzip`,
-`nc`, `unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in Linux
-and were installed in the list of packages installed from Chocolatey above.
+The commands `grep`, `sed`, `awk`, `file`, `rg`, `diff`, `patch`, `less`, `zip`,
+`gzip`, `nc`, `unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in
+Linux and were installed in the list of packages installed from Chocolatey
+above.
 
 The `patch` command comes with Git for Windows, the `$profile` above adds an
 alias to it.
