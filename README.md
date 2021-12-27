@@ -803,6 +803,20 @@ ri -r *
 
 , is safe because hidden files like `.git` are not affected without `-Force`.
 
+With `core.autocrlf` set to `false`, the files in your checkouts will have UNIX
+line endings, but occasionally you need a project to have DOS line endings, for
+example if you use PowerShell scripts to edit the files in the project. In this
+case, it's best to make a `.gitattributes` file in the root of your project and
+commit it, containing for example:
+
+```
+* text=auto
+*.exe binary
+```
+. Make sure to add exclusions for all binary file types you need.
+
+This way, anyone cloning the repo will have the correct line endings.
+
 ### PowerShell Usage Notes
 
 PowerShell is very different from POSIX shells, in both usage and programming.
