@@ -14,7 +14,7 @@
   - [Set up PowerShell Profile](#set-up-powershell-profile)
   - [Setting up gpg](#setting-up-gpg)
   - [Setting up ssh](#setting-up-ssh)
-  - [Setting up git](#setting-up-git)
+  - [Setting up and Using git](#setting-up-and-using-git)
   - [PowerShell Usage Notes](#powershell-usage-notes)
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
@@ -748,7 +748,7 @@ import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
 repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
 
-### Setting up git
+### Setting up and Using git
 
 You can copy over your `~/.gitconfig` and/or run the following to set some
 settings I recommend:
@@ -764,6 +764,44 @@ git config --global pull.rebase    true
 git config --global commit.gpgsign true
 ```
 .
+
+Git usage from PowerShell is pretty much the same as on Linux, with a couple of
+caveats.
+
+Arguments containing special characters like `:` or `.` should be quoted, for
+example:
+
+```powershell
+git tag -s 'v5.41' -m'v5.41'
+git push origin ':refs/heads/some-branch'
+```
+.
+
+The `.git` directory is hidden, to see it use:
+
+```powershell
+gci -fo
+# or
+gi -fo .git
+```
+.
+
+**NEVER** run the command:
+
+```powershell
+ri -r -fo *
+```
+
+. On Linux, the `*` glob does match dot files like `.git`, but on Windows it
+matches everything.
+
+The command:
+
+```powershell
+ri -r *
+```
+
+, is safe because hidden files like `.git` are not affected without `-Force`.
 
 ### PowerShell Usage Notes
 
@@ -882,6 +920,9 @@ ri .*.un~,.*.sw?
 .
 
 Note that globs in PowerShell are case-insensitive.
+
+Also, unlike Linux, the `*` glob will match all files including `.dotfiles`.
+Windows uses a different mechanism for hidden files, see below.
 
 Redirection for files and commands works like in POSIX on a basic level, that
 is, you can expect `>`, `>>` and `|` to redirect files and commands like you
