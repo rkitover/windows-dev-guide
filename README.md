@@ -38,8 +38,8 @@ making unprivileged symlinks.
 - Run these commands:
 
 ```powershell
-Set-ExecutionPolicy -Scope LocalMachine -Force RemoteSigned
-iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+set-executionpolicy -scope localmachine -force remotesigned
+iex ((new-object system.net.webclient).downloadstring('https://chocolatey.org/install.ps1'))
 ```
 .
 
@@ -680,6 +680,8 @@ function global:PromptWriteErrorInfo() {
 }
 
 $gitpromptsettings.defaultpromptabbreviatehomedirectory      = $true
+
+$gitpromptsettings.defaultpromptpath.foregroundcolor         = 0xC4A000
 
 $gitpromptsettings.defaultpromptprefix.text                  = '$(PromptWriteErrorInfo) '
 
