@@ -1172,6 +1172,13 @@ gci | % name
 , will do the same thing as `gci -n`. The input does not have to be a stream of
 multiple objects, using this on a single object will work just fine.
 
+This will get the full paths of the files in a directory:
+
+```powershell
+gci ~/source/pwsh/*.ps1 | % fullname
+```
+.
+
 This also works with `?` aka `Where-Object`, which has parameters mimicking
 PowerShell operators, allowing you to do things like this:
 
