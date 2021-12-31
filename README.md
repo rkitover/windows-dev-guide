@@ -179,6 +179,7 @@ and 'DejaVu Sans Mono' which was in the list of Chocolatey packages above.
 In the `"actions"` section add these keybindings:
 
 ```json
+{ "command": null, "keys": "alt+enter" },
 { "command": { "action": "newTab"  }, "keys": "ctrl+shift+t" },
 { "command": { "action": "nextTab" }, "keys": "ctrl+shift+right" },
 { "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" }
@@ -621,6 +622,12 @@ function nproc {
     [environment]::processorcount
 }
 
+ri alias:pwd -ea ignore
+
+function pwd {
+    get-location | %{ ($_.path.replace($env:USERPROFILE,'~') -replace '^.+:','') -replace '\\','/' }
+}
+
 # Make help nicer.
 $PSDefaultParameterValues = @{"help:Full"=$true}
 $env:PAGER = 'less'
@@ -642,7 +649,7 @@ set-alias -name wordpad -val $(resolve-path /prog*s/win*nt/accessories/wordpad.e
 # To use neovim instead of vim for mouse support:
 set-alias -name vim     -val nvim
 
-if (test-path alias:diff) { ri -fo alias:diff }
+ri alias:diff -ea ignore
 
 # Load VS env only once.
 foreach ($vs_type in 'buildtools','community') {
@@ -701,6 +708,10 @@ set-psreadlineoption     -editmode emacs
 set-psreadlinekeyhandler -key tab       -function complete
 set-psreadlinekeyhandler -key uparrow   -function historysearchbackward
 set-psreadlinekeyhandler -key downarrow -function historysearchforward
+
+# Thanks to @ninmonkey for these:
+set-psreadlinekeyhandler -chord 'ctrl+spacebar' -function menucomplete
+set-psreadlinekeyhandler -chord 'alt+enter'     -function addline
 ```
 .
 
@@ -1189,6 +1200,14 @@ gci ~/Downloads/*.zip | sort length | select -skiplast 1 | select -last 1 -expan
 ```
 , will give me the name of the second biggest `.zip` file in my `~/Downloads`
 folder.
+
+If you want to inspect the properties available on an object and their current
+values, you can use `fl *` aka `Format-List`, e.g.:
+
+```powershell
+gci ~/.vimrc | fl *
+```
+.
 
 The equivalent of `wc -l file` to count lines is:
 
