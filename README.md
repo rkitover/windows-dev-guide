@@ -1147,6 +1147,17 @@ gc file-list | cpi -r -dest e:/backup
 , copies the files and directories listed in my file to a directory on a USB
 stick.
 
+Most commands can accept pipeline input, even ones you wouldn't expect to, for
+example:
+
+```powershell
+split-path -parent $profile | sl
+```
+, will enter your Documents PowerShell directory.
+
+The help documentation for commands will generally state if they accept pipeline
+input or not.
+
 You can access the piped-in input in your own functions as the special `$input`
 variable, like in the `head` example in the profile above.
 
