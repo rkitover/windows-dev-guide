@@ -994,6 +994,14 @@ gci | ltr
 ```
 .
 
+The command:
+
+```powershell
+gci -n
+```
+, aka `-Name` will list only file/directory/object names as strings, which can
+be useful for long names or to pipe name strings only to another command.
+
 Parameters can be completed with `tab`, so in the case above you could write
 `lastw<TAB>`.
 
