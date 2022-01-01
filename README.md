@@ -350,7 +350,7 @@ set-alias -name vim -val nvim
 # Neovim is broken in ssh sessions, use regular vim.
 if ($env:SSH_CONNECTION) {
     $vim = resolve-path ~/.local/bin/vim.bat
-    ri alias:vim
+    ri -fo alias:vim -ea ignore
 }
 
 $env:EDITOR = $vim -replace '\\','/'
@@ -540,7 +540,7 @@ set-alias -name vim -val nvim
 # Neovim is broken in ssh sessions, use regular vim.
 if ($env:SSH_CONNECTION) {
     $vim = resolve-path ~/.local/bin/vim.bat
-    ri alias:vim
+    ri -fo alias:vim -ea ignore
 }
 
 $env:EDITOR = $vim -replace '\\','/'
@@ -555,7 +555,7 @@ if (test-path ~/source/repos/vcpkg) {
 $env:DISPLAY = '127.0.0.1:0.0'
 
 function megs {
-    gci -r $args | select mode, lastwritetime, @{name="MegaBytes"; expression = { [math]::round($_.length / 1MB, 2) }}, name
+    gci -r @args | select mode, lastwritetime, @{name="MegaBytes"; expression={ [math]::round($_.length / 1MB, 2) }}, name
 }
 
 function cmconf {
@@ -567,7 +567,7 @@ function pgrep {
 }
 
 function pkill {
-    pgrep $args | %{ stop-process $_.processid }
+    pgrep $args[0] | %{ stop-process $_.processid }
 }
 
 # "Windows PowerShell" does not support the `e special character sequence for Escape, so we use a variable $e for this.
@@ -589,24 +589,37 @@ function syslog {
 # You have to enable the tasks log first as admin, see the Scheduled Tasks section below.
 
 function tasklog {
-    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog
+    get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog | less -r
 }
 
 function ltr { $input | sort lastwritetime }
 
 function count { $input | measure | % count }
 
-function ntop { ntop.exe -s 'CPU%' $args }
+function ntop { ntop.exe -s 'CPU%' @args }
 
-function head {
-    $lines = if ($args.length -and $args[0] -match '^-(.+)') { $null,$args = $args; $matches[1] } else { 10 }
-    
-    if (!$args.length) {
-        $input | select -first $lines
+function head_tail([scriptblock]$cmd, $arglist) {
+    $lines =
+        if ($arglist.length -and $arglist[0] -match '^-(.+)') {
+            $null,$arglist = $arglist
+            $matches[1]
+        }
+        else { 10 }
+
+    if (!$arglist.length) {
+        $input | &$cmd $lines
     }
     else {
-        gc $args | select -first $lines
+        gc $arglist | &$cmd $lines
     }
+}
+
+function head {
+    $input | head_tail { $input | select -first @args } $args
+}
+
+function tail {
+    $input | head_tail { $input | select -last @args  } $args
 }
 
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
@@ -622,7 +635,7 @@ function nproc {
     [environment]::processorcount
 }
 
-ri alias:pwd -ea ignore
+ri -fo alias:pwd -ea ignore
 
 function pwd {
     get-location | %{ ($_.path.replace($env:USERPROFILE,'~') -replace '^.+:','') -replace '\\','/' }
@@ -649,7 +662,7 @@ set-alias -name wordpad -val $(resolve-path /prog*s/win*nt/accessories/wordpad.e
 # To use neovim instead of vim for mouse support:
 set-alias -name vim     -val nvim
 
-ri alias:diff -ea ignore
+ri -fo alias:diff -ea ignore
 
 # Load VS env only once.
 foreach ($vs_type in 'buildtools','community') {
@@ -1159,7 +1172,7 @@ The help documentation for commands will generally state if they accept pipeline
 input or not.
 
 You can access the piped-in input in your own functions as the special `$input`
-variable, like in the `head` example in the profile above.
+variable, like in the `head` and `tail` examples in the `$profile` above.
 
 Here is a more typical example:
 
