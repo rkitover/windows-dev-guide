@@ -72,21 +72,21 @@ Here are some commands for using the Chocolatey package manager.
 To search for a package:
 
 ```powershell
-choco search patch
+choco search vim
 ```
 .
 
 To get the description of a package:
 
 ```powershell
-choco info patch
+choco info vim
 ```
 .
 
 To install a package:
 
 ```powershell
-choco install -y patch
+choco install -y vim
 ```
 .
 
@@ -94,7 +94,7 @@ To uninstall a package:
 
 
 ```powershell
-choco uninstall -y patch
+choco uninstall -y vim
 ```
 .
 
@@ -108,7 +108,7 @@ choco list --local
 To update all installed packages:
 
 ```powershell
-choco update -y all
+choco upgrade -y all
 ```
 .
 
