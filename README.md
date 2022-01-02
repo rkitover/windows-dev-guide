@@ -718,6 +718,8 @@ $host.ui.rawui.windowtitle = $hostname
 import-module psreadline
 
 set-psreadlineoption     -editmode emacs
+set-psreadlineoption     -historysearchcursormovestoend
+
 set-psreadlinekeyhandler -key tab       -function complete
 set-psreadlinekeyhandler -key uparrow   -function historysearchbackward
 set-psreadlinekeyhandler -key downarrow -function historysearchforward
@@ -727,6 +729,10 @@ set-psreadlinekeyhandler -chord 'ctrl+spacebar' -function menucomplete
 set-psreadlinekeyhandler -chord 'alt+enter'     -function addline
 ```
 .
+
+With these settings, up arrow will not only cycle through previous commands, but
+also allow you to type the beginning of a previous command and cycle through
+matches.
 
 This profile works for "Windows PowerShell" as well. But the profile is in a
 different file, so you will need to make a symlink there to your PowerShell
