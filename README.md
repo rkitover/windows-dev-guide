@@ -531,6 +531,8 @@ $env:PATH = ($env:PATH -split ';' | ?{ $_ -notmatch '\\Strawberry\\c\\bin$' }) -
 
 $terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json
 
+$ps_history = (resolve-path ~/AppData/Roaming/Microsoft/Windows/PowerShell/PSReadline/ConsoleHost_history.txt)
+
 ri env:TERM -ea ignore
 
 $private:vim = resolve-path ~/.local/bin/nvim.bat
@@ -1015,14 +1017,25 @@ PowerShell relies very heavily on tab completion, and just about everything can
 be tab completed. The style I present here uses short forms and abbreviations
 instead, when possible.
 
-Tab completing directories and files with spaces in them can be very annoying,
-one simple fix is to use a glob, for example:
+Tab completing directories and files with spaces in them can be annoying, for
+example:
 
 ```powershell
-sl /prog*s/node<TAB>
+sl /prog<TAB>
 ```
 
-, will complete `'C:\Program Files\nodejs'`.
+, will show the completion `C:\Program`. If you want to complete `C:\Program
+Files` type `` `<SPACE> `` and it will be completed with a starting quote. More
+on the `` ` `` escape character later.
+
+The `$profile` above defines the variable `$ps_history` for the command history
+file location which is analogous to `~/.bash_history` on Linux, you can view it
+with e.g.:
+
+```powershell
+less $ps_history
+```
+.
 
 The cmdlet `Get-Command` (wrapped by `which` in the `$profile` above) will tell
 you the type of a command, like `type` on bash. To get the path of an executable
@@ -1402,8 +1415,8 @@ alias se* | select name, resolvedcommand
 
 # Find the import libraries in the Windows SDK with symbol names matching
 # 'MessageBox'.
-gci '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
-  %{ $_.name; dumpbin -headers $_ | grep MessageBox }
+gci -n '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
+  %{ $_; dumpbin -headers $_ | grep MessageBox }
 ```
 .
 
@@ -1475,10 +1488,9 @@ get-installedmodule | update-module
 
 ### Available Command-Line Tools and Utilities
 
-The commands `grep`, `sed`, `awk`, `file`, `rg`, `diff`, `patch`, `less`, `zip`,
-`gzip`, `nc`, `unzip`, `bzip2`, `ssh`, `vim`, `nvim` (neovim) are the same as in
-Linux and were installed in the list of packages installed from Chocolatey
-above.
+The commands installed in the list of packages [installed from
+Chocolatey](#install-chocolatey-and-some-packages) are pretty much the same as
+in Linux.
 
 The `patch` command comes with Git for Windows, the `$profile` above adds an
 alias to it.
@@ -1534,6 +1546,18 @@ For an `ldd` replacement, you can do this:
 ```powershell
 dumpbin /dependents prog.exe
 dumpbin /dependents somelib.dll
+```
+.
+
+To see the functions a `.dll` exports, you can do:
+
+```powershell
+dumpbin /exports some.dll
+```
+, and to see the symbols in a static `.lib` library, you can do:
+
+```powershell
+dumpbin /symbols foo.lib
 ```
 .
 
