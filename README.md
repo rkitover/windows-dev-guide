@@ -626,7 +626,7 @@ function tail {
 
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
 function hexcolortorgb {
-    'rgb(' + (((($args[0] -replace '^#','') -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
+    'rgb(' + ((($args[0] -replace '^(#|0x)','' -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
 }
 
 function sudo {
@@ -692,29 +692,37 @@ if ($vs_path -and -not $env:VSCMD_VER) {
 
 import-module ~/source/repos/posh-git/src/posh-git.psd1
 
-function global:PromptWriteErrorInfo() {
-    if ($global:gitpromptvalues.dollarquestion) {
-        "$e[0;32mv$e[0m"
+function prompt_error_indicator() {
+    if ($gitpromptvalues.dollarquestion) {
+        "$e[38;2;078;154;06m{0}$e[0m" -f 'v'
     }
     else {
-        "$e[0;31mx$e[0m"
+        "$e[38;2;220;020;60m{0}$e[0m" -f 'x'
     }
 }
 
-$gitpromptsettings.defaultpromptabbreviatehomedirectory      = $true
+$private:env_indicator = "$e[38;2;173;127;168m{0}{1}{2}$e[38;2;173;127;168m{3}$e[0m" -f `
+    'PWSH',
+    ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '{'),
+    $(if ($islinux) { "$e[1m$e[38;2;124;048;048m{0}$e[0m" -f 'L' }
+               else { "$e[1m$e[38;2;032;178;170m{0}$e[0m" -f 'W' }),
+    ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '}')
 
-$gitpromptsettings.defaultpromptpath.foregroundcolor         = 0xC4A000
+$private:username = $env:USERNAME
+$private:hostname = $env:COMPUTERNAME.tolower()
 
-$gitpromptsettings.defaultpromptprefix.text                  = '$(PromptWriteErrorInfo) '
+$gitpromptsettings.defaultpromptprefix.text = '{0} {1} ' `
+    -f '$(prompt_error_indicator)',$env_indicator
 
-$username = $env:USERNAME
-$hostname = $env:COMPUTERNAME.tolower()
+$gitpromptsettings.defaultpromptbeforesuffix.text ="`n$e[0m$e[38;2;140;206;250m{0}$e[1;97m@$e[0m$e[38;2;140;206;250m{1} " `
+    -f $username,$hostname
 
-$gitpromptsettings.defaultpromptwritestatusfirst             = $false
-$gitpromptsettings.defaultpromptbeforesuffix.text            = "`n$e[0m$e[38;2;140;206;250m$username$e[1;97m@$e[0m$e[38;2;140;206;250m$hostname "
-$gitpromptsettings.defaultpromptsuffix.foregroundcolor       = 0xDC143C
-
+$gitpromptsettings.defaultpromptabbreviatehomedirectory = $true
+$gitpromptsettings.defaultpromptwritestatusfirst        = $false
+$gitpromptsettings.defaultpromptpath.foregroundcolor    = 0xC4A000
+$gitpromptsettings.defaultpromptsuffix.foregroundcolor  = 0xDC143C
 $gitpromptsettings.windowtitle = $null
+
 $host.ui.rawui.windowtitle = $hostname
 
 import-module psreadline
