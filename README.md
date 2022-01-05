@@ -159,7 +159,8 @@ In the `"profiles"` `"defaults"` section add:
     "padding": "0",
     "scrollbarState": "hidden",
     "closeOnExit": "always",
-    "bellStyle": "none"
+    "bellStyle": "none",
+    "intenseTextStyle": "bold"
 },
 ```
 .
