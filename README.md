@@ -62,6 +62,9 @@ choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecs
 refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
+&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
+import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
+repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
 .
 
@@ -253,9 +256,6 @@ For searching scrollback with my provided configuration, follow the following pr
 
 You can scroll the terminal while a search is active and your match position
 will be preserved.
-
-This system is powerful enough to give you most of the functionality of a pager
-without using a pager.
 
 #### Transparency
 
