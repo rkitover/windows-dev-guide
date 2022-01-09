@@ -33,6 +33,9 @@ if ($iswindows) {
     # is not up to date.
     update-sessionenvironment
 }
+else {
+    $env:LANG = 'en_US.UTF-8'
+}
 
 # Make help nicer.
 $PSDefaultParameterValues["get-help:Full"] = $true
@@ -130,6 +133,14 @@ if ($iswindows) {
     # like vim.
     ri env:TERM -ea ignore
 }
+else {
+    if (-not $env:TERM) {
+        $env:TERM = 'xterm-256color'
+    }
+    elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
+        $env:TERM = $matches[0] + '-256color'
+    }
+}
 
 if ($iswindows) {
     $vim = ''
@@ -143,7 +154,7 @@ if ($iswindows) {
         }
 
         if ($vim) {
-            set-alias vim -scope global -val $vim
+            set-alias vim -val $vim -scope global
         }
     }
 
@@ -169,12 +180,50 @@ if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
 }
 
+if (-not $iswindows -and -not $env:XAUTHORITY) {
+    $env:XAUTHORITY = join-path $home .Xauthority
+}
+
 function global:megs {
-    gci -r @args | select mode, lastwritetime, @{ name="MegaBytes"; expression={ [math]::round($_.length / 1MB, 2) }}, name
+    gci @args | select mode, lastwritetime, @{ name="MegaBytes"; expression={ [math]::round($_.length / 1MB, 2) }}, name
 }
 
 function global:cmconf {
     grep -E --color 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
+}
+
+# Windows PowerShell does not have Remove-Alias.
+function rmalias($alias) {
+    # Use a loop to remove aliases from all scopes.
+    while (test-path "alias:\$alias") {
+        ri -force "alias:\$alias"
+    }
+}
+
+function global:which {
+    $cmd = try { get-command @args -ea stop | select -first 1 }
+           catch { write-error $_ -ea stop }
+
+    if ($cmd.commandtype -eq 'Application') {
+        $cmd = $cmd.source | pretty_path
+    }
+
+    $cmd
+}
+
+rmalias type
+
+function global:type {
+    try { which $args } catch { write-error $_ -ea stop }
+}
+
+function global:command {
+    # Remove -v etc. for now.
+    $args = $args | ?{ $_ -notmatch '^-' }
+
+    try {
+        which -commandtype application $args
+    } catch { write-error $_ -ea stop }
 }
 
 # Windows PowerShell does not support the `e special character
@@ -192,7 +241,7 @@ if ($iswindows) {
 
     function format-eventlog {
         $input | %{
-            echo ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
+            ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
             "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
             "$e[95m]$e[0m " + `
             ($_.message -replace "`n.*",''))
@@ -206,7 +255,8 @@ if ($iswindows) {
     # You have to enable the tasks log first as admin, see:
     # https://stackoverflow.com/q/13965997/262458
     function global:tasklog {
-        get-winevent 'Microsoft-Windows-TaskScheduler/Operational' -oldest | format-eventlog
+        get-winevent 'Microsoft-Windows-TaskScheduler/Operational' `
+            -oldest | format-eventlog
     }
 
     function global:ntop {
@@ -238,12 +288,12 @@ if ($iswindows) {
     }
 
     function global:touch {
-        foreach ($arg in ($args | %{ $_ })) {
-            if (test-path $arg) {
-                (gi $arg).lastwritetime = get-date
+        $args | %{ $_ } | %{
+            if (test-path $_) {
+                (gi $_).lastwritetime = get-date
             }
             else {
-                ni $arg | out-null
+                ni $_ | out-null
             }
         }
     }
@@ -256,12 +306,20 @@ if ($iswindows) {
         [environment]::processorcount
     }
 }
+elseif ($ismacos) {
+    function global:ls {
+        &(command ls) -Gh $args
+    }
+}
+else { # linux
+    function global:ls {
+        &(command ls) --color=auto -h $args
+    }
+}
 
-# Windows PowerShell does not have Remove-Alias.
-function rmalias($alias) {
-    # Use a loop to remove aliases from all scopes.
-    while (test-path "alias:\$alias") {
-        ri -force "alias:\$alias"
+if (command grep) {
+    function global:grep {
+        &(command grep) --color=auto $args
     }
 }
 
@@ -278,17 +336,6 @@ function global:count { $input | measure | % count }
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
 function global:hexcolortorgb {
     'rgb(' + ((($args[0] -replace '^(#|0x)','' -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
-}
-
-function global:which {
-    $cmd = try { get-command @args -ea stop }
-           catch { write-error $_ -ea stop }
-
-    if ($cmd.commandtype -eq 'Application') {
-        $cmd = $cmd.source | pretty_path
-    }
-
-    $cmd
 }
 
 function map_alias {
@@ -318,9 +365,7 @@ if ($iswindows) {
 }
 
 # For diff on Windows install diffutils from choco.
-if (get-command diff -commandtype application -ea ignore) {
-    rmalias diff
-}
+if (command diff) { rmalias diff }
 
 @{
     vcpkg = '~/source/repos/vcpkg/vcpkg'
@@ -346,7 +391,7 @@ if ($iswindows) {
         # vcvarsamd64_arm64.bat for ARM64  cross  builds.
         cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
-            set-item -force "env:$var" -value $val
+            set-item -force "env:\$var" -val $val
         }
         popd
     }
@@ -376,9 +421,12 @@ function global:prompt_error_indicator() {
 $env_indicator = "$e[38;2;173;127;168m{0}{1}{2}$e[38;2;173;127;168m{3}$e[0m" -f `
     'PWSH',
     ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '{'),
-    $(if (-not $iswindows)
-             { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'L' }
-        else { "$e[1m$e[38;2;032;178;170m{0}$e[0m" -f 'W' }),
+    $(if ($islinux)
+          { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'L' }
+      elseif ($ismacos)
+          { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'M' }
+      else # windows
+          { "$e[1m$e[38;2;032;178;170m{0}$e[0m" -f 'W' }),
     ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '}')
 
 if ($iswindows) {
