@@ -529,7 +529,7 @@ experimental features, run the following:
 ```powershell
 enable-experimentalfeature PSAnsiRenderingFileInfo
 enable-experimentalfeature PSNativeCommandArgumentPassing
-enable-experimentalfeature PPSNativePSPathResolution
+enable-experimentalfeature PSNativePSPathResolution
 ```
 , and then restart your terminal for them to take effect.
 
@@ -848,7 +848,7 @@ if ($iswindows) {
     }
 
     function global:sudo {
-        ssh localhost "sl $(get-location); $($args -join " ")"
+        ssh localhost -- "sl $(get-location); $($args -join " ")"
     }
 
     function global:nproc {
@@ -1020,8 +1020,10 @@ if ($private:posh_vcpkg = resolve-path `
     import-module $posh_vcpkg
 }
 
-if ($private:private_profile = resolve-path `
+if ($private:src = resolve-path `
     $ps_config_dir/private-profile.ps1 -ea ignore) {
+
+    $global:private_profile = $src | pretty_path
 
     . $private_profile
 }
@@ -1627,6 +1629,14 @@ vim $(gci -r *.h)
 ```
 .
 
+For string values, it can be nicer sometimes to use formats, e.g.:
+
+```powershell
+"This shade of {0} is the hex code #{1:X6}." -f 'Blue',13883343
+"Today is: {0}." -f (get-date)
+```
+.
+
 There isn't really a parallel to subshells in POSIX shells, because Windows does
 not use `fork()`, but immediately executed script blocks can be used for similar
 purposes. The syntax is:
@@ -1687,6 +1697,8 @@ $erroractionpreference = 'stop'
 ```
 .
 
+I highly recommend it adding it to the top of your scripts.
+
 Although this guide does not yet discuss programming much, I wanted
 to mention one thing that you must be aware of when writing
 PowerShell scripts and functions.
@@ -1698,6 +1710,12 @@ array. The command `echo` does nothing for example, a string value
 with no command will do the same thing. The `return` statement will
 yield a value and return control to the caller, but any value will
 be yielded implicitly.
+
+In essence, everything in PowerShell runs in a pipeline, a section
+of code runs in a pipeline and yields values to it, if you are
+running it from your terminal, the terminal takes the output objects
+from the pipeline and formats them using the formatters assigned to
+them.
 
 Here is an illustration:
 
@@ -1714,8 +1732,6 @@ function foo {
 (foo) -join ','
 # val1,val: 42,50,90
 ```
-
-I highly recommend it adding it to the top of your scripts.
 
 The bash commands `pushd` and `popd` are also available for use in your scripts.
 

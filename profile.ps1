@@ -299,7 +299,7 @@ if ($iswindows) {
     }
 
     function global:sudo {
-        ssh localhost "sl $(get-location); $($args -join " ")"
+        ssh localhost -- "sl $(get-location); $($args -join " ")"
     }
 
     function global:nproc {
@@ -471,8 +471,10 @@ if ($private:posh_vcpkg = resolve-path `
     import-module $posh_vcpkg
 }
 
-if ($private:private_profile = resolve-path `
+if ($private:src = resolve-path `
     $ps_config_dir/private-profile.ps1 -ea ignore) {
+
+    $global:private_profile = $src | pretty_path
 
     . $private_profile
 }
