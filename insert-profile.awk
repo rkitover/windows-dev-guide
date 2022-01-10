@@ -10,14 +10,12 @@ in_profile && /^```$/{
     in_profile=0
 }
 {
-    if (in_profile >= 2) {
-        if (in_profile == 2) {
-            while (getline line < "./profile.ps1") {
-                print line
-            }
+    if (in_profile == 2) {
+        while (getline line < "./profile.ps1") {
+            print line
         }
     }
-    else {
+    else if (in_profile < 2) {
         print
     }
 

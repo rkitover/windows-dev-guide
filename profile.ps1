@@ -145,16 +145,10 @@ else {
 if ($iswindows) {
     $vim = ''
 
-    # Neovim is broken in ssh sessions on Windows, use regular vim.
-    if (-not $env:SSH_CONNECTION) {
-        foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
-            if ($vim = (get-command $cmd -ea ignore).source) {
-                break
-            }
-        }
-
-        if ($vim) {
+    foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
+        if ($vim = (get-command $cmd -ea ignore).source) {
             set-alias vim -val $vim -scope global
+            break
         }
     }
 

@@ -2,6 +2,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
+  - [Introduction](#introduction)
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
   - [Configure the Terminal](#configure-the-terminal)
@@ -27,6 +28,25 @@
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Windows Native Development Environment Setup Guide for Linux Users
+
+### Introduction
+
+This guide is intended for experienced developers familiar with
+Linux or other UNIX-like operating systems who want to set up a
+native Windows terminal development environment. I will walk you
+through setting up and using the package manager, terminal, vim,
+gpg, git, ssh, Visual Studio build tools, and PowerShell. I will
+explain basic PowerShell usage which will allow you to use it as a
+shell and write simple scripts.
+
+This is a work in progress and there are sometimes typos and
+grammatical or ordering mistakes as I keep editing it, or bugs in
+the `$profile` or setup code, so make any necessary adjustments.
+
+I am planning to make many more expansions covering for example
+things like using `cmake` with `vcpkg` or `Conan` etc..
+
+Your feedback via issues or pull requests on Github is appreciated.
 
 ### Install Chocolatey and Some Packages
 
@@ -301,8 +321,8 @@ which I added an alias in the `$profile` below.
 
 I use vim, and the examples here are geared towards that.
 
-If you want a very simple terminal editor that doesn't require learning how to
-use it, you can use nano, see below for how to install it.
+If you want a very simple terminal editor that is easy to use, you
+can use nano, see below for how to install it.
 
 Make sure `$env:EDITOR` is set to the executable or script that launches your
 editor with backslashes replaced with forward slashes so that git can use it for commit messages. See the `$profile` example below.
@@ -310,8 +330,7 @@ editor with backslashes replaced with forward slashes so that git can use it for
 #### Setting up Vim
 
 I recommend using neovim on Windows because it has working mouse support and is
-almost 100% compatible with vim anyway, except in an ssh session where neovim
-does not currently work for some reason.
+almost 100% compatible with vim anyway.
 
 If you are using neovim or both, run the following:
 
@@ -345,16 +364,10 @@ Add the following to your `$profile`:
 if ($iswindows) {
     $vim = ''
 
-    # Neovim is broken in ssh sessions on Windows, use regular vim.
-    if (-not $env:SSH_CONNECTION) {
-        foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
-            if ($vim = (get-command $cmd -ea ignore).source) {
-                break
-            }
-        }
-
-        if ($vim) {
-            set-alias vim -scope global -val $vim
+    foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
+        if ($vim = (get-command $cmd -ea ignore).source) {
+            set-alias vim -val $vim -scope global
+            break
         }
     }
 
@@ -383,9 +396,7 @@ In `~/.local/bin/nvim.bat` put the following for neovim:
 set TERM=
 /tools/neovim/neovim/bin/nvim %*
 ```
-,
-
-and in `~/.local/bin/vim.bat` put the following for regular vim:
+, and in `~/.local/bin/vim.bat` put the following for regular vim:
 
 ```dosbatch
 @echo off
@@ -694,16 +705,10 @@ else {
 if ($iswindows) {
     $vim = ''
 
-    # Neovim is broken in ssh sessions on Windows, use regular vim.
-    if (-not $env:SSH_CONNECTION) {
-        foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
-            if ($vim = (get-command $cmd -ea ignore).source) {
-                break
-            }
-        }
-
-        if ($vim) {
+    foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
+        if ($vim = (get-command $cmd -ea ignore).source) {
             set-alias vim -val $vim -scope global
+            break
         }
     }
 
