@@ -54,7 +54,7 @@ choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip autohotkey autologon bzip2 dejavufonts diffutils file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip zip
+choco install -y 7zip bzip2 dejavufonts diffutils file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
