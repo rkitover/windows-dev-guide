@@ -1284,10 +1284,11 @@ Windows uses a different mechanism for hidden files, see below.
 Redirection for files and commands works like in POSIX shells on a
 basic level, that is, you can expect `>`, `>>` and `|` to redirect
 files and commands like you would expect, for **TEXT** data. `LF`
-line ends will also generally get rewritten to `CRLF`. See the [git
-section](#setting-up-and-using-git) for some ways to deal with this
-when needed. You can also adjust line endings with the `dos2unix`
-and `unix2dos` commands.
+line ends will also generally get rewritten to `CRLF`, and sometimes
+an extra `CRLF` will be added to the end of the file/stream. See the
+[git section](#setting-up-and-using-git) for some ways to deal with
+this when needed. You can also adjust line endings with the
+`dos2unix` and `unix2dos` commands.
 
 **DO NOT** redirect binary data, instead have the utility you are
 using save the file directly.
