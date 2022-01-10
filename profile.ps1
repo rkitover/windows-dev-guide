@@ -299,6 +299,13 @@ if ($iswindows) {
     function global:nproc {
         [environment]::processorcount
     }
+
+    # To see what a choco shim is pointing to.
+    function global:readshim {
+        $args | %{ $_ } | %{ &$_ --shimgen-help } | `
+            ?{ $_ -match "^ Target: '(.*)'$" } | `
+            %{ $matches[1] } | pretty_path
+    }
 }
 elseif ($ismacos) {
     function global:ls {

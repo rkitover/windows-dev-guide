@@ -859,6 +859,13 @@ if ($iswindows) {
     function global:nproc {
         [environment]::processorcount
     }
+
+    # To see what a choco shim is pointing to.
+    function global:readshim {
+        $args | %{ $_ } | %{ &$_ --shimgen-help } | `
+            ?{ $_ -match "^ Target: '(.*)'$" } | `
+            %{ $matches[1] } | pretty_path
+    }
 }
 elseif ($ismacos) {
     function global:ls {
@@ -1885,6 +1892,11 @@ There are a few very simplistic wrappers for Linux commands in the
 `pgrep`, `pkill`, `head`, `tail`, `touch`, `sudo`, `nproc`.
 
 See [below](#elevated-access-sudo) about the `sudo` wrapper.
+
+The `readshim` function will give you the package target of choco
+`.exe` shims, which are kind of like symlinks, they are the `.exe`
+that is in your `$env:PATH` under your choco root which is something
+like `/ProgramData/chocolatey/bin/`.
 
 The `patch` command comes with Git for Windows, the `$profile` above adds an
 alias to it.
