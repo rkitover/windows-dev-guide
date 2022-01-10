@@ -58,8 +58,8 @@ making unprivileged symlinks.
 - Run these commands:
 
 ```powershell
-set-executionpolicy -scope localmachine -force remotesigned
-iex ((new-object system.net.webclient).downloadstring('https://chocolatey.org/install.ps1'))
+set-executionpolicy -force remotesigned -scope localmachine
+iwr 'https://chocolatey.org/install.ps1' | % content | iex
 ```
 .
 
@@ -74,7 +74,7 @@ choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip bzip2 dejavufonts diffutils file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus NTop.Portable powershell-core python ripgrep sed sshfs StrawberryPerl unzip zip
+choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
 # Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
@@ -300,14 +300,14 @@ return
 
 You can install the `autohotkey` package from Chocolatey.
 
-This will toggle transparency in a window when you press `CTRL+WIN+ESC`, you
-have to press it twice the first time.
+This will toggle transparency in a window when you press
+`CTRL+WIN+ESC`, you have to press it twice the first time.
 
 Thanks to @munael for this tip.
 
-Note that this will not work for the Administrator PowerShell window unless you
-run AutoHotkey with Administrator privileges, you can do that on startup by
-creating a task in the Task Scheduler.
+Note that this will not work for the Administrator PowerShell window
+unless you run AutoHotkey with Administrator privileges, you can do
+that on logon by creating a task in the Task Scheduler.
 
 ### Setting up an Editor
 
@@ -1212,13 +1212,13 @@ cmd /c help for | less
 ```
 .
 
-For the `git` man pages, do `git help <command>` to open the man page in your
-browser, e.g. `git help config`.
+For the `git` man pages, do `git help <command>` to open the man
+page in your browser, e.g. `git help config`.
 
-I suggest using the short forms of PowerShell aliases instead of the POSIX
-aliases, this forces your brain into PowerShell mode so you will mix things up
-less often, with the exception of a couple of things like `mkdir` and the
-wrapper above for `which`.
+I suggest using the short forms of PowerShell aliases instead of the
+POSIX aliases, this forces your brain into PowerShell mode so you
+will mix things up less often, with the exception of a couple of
+things like `mkdir` and the wrapper above for `which`.
 
 Here are a few:
 
@@ -1281,11 +1281,20 @@ Note that globs in PowerShell are case-insensitive.
 Also, unlike Linux, the `*` glob will match all files including `.dotfiles`.
 Windows uses a different mechanism for hidden files, see below.
 
-Redirection for files and commands works like in POSIX on a basic level, that
-is, you can expect `>`, `>>` and `|` to redirect files and commands like you
-would expect on a POSIX shell. The `<` operator is not yet available. The file descriptors `0`, `1` and `2` are
-`stdin`, `stdout` and `stderr` just like in POSIX.  The equivalent of
-`/dev/null` is `$null`, so a command such as:
+Redirection for files and commands works like in POSIX shells on a
+basic level, that is, you can expect `>`, `>>` and `|` to redirect
+files and commands like you would expect, for **TEXT** data. `LF`
+line ends will also generally get rewritten to `CRLF`. See the [git
+section](#setting-up-and-using-git) for some ways to deal with this
+when needed. You can also adjust line endings with the `dos2unix`
+and `unix2dos` commands.
+
+**DO NOT** redirect binary data, instead have the utility you are
+using save the file directly.
+
+The `<` operator is not yet available. The file descriptors `0`, `1`
+and `2` are `stdin`, `stdout` and `stderr` just like in POSIX.  The
+equivalent of `/dev/null` is `$null`, so a command such as:
 
 ```bash
 cmd >/dev/null 2>&1
@@ -2250,5 +2259,7 @@ ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 ```
 .
 
-Here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr` to specify
-a path relative to your home directory.
+Here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr`
+to specify a path relative to your home directory.
+
+<!--- vim:set et sw=4 tw=68: --->
