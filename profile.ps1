@@ -313,7 +313,7 @@ else { # linux
 
 if (command grep) {
     function global:grep {
-        &(command grep) --color=auto $args
+        $input | &(command grep) --color=auto $args
     }
 }
 
