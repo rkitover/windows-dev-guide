@@ -1611,12 +1611,14 @@ gci ~/Downloads/*.zip | sort length | select -skiplast 1 | select -last 1 -expan
 folder.
 
 If you want to inspect the properties available on an object and their current
-values, you can use `fl *` aka `Format-List`, e.g.:
+values, you can use `fl *` aka `Format-List *` or `select *` aka
+`Select-Object *`, e.g.:
 
 ```powershell
-gci ~/.vimrc | fl *
+gi ~/.vimrc | fl *
+gi .gitconfig | select *
 ```
-.
+, the output is usually the same.
 
 The equivalent of `wc -l file` to count lines is:
 
