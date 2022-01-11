@@ -5,6 +5,7 @@
   - [Introduction](#introduction)
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
+    - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
   - [Configure the Terminal](#configure-the-terminal)
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
@@ -99,13 +100,6 @@ choco search vim
 ```
 .
 
-To get the description of a package:
-
-```powershell
-choco info vim
-```
-.
-
 To install a package:
 
 ```powershell
@@ -113,13 +107,36 @@ choco install -y vim
 ```
 .
 
-To uninstall a package:
+To get the description of a package:
 
+```powershell
+choco info vim
+```
+, this will also include possible installation parameters that you
+can pass as a single string on install, e.g.:
+
+```powershell
+choco install -y package --params '/NoDesktopShortcuts
+/SomeOtherParam'
+```
+, if you use install params make sure you enabled the
+`useRememberedArgumentsForUpgrades` choco feature, otherwise your
+params will not be applied on upgrades and your package may break,
+to do this run:
+```powershell
+choco feature enable --name 'useRememberedArgumentsForUpgrades'
+```
+.
+
+To uninstall a package:
 
 ```powershell
 choco uninstall -y vim
 ```
-.
+, you might run into packages that can't uninstall, this can happen
+when a package was installed with an installer and there is no
+specification for how to uninstall, in which case you would have to
+clean it up manually.
 
 To list installed packages:
 
@@ -139,6 +156,47 @@ Sometimes after you install a package, your terminal session will not have it in
 `$env:PATH`, you can restart your terminal or run `refreshenv` re-read your
 environment settings. This is also in the `$profile` below, so starting a new
 tab will also work.
+
+#### Chocolatey Filesystem Structure
+
+The main default directory for choco and packages is
+`/ProgramData/chocolatey`.
+
+You can change this directory **BEFORE** you install choco itself like so:
+```powershell
+[environment]::setenvironmentvariable('ChocolateyInstall', 'C:\Some\Path', 'machine')
+```
+. This can only be changed before you install choco and any
+packages, it **CANNOT** be changed after it is already installed and
+any packages are installed.
+
+The directory `/ProgramData/chocolatey/bin` contains the `.exe`
+"shims", which are kind of like symbolic links, that point to the
+actual program executables. You can run e.g.:
+```powershell
+grep --shimgen-help
+```
+, to see the target path and more information about shims. The
+`$profile` below has a `shimread` function to get the target of
+shims.
+
+The directory `/ProgramData/chocolatey/lib` contains the package
+install directories with various package metadata and sometimes the
+executables as well.
+
+The directory `/tools` is sometimes used by packages as the
+installation target as well.
+
+You can change this directory like so:
+```powershell
+[environment]::setenvironmentvariable('ChocolateyToolsLocation', 'C:\Some\Path', 'machine')
+```
+, this can be changed after installation, in which case make sure to
+move any files there to the new location.
+
+Many packages simply run an installer and do not install to any
+specific location, however various package metadata will still be
+available under `/ProgramData/chocolatey/lib/<package>`.
 
 ### Configure the Terminal
 
