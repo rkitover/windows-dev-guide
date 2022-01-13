@@ -1,14 +1,20 @@
-all: .profile-stamp .doctoc-stamp
+all: README.md .doctoc-stamp .link-check-stamp
 
-.profile-stamp: profile.ps1
-	@echo Inserting updated profile.ps1
-	@dos2unix ./profile.ps1
-	@awk -f insert-profile.awk ./README.md > ./README.md.new
-	@cmake -E copy ./README.md.new ./README.md
-	@cmake -E remove -f ./README.md.new
-	@dos2unix ./README.md
-	@echo > .profile-stamp
+README.md: .profile-include-stamp .nanosetup-include-stamp .install-include-stamp
 
-.doctoc-stamp: .profile-stamp README.md
-	doctoc --notitle --github README.md
+.%-include-stamp: %.ps1
+	@echo Inserting updated $<
+	@dos2unix -q $<
+	@awk -v include_file=$< -f insert-file.awk ./README.md > ./README.md.new
+	@python -c "from shutil import copyfile; copyfile('README.md.new', 'README.md')"
+	@python -c "import os; os.remove('README.md.new')"
+	@dos2unix -q ./README.md
+	@echo > $@
+
+.doctoc-stamp: README.md
+	@doctoc --notitle --github README.md
 	@echo > .doctoc-stamp
+
+.link-check-stamp: README.md
+	@markdown-link-check -q README.md
+	@echo > .link-check-stamp

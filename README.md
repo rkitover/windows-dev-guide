@@ -13,11 +13,22 @@
   - [Setting up an Editor](#setting-up-an-editor)
     - [Setting up Vim](#setting-up-vim)
     - [Setting up nano](#setting-up-nano)
-  - [Set up PowerShell Profile](#set-up-powershell-profile)
-  - [Setting up gpg](#setting-up-gpg)
+  - [Setting up PowerShell](#setting-up-powershell)
   - [Setting up ssh](#setting-up-ssh)
   - [Setting up and Using git](#setting-up-and-using-git)
+  - [Setting up gpg](#setting-up-gpg)
   - [PowerShell Usage Notes](#powershell-usage-notes)
+    - [Introduction](#introduction-1)
+    - [Finding Documentation](#finding-documentation)
+    - [Commands, Parameters and Environment](#commands-parameters-and-environment)
+    - [Redirection and Streams](#redirection-and-streams)
+    - [Commands and Operations on Filesystems and Filesystem-Like Objects](#commands-and-operations-on-filesystems-and-filesystem-like-objects)
+    - [Pipelines](#pipelines)
+    - [The Measure-Object Cmdlet](#the-measure-object-cmdlet)
+    - [Sub-Expressions and Strings](#sub-expressions-and-strings)
+    - [Script Blocks and Scopes](#script-blocks-and-scopes)
+    - [Using and Writing Scripts](#using-and-writing-scripts)
+    - [Miscellaneous Usage Tips](#miscellaneous-usage-tips)
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
@@ -42,7 +53,8 @@ shell and write simple scripts.
 
 This is a work in progress and there are sometimes typos and
 grammatical or ordering mistakes as I keep editing it, or bugs in
-the `$profile` or setup code, so make any necessary adjustments.
+the [`$profile`](#setting-up-powershell) or setup code, so make any
+necessary adjustments.
 
 I am planning to make many more expansions covering for example
 things like using `cmake` with `vcpkg` or `Conan` etc..
@@ -51,8 +63,8 @@ Your feedback via issues or pull requests on Github is appreciated.
 
 ### Install Chocolatey and Some Packages
 
-Make sure developer mode is turned on in Windows settings, this is necessary for
-making unprivileged symlinks.
+Make sure developer mode is turned on in Windows settings, this is
+necessary for making unprivileged symlinks.
 
 - Press Win+X and open PowerShell (Administrator).
 
@@ -62,11 +74,19 @@ making unprivileged symlinks.
 set-executionpolicy -force remotesigned -scope localmachine
 iwr 'https://chocolatey.org/install.ps1' | % content | iex
 ```
-.
 
-Close the Administrator PowerShell window and open it again.
+. Close the Administrator PowerShell window and open it again.
 
-Install some chocolatey packages:
+Run this script, which is in the repo, like so:
+
+```powershell
+./install.ps1.
+```
+
+, it installs some choco packages and sets some QOL improvement
+settings. Copy over your `~/.ssh` first, but you can do this [later](#setting-up-ssh).
+
+[//]: # "BEGIN INCLUDED install.ps1"
 
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
@@ -76,7 +96,6 @@ choco install -y visualstudio2019community --params '--locale en-US'
 choco install -y visualstudio2019-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
 choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
-# Copy your .ssh over to your profile directly first preferrably:
 stop-service ssh-agent
 sc.exe delete ssh-agent
 choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
@@ -84,8 +103,9 @@ refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
 &(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
-import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
+import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
 repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)
 ```
 .
 
@@ -98,20 +118,19 @@ To search for a package:
 ```powershell
 choco search vim
 ```
-.
 
-To install a package:
+. To install a package:
 
 ```powershell
 choco install -y vim
 ```
-.
 
-To get the description of a package:
+. To get the description of a package:
 
 ```powershell
 choco info vim
 ```
+
 , this will also include possible installation parameters that you
 can pass as a single string on install, e.g.:
 
@@ -119,24 +138,38 @@ can pass as a single string on install, e.g.:
 choco install -y package --params '/NoDesktopShortcuts
 /SomeOtherParam'
 ```
+
 , if you use install params make sure you enabled the
 `useRememberedArgumentsForUpgrades` choco feature, otherwise your
 params will not be applied on upgrades and your package may break,
 to do this run:
+
 ```powershell
 choco feature enable --name 'useRememberedArgumentsForUpgrades'
 ```
-.
 
-To uninstall a package:
+. To uninstall a package:
 
 ```powershell
 choco uninstall -y vim
 ```
+
 , you might run into packages that can't uninstall, this can happen
 when a package was installed with an installer and there is no
 specification for how to uninstall, in which case you would have to
 clean it up manually.
+
+If you need to uninstall packages that depend on each other, you
+must pass the list in the correct order, or choco will throw a
+dependency error. For example, this would be the correct order in
+one particular case:
+
+```powershell
+choco uninstall -y transifex-client python python3
+```
+
+, any other order would not work. You can also use the `-x` option
+to remove packages and all of their dependencies.
 
 To list installed packages:
 
@@ -150,12 +183,12 @@ To update all installed packages:
 ```powershell
 choco upgrade -y all
 ```
-.
 
-Sometimes after you install a package, your terminal session will not have it in
-`$env:PATH`, you can restart your terminal or run `refreshenv` re-read your
-environment settings. This is also in the `$profile` below, so starting a new
-tab will also work.
+. Sometimes after you install a package, your terminal session will
+not have it in `$env:PATH`, you can restart your terminal or run
+`refreshenv` re-read your environment settings. This is also in the
+[`$profile`](#setting-up-powershell), so starting a new tab
+will also work.
 
 #### Chocolatey Filesystem Structure
 
@@ -163,9 +196,11 @@ The main default directory for choco and packages is
 `/ProgramData/chocolatey`.
 
 You can change this directory **BEFORE** you install choco itself like so:
+
 ```powershell
 [environment]::setenvironmentvariable('ChocolateyInstall', 'C:\Some\Path', 'machine')
 ```
+
 . This can only be changed before you install choco and any
 packages, it **CANNOT** be changed after it is already installed and
 any packages are installed.
@@ -173,12 +208,14 @@ any packages are installed.
 The directory `/ProgramData/chocolatey/bin` contains the `.exe`
 "shims", which are kind of like symbolic links, that point to the
 actual program executables. You can run e.g.:
+
 ```powershell
 grep --shimgen-help
 ```
+
 , to see the target path and more information about shims. The
-`$profile` below has a `shimread` function to get the target of
-shims.
+[`$profile`](#setting-up-powershell) has a `shimread` function to
+get the target of shims.
 
 The directory `/ProgramData/chocolatey/lib` contains the package
 install directories with various package metadata and sometimes the
@@ -188,9 +225,11 @@ The directory `/tools` is sometimes used by packages as the
 installation target as well.
 
 You can change this directory like so:
+
 ```powershell
 [environment]::setenvironmentvariable('ChocolateyToolsLocation', 'C:\Some\Path', 'machine')
 ```
+
 , this can be changed after installation, in which case make sure to
 move any files there to the new location.
 
@@ -200,12 +239,12 @@ available under `/ProgramData/chocolatey/lib/<package>`.
 
 ### Configure the Terminal
 
-Launch the terminal and choose Settings from the tab drop-down, this will open
-the settings json in visual studio.
+Launch the terminal and choose Settings from the tab drop-down, this
+will open the settings json in visual studio.
 
 In the global settings, above the `"profiles"` section, add:
 
-```json
+```jsonc
 "copyFormatting": "all",
 "focusFollowMouse": true,
 // If enabled, selections are automatically copied to your clipboard.
@@ -219,11 +258,10 @@ In the global settings, above the `"profiles"` section, add:
 "multiLinePasteWarning": false,
 "windowingBehavior": "useAnyExisting",
 ```
-.
 
-In the `"profiles"` `"defaults"` section add:
+. In the `"profiles"` `"defaults"` section add:
 
-```json
+```jsonc
 "defaults":
 {
     // Put settings here that you want to apply to all profiles.
@@ -244,27 +282,38 @@ In the `"profiles"` `"defaults"` section add:
     "intenseTextStyle": "bold"
 },
 ```
-.
 
-I prefer the 'SF Mono' font which you can get here:
+. I prefer the 'SF Mono' font which you can get here:
 
 https://github.com/supercomputra/SF-Mono-Font
-.
 
-Other fonts you might like are `IBM Plex Mono` which you can install from:
+. Other fonts you might like are `IBM Plex Mono` which you can
+install from:
 
 https://github.com/IBM/plex
-,
 
-and 'DejaVu Sans Mono' which was in the list of Chocolatey packages above.
+, and 'DejaVu Sans Mono' which was in the [list of Chocolatey
+packages](#install-chocolatey-and-some-packages).
 
-In the `"actions"` section add these keybindings:
+In the profile list section, in the entry that lists:
 
-```json
+```jsonc
+"source": "Windows.Terminal.PowershellCore"
+```
+
+, add this:
+
+```jsonc
+"commandline": "pwsh -nologp"
+```
+
+. In the `"actions"` section add these keybindings:
+
+```jsonc
 { "command": null, "keys": "alt+enter" },
 { "command": { "action": "newTab"  }, "keys": "ctrl+shift+t" },
 { "command": { "action": "nextTab" }, "keys": "ctrl+shift+right" },
-{ "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" }
+{ "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" },
 { "command": { "action": "findMatch", "direction": "next" },          "keys": "ctrl+shift+n" },
 { "command": { "action": "findMatch", "direction": "prev" },          "keys": "ctrl+shift+p" },
 { "command": { "action": "scrollUp", "rowsToScroll": 1 },
@@ -272,17 +321,17 @@ In the `"actions"` section add these keybindings:
 { "command": { "action": "scrollDown", "rowsToScroll": 1 },
   "keys": "ctrl+shift+down" }
 ```
-.
 
-And **REMOVE** the `CTRL+V` binding, if you want to use `CTRL+V` in vim (visual
-line selection.)
+. And **REMOVE** the `CTRL+V` binding, if you want to use `CTRL+V`
+in vim (visual line selection.)
 
-This gives you a sort of "tmux" for PowerShell using tabs, and binds keys to
-find next/previous match.
+This gives you a sort of "tmux" for PowerShell using tabs, and binds
+keys to find next/previous match.
 
-Note that `CTRL+SHIFT+N` is bound by default to opening a new window and
-`CTRL+SHIFT+P` is bound by default to opening the command palette, if you need
-these, rebind them or the original actions to something else.
+Note that `CTRL+SHIFT+N` is bound by default to opening a new window
+and `CTRL+SHIFT+P` is bound by default to opening the command
+palette, if you need these, rebind them or the original actions to
+something else.
 
 Restart the terminal.
 
@@ -290,11 +339,13 @@ Restart the terminal.
 
 You can toggle full-screen mode with `F11`.
 
-`SHIFT`+`ALT`+`+` will open a split pane vertically, while `SHIFT`+`ALT`+`-`
-will open a split pane horizontally. This works in full-screen as well.
+`SHIFT`+`ALT`+`+` will open a split pane vertically, while
+`SHIFT`+`ALT`+`-` will open a split pane horizontally. This works in
+full-screen as well.
 
-You can paste with both `SHIFT+INSERT` and `CTRL+SHIFT+V`. To copy text with my
-provided configuration, simply select it.
+You can paste with both `SHIFT+INSERT` and `CTRL+SHIFT+V`. To copy
+text with `"copyOnSelect"` enabled, simply select it, or press
+`CTRL`+`SHIFT`+`C`.
 
 The documentation for the terminal and a lot of other good information is here:
 
@@ -303,7 +354,7 @@ https://docs.microsoft.com/en-us/windows/terminal/
 
 #### Scrolling and Searching in the Terminal
 
-These are the scrolling keybinds available:
+These are the scrolling keybinds available with this configuration:
 
 | Key                 | Action                 |
 |---------------------|------------------------|
@@ -312,32 +363,35 @@ These are the scrolling keybinds available:
 | CTRL+SHIFT+UP       | Scroll X lines up.     |
 | CTRL+SHIFT+DOWN     | Scroll X lines down.   |
 
-In my provided configuration, `CTRL+SHIFT+UP/DOWN` will scroll by 1 line, you
-can change this to any number of lines by adjusting the `rowsToScroll`
-parameter. You can even make additional keybindings for the same action but a
+`CTRL+SHIFT+UP/DOWN` will scroll by 1 line, you can change this to
+any number of lines by adjusting the `rowsToScroll` parameter. You
+can even make additional keybindings for the same action but a
 different keybind with a different `rowsToScroll` value.
 
-You can scroll with your mouse scrollwheel, assuming that there is no active
-application controlling the mouse.
+You can scroll with your mouse scrollwheel, assuming that there is
+no active application controlling the mouse.
 
-For searching scrollback with my provided configuration, follow the following process:
+For searching scrollback with this configuration, follow the
+following process:
 
-1. Press `CTRL+SHIFT+F` and type in your search term in the search box that pops
-   up in the upper right, the term is case-insensitive.
+1. Press `CTRL+SHIFT+F` and type in your search term in the search
+   box that pops up in the upper right, the term is
+   case-insensitive.
 2. Press `ESC` to close the search box.
-3. Press `CTRL+SHIFT+N` to find the first match going up, the match will be
-   highlighted.
-4. Press `CTRL+SHIFT+P` to find the first match going down below the current
-   match.
-5. To change the search term, press `CTRL+SHIFT+F` again, type in the new term,
-   and press `ESC`.
+3. Press `CTRL+SHIFT+N` to find the first match going up, the match
+   will be highlighted.
+4. Press `CTRL+SHIFT+P` to find the first match going down below the
+   current match.
+5. To change the search term, press `CTRL+SHIFT+F` again, type in
+   the new term, and press `ESC`.
 
-You can scroll the terminal while a search is active and your match position
-will be preserved.
+You can scroll the terminal while a search is active and your match
+position will be preserved.
 
 #### Transparency
 
-To get transparency in Microsoft terminal, use this AutoHotkey script:
+To get transparency in Microsoft terminal, use this AutoHotkey
+script:
 
 ```autohotkey
 #NoEnv
@@ -354,9 +408,8 @@ If (TransLevel = 255) {
 }
 return
 ```
-.
 
-You can install the `autohotkey` package from Chocolatey.
+. You can install the `autohotkey` package from Chocolatey.
 
 This will toggle transparency in a window when you press
 `CTRL+WIN+ESC`, you have to press it twice the first time.
@@ -369,54 +422,52 @@ that on logon by creating a task in the Task Scheduler.
 
 ### Setting up an Editor
 
-Here I will describe how to set up a few editors. You can use nano, vim, emacs
-or vscode etc..
+In this section I will describe how to set up a couple of editors.
 
 You can also edit files in the Visual Studio IDE using the `devenv` command.
 
-You can use `notepad` which is in your `$env:PATH` already, and `wordpad`, for
-which I added an alias in the `$profile` below.
-
-I use vim, and the examples here are geared towards that.
+You can use `notepad` which is in your `$env:PATH` already (aliased
+to notepad++ in the [`$profile`](#setting-up-powershell).)
 
 If you want a very simple terminal editor that is easy to use, you
-can use nano, see below for how to install it.
+can use [nano](#setting-up-nano).
 
-Make sure `$env:EDITOR` is set to the executable or script that launches your
-editor with backslashes replaced with forward slashes so that git can use it for commit messages. See the `$profile` example below.
+Make sure `$env:EDITOR` is set to the executable or `.bat` file that
+launches your editor with backslashes replaced with forward slashes
+in your [`$profile`](#setting-up-powershell) so that git can use it
+for commit messages. For example:
+
+```powershell
+$private:nano = resolve-path ~/.local/bin/nano.exe
+$env:EDITOR = $nano -replace '\\','/'
+```
+.
 
 #### Setting up Vim
 
-I recommend using neovim on Windows because it has working mouse support and is
-almost 100% compatible with vim anyway.
+I recommend using neovim on Windows because it has working mouse
+support and is almost 100% compatible with vim.
 
 If you are using neovim or both, run the following:
 
 ```powershell
+$erroractionpreference = 'stop'
 mkdir ~/.vim -ea ignore
-ni -it sym ~/vimfiles -tar $(resolve-path ~/.vim) -ea ignore
-cmd /c rmdir /Q /S $(resolve-path ~/AppData/Local/nvim)
-ni -it sym ~/AppData/Local/nvim -tar $(resolve-path ~/.vim)
+ni -it sym ~/vimfiles -tar (resolve-path ~/.vim) -ea ignore
+cmd /c rmdir (resolve-path ~/AppData/Local/nvim)
+ni -it sym ~/AppData/Local/nvim -tar (resolve-path ~/.vim)
 if (-not (test-path ~/.vim/init.vim)) {
     ni ~/.vimrc -ea ignore
-    ni -it sym ~/.vim/init.vim  -tar $(resolve-path ~/.vimrc)
+    ni -it sym ~/.vim/init.vim  -tar (resolve-path ~/.vimrc)
 } elseif (-not (test-path ~/.vimrc)) {
-    ni -it sym ~/.vimrc         -tar $(resolve-path ~/.vim/init.vim)
+    ni -it sym ~/.vimrc         -tar (resolve-path ~/.vim/init.vim)
 }
 ```
-.
 
-For regular vim run the following:
+. You can edit your powershell profile with `vim $profile`, and
+reload it with `. $profile`.
 
-```powershell
-mkdir ~/.vim -ea ignore
-ni -it sym ~/vimfiles -tar $(resolve-path ~/.vim)
-```
-
-You can edit your powershell profile with `vim $profile`, and reload it with `.
-$profile`.
-
-Add the following to your `$profile`:
+Add the following to your [`$profile`](#setting-up-powershell):
 
 ```powershell
 if ($iswindows) {
@@ -445,15 +496,15 @@ else {
     $env:EDITOR = 'vim'
 }
 ```
-.
 
-In `~/.local/bin/nvim.bat` put the following for neovim:
+. In `~/.local/bin/nvim.bat` put the following for neovim:
 
 ```dosbatch
 @echo off
 set TERM=
 /tools/neovim/neovim/bin/nvim %*
 ```
+
 , and in `~/.local/bin/vim.bat` put the following for regular vim:
 
 ```dosbatch
@@ -462,9 +513,8 @@ set TERM=
 for /f "tokens=*" %%f in ('dir /b \tools\vim\vim*') do @call set vimdir=%%f
 /tools/vim/%vimdir%/vim %*
 ```
-.
 
-This is needed for git to work correctly with native vim/neovim.
+. This is needed for git to work correctly with native vim/neovim.
 
 Some suggestions for your `~/.vimrc`:
 
@@ -505,7 +555,8 @@ filetype plugin indent on
 syntax enable
 
 au BufRead COMMIT_EDITMSG,*.md setlocal spell
-au BufRead *.md setlocal tw=80
+au BufRead *.md  setlocal tw=80
+au FileType json setlocal ft=jsonc sw=4 et
 
 " Return to last edit position when opening files.
 autocmd BufReadPost *
@@ -513,84 +564,79 @@ autocmd BufReadPost *
      \   exe "normal! g`\"" |
      \ endif
 
-" Markdown
-let g:markdown_fenced_languages = ['css', 'javascript', 'js=javascript', 'json=javascript', 'xml', 'ps1', 'powershell=ps1', 'sh', 'bash=sh', 'autohotkey', 'vim', 'sshconfig', 'dosbatch']
-```
-.
+" Fix syntax highlighting on CTRL+L.
+noremap  <C-L> <Esc>:syntax sync fromstart<CR>:redraw<CR>
+inoremap <C-L> <C-o>:syntax sync fromstart<CR><C-o>:redraw<CR>
 
-I use this color scheme, which is a fork of Apprentice for black backgrounds:
+" Markdown
+let g:markdown_fenced_languages = ['css', 'javascript', 'js=javascript', 'json=javascript', 'jsonc=javascript', 'xml', 'ps1', 'powershell=ps1', 'sh', 'bash=sh', 'autohotkey', 'vim', 'sshconfig', 'dosbatch']
+```
+
+. I use this color scheme, which is a fork of Apprentice for black backgrounds:
 
 https://github.com/rkitover/Apprentice
 
 You can add it with Plug or pathogen or whatever you prefer.
 
-You'll probably want the PowerShell support vim including syntax highlighting
-which is here:
+You'll probably want the PowerShell support for vim including syntax
+highlighting which is here:
 
 https://github.com/PProvost/vim-ps1
-.
 
-I also use vim-sleuth to detect indent settings and vim-markdown for
-better markdown support including syntax highlighting in code
+. I also use vim-sleuth to detect indent settings and vim-markdown
+for better markdown support including syntax highlighting in code
 blocks.
 
 #### Setting up nano
 
-Run the following:
+Run this script, from this repo using:
+
+```powershell
+./nanosetup.ps1
+```
+
+, this is the script:
+
+[//]: # "BEGIN INCLUDED nanosetup.ps1"
 
 ```powershell
 $erroractionpreference = 'stop'
 
-$RELEASES = 'https://files.lhmouse.com/nano-win/'
+$releases = 'https://files.lhmouse.com/nano-win/'
 
 ri -r -fo ~/Downloads/nano-installer -ea ignore
 mkdir ~/Downloads/nano-installer | out-null
 pushd ~/Downloads/nano-installer
-curl -sLO ($RELEASES + $( `
-    iwr -usebasicparsing $RELEASES | % links | `
-    ? href -match '\.7z$' | select -last 1 -expand href `
+curl -sLO ($releases + (
+    iwr -usebasicparsing $releases | % links |
+    ? href -match '\.7z$' | select -last 1 | % href
 ))
 7z x nano*.7z | out-null
 mkdir ~/.local/bin -ea ignore | out-null
 cpi -fo pkg_x86_64*/bin/nano.exe ~/.local/bin
 mkdir ~/.nano -ea ignore | out-null
 git clone https://github.com/scopatz/nanorc *> $null
-gci -r nanorc -i *.nanorc | %{ cpi $_ ~/.nano }
+gci -r nanorc -i *.nanorc | cpi -dest ~/.nano
 popd
-("include `"" + (($env:USERPROFILE -replace '\\','/') -replace '^[^/]+','').tolower() + "/.nano/*.nanorc`"") >> ~/.nanorc
+("include `"" + (($env:USERPROFILE -replace '\\','/') `
+    -replace '^[^/]+','').tolower() + `
+    "/.nano/*.nanorc`"") >> ~/.nanorc
 
 gi ~/.nanorc,~/.nano,~/.local/bin/nano.exe
 ```
-.
 
-Make sure `~/.local/bin` is in your `$env:PATH` and set `$env:EDITOR` in your
-`$profile` as follows:
+. Make sure `~/.local/bin` is in your `$env:PATH` and set
+`$env:EDITOR` in your [`$profile`](#setting-up-powershell) as follows:
 
 ```powershell
 $env:EDITOR = (get-command nano).source -replace '\\','/'
 ```
 .
 
-### Set up PowerShell Profile
+### Setting up PowerShell
 
-Now add some useful things to your powershell profile, I will present some of
-mine below:
-
-Run:
-
-```powershell
-vim $profile
-```
-
-or
-
-```powershell
-notepad $profile
-```
-.
-
-If you use my `posh-git` prompt, you'll need to install the module `posh-git`
-from PSGallery, see  [Using PowerShell Gallery](#using-powershell-gallery).
+If you use my `posh-git` prompt, you'll need to install the module
+`posh-git` from [PSGallery](#using-powershell-gallery).
 
 To get colors in filesystem listings and enable some other necessary
 experimental features, run the following:
@@ -600,20 +646,36 @@ enable-experimentalfeature PSAnsiRenderingFileInfo
 enable-experimentalfeature PSNativeCommandArgumentPassing
 enable-experimentalfeature PSNativePSPathResolution
 ```
-, and then restart your terminal for them to take effect.
 
-Here is a profile to get you started, it has a few examples of functions and
-aliases which you will invariably write for yourself.
+, and then restart your terminal or open a new tab for them to take
+effect.
 
-If you cloned this repo, you can just copy it to your profile like
-so:
+Here is a profile to get you started, it has a few examples of
+functions and aliases which you will invariably write for yourself.
+
+Now edit your `$profile`, you can do this simply by:
 
 ```powershell
-cpi ./profile.ps1 $profile
+vim $profile
+```
+
+, or
+
+```powershell
+notepad $profile
 ```
 .
 
-[//]: # "BEGIN INCLUDED PROFILE.PS1"
+If you cloned this repo, you can dot-source mine in yours by adding
+this:
+
+```powershell
+. ~/source/repos/windows-dev-guide/profile.ps1
+```
+
+, or the copy the parts you are interested in, it is below:
+
+[//]: # "BEGIN INCLUDED profile.ps1"
 
 ```powershell
 # Windows PowerShell does not have OS automatic variables.
@@ -663,7 +725,7 @@ new-module MyProfile -script {
 
 $path_sep = [system.io.path]::pathseparator
 
-$global:ps_share_dir  = if ($iswindows) {
+$global:ps_share_dir = if ($iswindows) {
     '~/AppData/Roaming/Microsoft/Windows/PowerShell'
 }
 else {
@@ -704,18 +766,18 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
-function pretty_path($str) {
+function global:pretty_path($str) {
     if (-not $str) { $str = $input }
 
     $str | home_to_tilde | trim_sysdrive | backslashes_to_forward
 }
 
-# Replace OneDrive Documents path in $profile with ~/Documents
-# symlink, if you have one.
-if ($iswindows -and
-    ((gi ~/Documents -ea ignore).target -match 'OneDrive')) {
-
-    $global:profile = $profile -replace 'OneDrive\\',''
+if ($iswindows) {
+    # Replace OneDrive Documents path in $profile with ~/Documents
+    # symlink, if you have one.
+    if ((gi ~/Documents -ea ignore).target -match 'OneDrive') {
+        $global:profile = $profile -replace 'OneDrive\\',''
+    }
 
     # Remove Strawberry Perl MinGW stuff from PATH.
     $env:PATH = (split_env_path |
@@ -733,16 +795,25 @@ if ($iswindows) {
     $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | pretty_path
 }
 
-$prepend_paths = `
-    '~/.local/bin'
+$extra_paths = @{
+    prepend = '~/.local/bin'
+    append  = '~/AppData/Roaming/Python/Python*/Scripts'
+}
 
-foreach ($path in $prepend_paths) {
-    if (-not ($path = resolve-path $path -ea ignore)) {
-        continue
-    }
+foreach ($section in $extra_paths.keys) {
+    foreach ($path in $extra_paths[$section]) {
+        if (-not ($path = resolve-path $path -ea ignore)) {
+            continue
+        }
 
-    if (-not ((split_env_path) -contains $path)) {
-        $env:PATH = ($path,$env:PATH) -join $path_sep
+        if (-not ((split_env_path) -contains $path)) {
+            $env:PATH = $(if ($section -eq 'prepend') {
+                $path,$env:PATH
+            }
+            else {
+                $env:PATH,$path
+            }) -join $path_sep
+        }
     }
 }
 
@@ -816,7 +887,7 @@ function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
-    if ($cmd.commandtype -eq 'Application') {
+    if ($cmd.commandtype -match '^(Application|ExternalScript)$') {
         $cmd = $cmd.source | pretty_path
     }
 
@@ -826,7 +897,7 @@ function global:which {
 rmalias type
 
 function global:type {
-    try { which $args } catch { write-error $_ -ea stop }
+    try { which @args } catch { write-error $_ -ea stop }
 }
 
 function global:command {
@@ -834,7 +905,7 @@ function global:command {
     $args = $args | ?{ $_ -notmatch '^-' }
 
     try {
-        which -commandtype application $args
+        which -commandtype application,externalscript $args
     } catch { write-error $_ -ea stop }
 }
 
@@ -843,12 +914,12 @@ function global:command {
 $e = [char]27
 
 if ($iswindows) {
-    function global:pgrep {
-        get-ciminstance win32_process -filter "name like '%$($args[0])%' OR commandline like '%$($args[0])%'" | select processid, name, commandline
+    function global:pgrep($pat) {
+        get-ciminstance win32_process -filter "name like '%${pat}%' OR commandline like '%${pat}%'" | select ProcessId,Name,CommandLine
     }
 
-    function global:pkill {
-        pgrep $args[0] | %{ stop-process $_.processid }
+    function global:pkill($pat) {
+        pgrep $pat | %{ stop-process $_.ProcessId }
     }
 
     function format-eventlog {
@@ -861,14 +932,14 @@ if ($iswindows) {
     }
 
     function global:syslog {
-        get-winevent -log system -oldest | format-eventlog
+        get-winevent -log system -oldest | format-eventlog | less -r
     }
 
     # You have to enable the tasks log first as admin, see:
     # https://stackoverflow.com/q/13965997/262458
     function global:tasklog {
         get-winevent 'Microsoft-Windows-TaskScheduler/Operational' `
-            -oldest | format-eventlog
+            -oldest | format-eventlog | less -r
     }
 
     function global:ntop {
@@ -900,6 +971,8 @@ if ($iswindows) {
     }
 
     function global:touch {
+        if (-not $args) { $args = $input }
+
         $args | %{ $_ } | %{
             if (test-path $_) {
                 (gi $_).lastwritetime = get-date
@@ -911,6 +984,8 @@ if ($iswindows) {
     }
 
     function global:sudo {
+        if (-not $args) { $args = $input }
+
         ssh localhost -- "sl $(get-location); $($args -join " ")"
     }
 
@@ -920,7 +995,11 @@ if ($iswindows) {
 
     # To see what a choco shim is pointing to.
     function global:readshim {
-        $args | %{ $_ } | %{ &$_ --shimgen-help } | `
+        if (-not $args) { $args = $input }
+
+        $args | %{ get-command $_ -commandtype application `
+                       -ea ignore } | `
+            %{ &$_ --shimgen-help } | `
             ?{ $_ -match "^ Target: '(.*)'$" } | `
             %{ $matches[1] } | pretty_path
     }
@@ -1053,8 +1132,8 @@ if ($iswindows) {
     $hostname = $env:COMPUTERNAME.tolower()
 }
 else {
-    $username = $(whoami)
-    $hostname = $(hostname) -replace '\..*',''
+    $username = whoami
+    $hostname = (hostname) -replace '\..*',''
 }
 
 $gitpromptsettings.defaultpromptprefix.text = '{0} {1} ' `
@@ -1098,15 +1177,14 @@ if ($private:src = resolve-path `
     . $private_profile
 }
 ```
-.
 
-With these settings, up arrow will not only cycle through previous commands, but
-also allow you to type the beginning of a previous command and cycle through
-matches.
+. With these settings, up arrow will not only cycle through previous
+commands, but also allow you to type the beginning of a previous
+command and cycle through matches.
 
-This profile works for "Windows PowerShell" as well. But the profile is in a
-different file, so you will need to make a symlink there to your PowerShell
-`$profile`.
+This profile works for "Windows PowerShell" as well. But the profile
+is in a different file, so you will need to make a symlink there to
+your PowerShell `$profile`.
 
 ```powershell
 mkdir ~/Documents/WindowsPowerShell
@@ -1114,14 +1192,99 @@ ni -it sym ~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1 -tar $
 ```
 .
 
-Be aware that if your Documents are in OneDrive, OneDrive will ignore and not
-sync symlinks.
+Be aware that if your Documents are in OneDrive, OneDrive will
+ignore and not sync symlinks.
 
 This `$profile` also works for PowerShell for Linux and macOS.
 
-If you want to keep this file separate from your other profile code,
-you can dot source it in yours, or add yours to
-`$ps_config_dir/private-profile.ps1`.
+The utility functions it defines are described [here](#available-command-line-tools-and-utilities).
+
+### Setting up ssh
+
+To make sure the permissions are correct on the files in your
+`~/.ssh` directory, run the following:
+
+```powershell
+&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
+import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
+repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+```
+.
+
+### Setting up and Using git
+
+You can copy over your `~/.gitconfig` and/or run the following to
+set some settings I recommend:
+
+```powershell
+# SET YOUR NAME AND EMAIL HERE:
+git config --global user.name "John Doe"
+git config --global user.email johndoe@example.com
+
+git config --global core.autocrlf  false
+git config --global push.default   simple
+git config --global pull.rebase    true
+git config --global commit.gpgsign true
+```
+
+. Git usage from PowerShell is pretty much the same as on Linux,
+with a couple of caveats.
+
+Arguments containing special characters like `:` or `.` must be
+quoted, for example:
+
+```powershell
+git tag -s 'v5.41' -m'v5.41'
+git push origin ':refs/heads/some-branch'
+```
+
+. The `.git` directory is hidden, to see it use:
+
+```powershell
+gci -fo
+# or
+gi -fo .git
+```
+
+. **NEVER** run the command:
+
+```powershell
+ri -r -fo *
+```
+
+. On Linux, the `*` glob does match dot files like `.git`, but on
+Windows it matches everything.
+
+The command:
+
+```powershell
+ri -r *
+```
+
+, is safe because hidden files like `.git` are not affected without `-Force`.
+
+Because `.git` is a hidden directory, this also means that to delete a cloned repository, you must pass `-Force` to `Remove-Item`, e.g.:
+
+```powershell
+ri -r -fo somerepo
+```
+
+. With `core.autocrlf` set to `false`, the files in your checkouts
+will have UNIX line endings, but occasionally you need a project to
+have DOS line endings, for example if you use PowerShell scripts to
+edit the files in the project. In this case, it's best to make a
+`.gitattributes` file in the root of your project and commit it,
+containing for example:
+
+```
+* text=auto
+*.exe binary
+```
+
+. Make sure to add exclusions for all binary file types you need.
+
+This way, anyone cloning the repo will have the correct line
+endings.
 
 ### Setting up gpg
 
@@ -1130,8 +1293,8 @@ Make this symlink:
 ```powershell
 sl ~
 mkdir .gnupg -ea ignore
-cmd /c rmdir /Q /S $(resolve-path ~/AppData/Roaming/gnupg)
-ni -it sym ~/AppData/Roaming/gnupg -tar $(resolve-path ~/.gnupg)
+cmd /c rmdir (resolve-path ~/AppData/Roaming/gnupg)
+ni -it sym ~/AppData/Roaming/gnupg -tar (resolve-path ~/.gnupg)
 ```
 .
 
@@ -1145,149 +1308,81 @@ git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
 ```
 .
 
-### Setting up ssh
-
-To make sure the permissions are correct on the files in your `~/.ssh`
-directory, run the following:
-
-```powershell
-&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
-import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
-repair-authorizedkeypermission -file ~/.ssh/authorized_keys
-```
-
-### Setting up and Using git
-
-You can copy over your `~/.gitconfig` and/or run the following to set some
-settings I recommend:
-
-```powershell
-# SET YOUR NAME AND EMAIL HERE:
-git config --global user.name "John Doe"
-git config --global user.email johndoe@example.com
-
-git config --global core.autocrlf  false
-git config --global push.default   simple
-git config --global pull.rebase    true
-git config --global commit.gpgsign true
-```
-.
-
-Git usage from PowerShell is pretty much the same as on Linux, with a couple of
-caveats.
-
-Arguments containing special characters like `:` or `.` should be quoted, for
-example:
-
-```powershell
-git tag -s 'v5.41' -m'v5.41'
-git push origin ':refs/heads/some-branch'
-```
-.
-
-The `.git` directory is hidden, to see it use:
-
-```powershell
-gci -fo
-# or
-gi -fo .git
-```
-.
-
-**NEVER** run the command:
-
-```powershell
-ri -r -fo *
-```
-
-. On Linux, the `*` glob does match dot files like `.git`, but on Windows it
-matches everything.
-
-The command:
-
-```powershell
-ri -r *
-```
-
-, is safe because hidden files like `.git` are not affected without `-Force`.
-
-With `core.autocrlf` set to `false`, the files in your checkouts will have UNIX
-line endings, but occasionally you need a project to have DOS line endings, for
-example if you use PowerShell scripts to edit the files in the project. In this
-case, it's best to make a `.gitattributes` file in the root of your project and
-commit it, containing for example:
-
-```
-* text=auto
-*.exe binary
-```
-. Make sure to add exclusions for all binary file types you need.
-
-This way, anyone cloning the repo will have the correct line endings.
-
 ### PowerShell Usage Notes
 
-PowerShell is very different from POSIX shells, in both usage and programming.
+#### Introduction
+
+PowerShell is very different from POSIX shells, in both usage and
+programming.
 
 This section won't teach you PowerShell, but it will give you enough
-information to use it as a shell and a springboard for further exploration.
+information to use it as a shell, write basic scripts and a
+springboard for further exploration.
 
-You can get a list of aliases with `alias` and lookup specific aliases with e.g.
-`alias ri`. It allows globs, e.g. to see aliases starting with `s` do `alias
-s*`.
+#### Finding Documentation
 
-You can get help text for any cmdlet via its long name or alias with `help -full
-<cmdlet>`. To use `less` instead of the default pager, do e.g.: `help -full gci |
-less`.
+You can get a list of aliases with `alias` and lookup specific
+aliases with e.g. `alias ri`. It allows globs, e.g. to see aliases
+starting with `s` do `alias s*`.
 
-If you use the settings in my `$profile`, `less` will be the default pager for
-`help` via `$env:PAGER`, and `-full` will be enabled by default via
-`$PSDefaultParameterValues`.
+You can get help text for any Cmdlet via its long name or alias with
+`help -full <Cmdlet>`. To use `less` instead of the default pager,
+do e.g.: `help -full gci | less`.
 
-You can use tab completion to find help topics and search for documentation
-using globs, for example to see a list of articles containing the word "where":
+In the [`$profile`](#setting-up-powershell), `less` is set to the
+default pager for `help` via `$env:PAGER`, and `-full` is enabled by
+default via `$PSDefaultParameterValues`.
+
+You can use tab completion to find help topics and search for
+documentation using globs, for example to see a list of articles
+containing the word "where":
 
 ```powershell
 help *where*
 ```
-.
 
-The conceptual documentation not related to a specific command or function takes
-the form `about_XXXXX` e.g. `about_Operators`, modules you install will often
-also have such a document, to see a list:
+. The conceptual documentation not related to a specific command or
+function takes the form `about_XXXXX` e.g. `about_Operators`,
+modules you install will often also have such a document, to see a
+list do:
 
 ```powershell
 help about_*
 ```
-.
 
-Run `update-help` once in a while to update all your help files.
+. Run `update-help` once in a while to update all your help files.
 
 You can get documentation for external utilities in this way:
 
 ```powershell
 icacls /? | less
 ```
-.
 
-For documentation for cmd builtins, you can do this:
+. For documentation for cmd builtins, you can do this:
 
 ```powershell
 cmd /c help for | less
 ```
+
+. For the `git` man pages, use `git help <command>` to open the man
+page in your browser, e.g.:
+
+```powershell
+git help config
+```
 .
 
-For the `git` man pages, do `git help <command>` to open the man
-page in your browser, e.g. `git help config`.
+#### Commands, Parameters and Environment
 
 I suggest using the short forms of PowerShell aliases instead of the
 POSIX aliases, this forces your brain into PowerShell mode so you
 will mix things up less often, with the exception of a couple of
-things like `mkdir` and the wrapper above for `which`.
+things that are easier to type like `mkdir` or `kill` or some of the
+wrappers in the [`$profile`](#setting-up-powershell).
 
 Here are a few:
 
-| PowerShell alias                   | Full cmdlet + Params                            | POSIX command          |
+| PowerShell alias                   | Full Cmdlet + Params                            | POSIX command          |
 |------------------------------------|-------------------------------------------------|------------------------|
 | sl                                 | Set-Location                                    | cd                     |
 | gci -n                             | Get-ChildItem -Name                             | ls                     |
@@ -1311,40 +1406,98 @@ Here are a few:
 | gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10 | head -n 10 file        |
 | gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10 | tail -n 10 file        |
 | gc -wait -tail 20 some.log         | Get-Content -Wait -Tail 20 some.log             | tail -f -n 20 some.log |
+| iex                                | Invoke-Expression                               | eval                   |
 
-.
+. This will get you around and doing stuff, the usage is slightly
+different however.
 
-This will get you around and doing stuff, the usage is slightly different
-however.
-
-For one thing commands like `cpi` (`Copy-Item`) take a list of files differently
-from POSIX, they must be a PowerShell list, which means separated by commas. For
-example, to copy `file1` and `file2` to `dest-dir`, you would do:
+For one thing commands like `cpi` (`Copy-Item`) take a list of files
+differently from POSIX, they must be a PowerShell list, which means
+separated by commas. For example, to copy `file1` and `file2` to
+`dest-dir`, you would do:
 
 ```powershell
 cpi file1,file2 dest-dir
 ```
-.
 
-To remove `file1` and `file2` you would do:
+. To remove `file1` and `file2` you would do:
 
 ```powershell
 ri file1,file2
 ```
-.
 
-You can list multiple globs in these lists as well as files and directories
-etc., for example:
+. You can list multiple globs in these lists as well as files and
+directories etc., for example:
 
 ```powershell
 ri .*.un~,.*.sw?
 ```
+
+. Note that globs in PowerShell are case-insensitive.
+
+Also, unlike Linux, the `*` glob will match all files including
+`.dotfiles`. Windows uses a different mechanism for hidden files,
+see below.
+
+PowerShell relies very heavily on tab completion, and just about
+everything can be tab completed. The style I present here uses short
+forms and abbreviations instead, when possible.
+
+Tab completing directories and files with spaces in them can be
+annoying, for example:
+
+```powershell
+sl /prog<TAB>
+```
+
+, will show the completion `C:\Program`. If you want to complete
+`C:\Program Files` type `` `<SPACE> `` and it will be completed with
+a starting quote. More on the `` ` `` escape character later.
+
+The [`$profile`](#setting-up-powershell) defines the variable
+`$ps_history` for the command history file location which is
+analogous to `~/.bash_history` on Linux, you can view it with e.g.:
+
+```powershell
+less $ps_history
+```
+
+. Command-line editing and history search works about the same way
+as in bash.
+
+For examining variables and objects, unlike in POSIX shells, a value
+will be formatted for output implicitly and you do not have to
+`echo` it, to write a message you can just use a string, to examine
+a variable you can just input it directly, for example:
+
+```powershell
+'Operation was successful!'
+"The date today is: {0}" -f (get-date)
+$profile
+$env:PAGER
+```
+
+. As you can see here, there is a difference between normal
+variables and environment variables, which are prefixed with `env:`,
+which is a PSDrive, more on that later.
+
+Many commands you will use in PowerShell will, in fact, yield
+objects that will use the format defined for them to present
+themselves on the terminal. For example `gci` or `gi`. You can
+change these formats too.
+
+The Cmdlet `Get-Command` will tell you the type of a command, like
+`type` on bash. To get the path of an executable use, e.g.:
+
+```powershell
+(get-command git).source
+```
 .
 
-Note that globs in PowerShell are case-insensitive.
+The [`$profile`](#setting-up-powershell) `which`,`type` and
+`command` wrappers do this automatically.
 
-Also, unlike Linux, the `*` glob will match all files including `.dotfiles`.
-Windows uses a different mechanism for hidden files, see below.
+#### Redirection and Streams
 
 Redirection for files and commands works like in POSIX shells on a
 basic level, that is, you can expect `>`, `>>` and `|` to redirect
@@ -1355,112 +1508,166 @@ an extra `CRLF` will be added to the end of the file/stream. See the
 this when needed. You can also adjust line endings with the
 `dos2unix` and `unix2dos` commands.
 
+The `>` redirection operator is a shorthand for the `Out-File`
+command.
+
 **DO NOT** redirect binary data, instead have the utility you are
 using save the file directly.
 
-The `<` operator is not yet available. The file descriptors `0`, `1`
-and `2` are `stdin`, `stdout` and `stderr` just like in POSIX.  The
-equivalent of `/dev/null` is `$null`, so a command such as:
+The `<` operator is not yet available.
+
+The streams `1` and `2` are `SUCCESS` and `ERROR`, they are
+analogous to the `STDOUT` and `STDERR` file descriptors, and
+generally work similarly and support the same redirection syntax.
+
+PowerShell has many other streams, see:
+
+```powershell
+help about_output_streams
+```
+
+. There is no analogue to the `STDIN` stream. This gets quite
+complex because the pipeline paradigm is central in pwsh.
+
+For example, text data is generally broken up into string objects
+for each line. If you pipe to `out-string` they will be combined
+into one string object. Here is an illustration:
+
+```powershell
+get-content try.ps1 | invoke-expression
+# Throws various syntax errors.
+get-content try.ps1 | out-string | invoke-expression
+# Works correctly.
+```
+
+, there are many ways to handle pipeline input, the simplest and
+least reliable is the automatic variable `$input`, I have used it in
+the [`$profile`](#setting-up-powershell) for many things. Here is a
+stupid example:
+
+```powershell
+function capitalize_foo {
+    $input | %{ $_ -replace 'foo','FOO' }
+}
+```
+
+. The equivalent of `/dev/null` is `$null`, so a command such as:
 
 ```bash
 cmd >/dev/null 2>&1
+# Or, using a non-POSIX bash feature:
+cmd &>/dev/null
 ```
 
-would be:
+, would be:
 
 ```powershell
 cmd *> $null
 ```
+
+. This is generally what you would do to suppress `SUCCESS`, `ERROR`
+and any other streams. If you just want to suppress the output
+(`SUCCESS`) stream, you would generally use:
+
+```powershell
+cmd | out-null
+```
+
+. The `ERROR` stream also behaves quite differently from POSIX
+shells.
+
+While external commands return an exit code in `$?` in the same way
+as in POSIX, PowerShell commands use a different mechanism to
+indicate an error status. They throw an exception or write an error
+to the `ERROR` stream, which is essentially the same thing. You can
+examine the error/exception objects in the `$error` array, for
+example:
+
+```powershell
+write-error 'Something bad happened.'
+$error[0]
+```
+```console
+Write-Error: Something bad happened.
+```
+```powershell
+$error[0] | select *
+```
+```console
+PSMessageDetails      :
+Exception             : Microsoft.PowerShell.Commands.WriteErrorException: Something bad happened.
+TargetObject          :
+CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+ErrorDetails          :
+InvocationInfo        : System.Management.Automation.InvocationInfo
+ScriptStackTrace      : at <ScriptBlock>, <No file>: line 1
+PipelineIterationInfo : {0, 0, 0}
+```
 .
+
+Now I must admit to lying to you previously, that is:
+
+```powershell
+pwsh-cmd *> $null
+```
+
+, is not the same thing as suppressing `STDERR` in bash, for
+example:
+
+```powershell
+write-error '' *> $null
+```
+
+, will still set error status, even though you see no output, and
+`$error[0]` will contain an empty error.
+
+For native commands, it does in effect suppress `STDERR`, because
+they do not use this mechanism.
+
+For PowerShell commands what you want to do instead is this:
+
+```powershell
+mkdir existing-dir -ea ignore
+```
+
+, this sets `ErrorAction` to `Ignore`, and does not trigger an error
+condition.
+
+#### Commands and Operations on Filesystems and Filesystem-Like Objects
+
+The `gci` aka `Get-ChildItem` command is analogous to `ls -l`.
 
 For `ls -ltr` use:
 
 ```powershell
 gci | sort lastwritetime
-```
-
-Or the alias in my profile:
-
-```powershell
+# Or my alias:
 gci | ltr
 ```
-.
 
-The command:
+. The command analogous to `ls -1` would be:
 
 ```powershell
 gci -n
 ```
-, aka `-Name` will list only file/directory/object names as strings, which can
-be useful for long names or to pipe name strings only to another command.
 
-Parameters can be completed with `tab`, so in the case above you could write
-`lastw<TAB>`.
+, aka `-Name`, it will list only file/directory/object names as
+strings, which can be useful for long names or to pipe name strings
+only to another command.
 
-PowerShell relies very heavily on tab completion, and just about everything can
-be tab completed. The style I present here uses short forms and abbreviations
-instead, when possible.
-
-Tab completing directories and files with spaces in them can be annoying, for
-example:
-
-```powershell
-sl /prog<TAB>
-```
-
-, will show the completion `C:\Program`. If you want to complete `C:\Program
-Files` type `` `<SPACE> `` and it will be completed with a starting quote. More
-on the `` ` `` escape character later.
-
-The `$profile` above defines the variable `$ps_history` for the command history
-file location which is analogous to `~/.bash_history` on Linux, you can view it
-with e.g.:
-
-```powershell
-less $ps_history
-```
-.
-
-A note about examining variables and objects, unlike POSIX shells, a
-value will be formatted for output implicitly and you do not have to
-`echo` it, to write a message you can just use a string, to examine
-a variable you can just type it directly, for example:
-
-```powershell
-'Operation was successful!'
-"The date today is: {0}" -f (get-date)
-$profile
-$env:PAGER
-```
-.
-
-Many commands you will use in PowerShell will, in fact, yield
-objects that will use the format defined for them to present
-themselves on the terminal. For example `gci` or `gi`. You can
-change these formats too.
-
-The cmdlet `Get-Command` (wrapped by `which` in the `$profile` above) will tell
-you the type of a command, like `type` on bash. To get the path of an executable
-use, e.g.:
-
-```powershell
-(get-command git).source
-```
-.
-
-The `which` wrapper does this automatically.
 
 `Get-Child-Item` (`gci`) and `Get-Item` (`gi`) do not only operate
-on filesystem objects, but on many other kinds of objects. For example, you can
-operate on registry values like a filesystem, e.g.:
+on filesystem objects, but on many other kinds of objects. For
+example, you can operate on registry values like a filesystem, e.g.:
 
 ```powershell
 gi  HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion
 gci HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion | less
 ```
 
-, here `HKLM` stands for the `HKEY_LOCAL_MACHINE` section of the registry.
-`HKCU` stands for `HKEY_CURRENT_USER`.
+, here `HKLM` stands for the `HKEY_LOCAL_MACHINE` section of the
+registry. `HKCU` stands for `HKEY_CURRENT_USER`.
 
 You can go into these objects and work with them similar to a filesystem, for
 example try this:
@@ -1475,19 +1682,18 @@ sl ..
 
 , etc..
 
-The properties displayed and their contents will depend on the types of objects
-you are working with.
+The properties displayed and their contents will depend on the types
+of objects you are working with.
 
 You can get a list of "drive" type devices including actual drive letters with:
 
 ```powershell
 get-psdrive
 ```
-.
 
-The first column in filesystem directory listings from `gci` or `gi` is the mode
-or attributes of the object. The positions of the letters will vary, but here is
-their meaning:
+. For actual Windows filesystems, the first column in directory
+listings from `gci` or `gi` is the mode or attributes of the object.
+The positions of the letters will vary, but here is their meaning:
 
 | Mode Letter | Attribute Set On Object |
 |-------------|-------------------------|
@@ -1504,50 +1710,50 @@ To see hidden files, pass `-Force` to `gci` or `gi`:
 gci -fo
 gi -fo hidden-file
 ```
-.
 
-The best way to manipulate these attributes is with the `attrib` utility, for
-example, to make a file or directory hidden do:
+. The best way to manipulate these attributes is with the `attrib`
+utility, for example, to make a file or directory hidden do:
 
 ```powershell
 attrib +h file
 gi -fo file
 ```
-, `-Force` is required for `gci` and `gi` to access hidden filesystem objects.
 
-To make it visible do:
+, `-Force` is required for `gci` and `gi` to access hidden
+filesystem objects.
+
+To make this file visible again, do:
 
 ```powershell
 attrib -h file
 gi file
 ```
-.
 
-
-To make a symbolic link, do:
+. To make a symbolic link, do:
 
 ```powershell
 ni -it sym name-of-link -tar path-to-source
 ```
-.
 
-Make sure the `path-to-source` is an absolute path, you can use tab completion
-or `$(resolve-path file)` to ensure this.
+. The alias `ni` is for `New-Item`. Make sure the `path-to-source`
+is an absolute path, you can use tab completion or `(resolve-path
+file)` to ensure this.
 
-**WARNING**: Do not use `ri` to delete a symbolic link to a directory, do this
-instead:
+You must turn on Developer Mode to be able to make symbolic links
+without elevation in PowerShell Core.
+
+In Windows PowerShell, you must be elevated to make symbolic links
+whether Developer Mode is enabled or not.
+
+**WARNING**: Do not use `ri` to delete a symbolic link to a
+directory in Windows PowerShell, do this instead:
 
 ```powershell
 cmd /c rmdir symlink-to-directory
 ```
-.
 
-Errors for most PowerShell commands can be suppressed as follows:
-
-```powershell
-mkdir existing-dir -ea ignore
-```
-, this sets `ErrorAction` to `Ignore`.
+, `ri dirlink` works fine in PowerShell Core (the one you installed
+from choco.)
 
 For a `find` replacement, use the `-Recurse` flag to `gci`, e.g.:
 
@@ -1556,16 +1762,18 @@ gci -r *.cpp
 ```
 .
 
-To search under a specific directory, specify the glob with `-Include`, e.g.:
+To search under a specific directory, specify the glob with
+`-Include`, e.g.:
 
 ```powershell
 gci -r /windows -i *.dll
 ```
 
-, for example, to find all DLL files in all levels under `C:\Windows`.
+, for example, to find all DLL files in all levels under
+`C:\Windows`.
 
-Another useful parameter for the file operation commands is `-Exclude`, which
-also takes globs, e.g.:
+Another useful parameter for the file operation commands is
+`-Exclude`, which also takes globs, e.g.:
 
 ```powershell
 gci ~/source/repos -exclude vcpkg
@@ -1573,143 +1781,169 @@ gci -r /some/dir -exclude .*
 ```
 .
 
-PowerShell supports an amazing new system called the "object pipeline", what
-this means is that you can pass objects around via pipelines and inspect their
-properties, call methods on them, etc..
+#### Pipelines
 
-Here is an example of using the object pipeline to delete all vim undo files:
+PowerShell supports an amazing new system called the "object
+pipeline", what this means is that you can pass objects around via
+pipelines and inspect their properties, call methods on them, etc..
+This is the central paradigm in PowerShell for everything.
+
+Here is an example of using the object pipeline to delete all vim
+undo files:
 
 ```powershell
 gci -r .*.un~ | ri
 ```
-.
 
-It's that simple, `ri` notices that the input objects are files, and removes
-them.
+. It's that simple, `ri` sees that the input objects are files, and
+removes them.
 
-If the cmdlet works on files, they can be strings as well, for example:
+If the Cmdlet works on files, they can be strings as well, for example:
 
 ```powershell
 gc file-list | cpi -r -dest e:/backup
 ```
 
-, copies the files and directories listed in my file to a directory on a USB
-stick.
+, copies the files and directories listed in my file to a directory
+on a USB stick.
 
-Most commands can accept pipeline input, even ones you wouldn't expect to, for
-example:
+Most commands can accept pipeline input, even ones you wouldn't
+expect to, for example:
 
 ```powershell
 split-path -parent $profile | sl
 ```
+
 , will enter your Documents PowerShell directory.
 
-The help documentation for commands will generally state if they accept pipeline
-input or not.
+The help documentation for commands will generally state if they
+accept pipeline input or not.
 
-You can access the piped-in input in your own functions as the special `$input`
-variable, like in the `head` and `tail` examples in the `$profile` above.
+You can access the piped-in input in your own functions as the
+special `$input` variable, like in some of the functions in the
+[`$profile`](#setting-up-powershell). This is the worst way to do
+this, but it is the most simple.
 
-Here is a more typical example:
+Here is a more typical example of a pipeline:
 
 ```powershell
 get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 ```
-.
 
-Here `?{ ... }` is like filter/grep block and `%{ ... }` is like apply/map.
+. Here `?{ ... }` is like filter/grep block while `%{ ... }` is like
+an apply/map block.
 
-In PowerShell pipelines you will generally be working with object streams and
-their properties rather than lines of text. I will describe a few tricks for
-doing this here.
+In PowerShell pipelines you will generally be working with object
+streams and their properties rather than lines of text. I will
+describe a few tricks for doing this here.
 
-You can use the `% property` shorthand to select a single property from an
-object stream, for example:
+You can use the `% property` shorthand to select a single property
+from an object stream, for example:
 
 ```powershell
 gci | % name
 ```
-, will do the same thing as `gci -n`. The input does not have to be a stream of
-multiple objects, using this on a single object will work just fine.
+
+, will do the same thing as `gci -n`. The input does not have to be
+a stream of multiple objects, using this on a single object will
+work just fine.
 
 This will get the full paths of the files in a directory:
 
 ```powershell
 gci ~/source/pwsh/*.ps1 | % fullname
 ```
-.
 
-This also works with `?` aka `Where-Object`, which has parameters mimicking
-PowerShell operators, allowing you to do things like this:
+. This also works with `?` aka `Where-Object`, which has parameters
+mimicking PowerShell operators, allowing you to do things like this:
 
 ```powershell
 gci | ? length -lt 1000
 ```
+
 , which will show all filesystem objects less than `1000` bytes.
 
-Or, e.g.:
+Or, for example:
 
 ```powershell
 get-process | ? name -match 'win'
 ```
-.
 
-There are many useful parameters to the `select` aka `Select-Object` command for
-manipulating object streams, including `-first` and `-last` as you saw for the
-`head`/`tail` equivalents, as well as `-skip`, `-skiplast`, `-unique`, `-index`,
-`-skipindex` and `-expand`. The last one, `-expand`, will select a property from
+. There are many useful parameters to the `select` aka
+`Select-Object` command for manipulating object streams, including
+`-first` and `-last` as you saw for the `head`/`tail` equivalents,
+as well as `-skip`, `-skiplast`, `-unique`, `-index`, `-skipindex`
+and `-expand`. The last one, `-expand`, will select a property from
 the objects selected.
 
-For example,
+For a contrived example,
 
 ```powershell
-gci ~/Downloads/*.zip | sort length | select -skiplast 1 | select -last 1 -expand name
+gci ~/Downloads/*.zip | sort length | select -skiplast 1 `
+    | select -last 1 -expand name
 ```
-, will give me the name of the second biggest `.zip` file in my `~/Downloads`
-folder.
 
-If you want to inspect the properties available on an object and their current
-values, you can use `fl *` aka `Format-List *` or `select *` aka
-`Select-Object *`, e.g.:
+, will give me the name of the second biggest `.zip` file in my
+`~/Downloads` folder.
+
+If you want to inspect the properties available on an object and
+their current values, you can use `fl *` aka `Format-List *` or
+`select *` aka `Select-Object *`, e.g.:
 
 ```powershell
 gi ~/.vimrc | fl *
 gi .gitconfig | select *
 ```
+
 , the output is usually the same.
+
+#### The Measure-Object Cmdlet
 
 The equivalent of `wc -l file` to count lines is:
 
 ```powershell
 gc file | measure -l
 ```
-,
-while `-w` will count words and `-c` will count characters. You can combine any
-of the three in one command, the output is a table.
+
+, while `-w` will count words and `-c` will count characters. You
+can combine any of the three in one command, the output is a table.
 
 To get just the number of lines, you can do this:
 
 ```powershell
 gc file | measure -l | % lines
 ```
-.
 
-Note that if you are working with objects and not lines of text, `meaure -l`
-will still do what you expect, but it's better to do something like:
+. Note that if you are working with objects and not lines of text,
+`meaure -l` will still do what you expect, but it's better to do
+something like:
 
 ```powershell
 gci | measure | % count
+# Or with my $profile function:
+gci | count
 ```
-, I define the function `count` in the `$profile` above that does this.
 
-Command substitution is pretty much the same as in POSIX shells, using `$( ...
-)`. For example:
+#### Sub-Expressions and Strings
+
+The POSIX command substitution syntax allows inserting the result of
+an expression in a string or in some other contexts, for example:
 
 ```powershell
-vim $(gci -r *.h)
 "This file contains $(gc README.md | measure -l | % lines) lines."
 ```
-.
+
+. Executing an external command is also an expression, that returns
+string objects for the lines outputted, which gives you essentially
+the same thing as POSIX command substitution.
+
+When not inside a string, you can simply use parenthesis, and when
+assigning to variables you need nothing at all, for example:
+
+```powershell
+$date = get-date
+vim (gci -r *.ps1)
+```
 
 For string values, it can be nicer sometimes to use formats, e.g.:
 
@@ -1717,31 +1951,31 @@ For string values, it can be nicer sometimes to use formats, e.g.:
 "This shade of {0} is the hex code #{1:X6}." -f 'Blue',13883343
 "Today is: {0}." -f (get-date)
 ```
-.
 
-There isn't really a parallel to subshells in POSIX shells, because Windows does
-not use `fork()`, but immediately executed script blocks can be used for similar
-purposes. The syntax is:
+. Variables can also be interpolated in strings just like in POSIX
+shells, for example:
 
 ```powershell
-&{ "this is running in a script block" }
+$greeting = 'Hello'
+$name     = 'Fred'
+"${greeting}, $name"
 ```
-.
 
-In PowerShell, the backtick `` ` `` is the escape character, and you can use it
-at the end of a line, escaping the line end as a line continuation character. In
-regular expressions, the backslash `\` is the escape character, like everywhere
-else.
+In PowerShell, the backtick `` ` `` is the escape character, and you
+can use it at the end of a line, escaping the line end as a line
+continuation character. In regular expressions, the backslash `\` is
+the escape character, like everywhere else.
 
-The backtick is also used to escape nested double quotes, but not single quotes,
-for example:
+The backtick is also used to escape nested double quotes, but not
+single quotes, for example:
 
 ```powershell
 "this `"is`" a test"
 ```
 .
 
-It is also used for special character sequences, here are some useful ones:
+It is also used for special character sequences, here are some
+useful ones:
 
 | Sequence     | Character                                      |
 |--------------|------------------------------------------------|
@@ -1757,29 +1991,73 @@ It is also used for special character sequences, here are some useful ones:
 .
 
 
-For example, this will print an emoji between two blank lines, indented by a tab:
+For example, this will print an emoji between two blank lines,
+indented by a tab:
 
 ```powershell
 "`n`t`u{1F47D}`n"
 ```
+
 .
 
-PowerShell script files are any sequence of commands in a `.ps1` file, and you
-can run them directly:
+#### Script Blocks and Scopes
+
+A section of PowerShell code is usually represented by a Script
+Block, a function is a Script Block, or any code between `{ ... }`
+braces, such as for `%{ ... }` aka `ForEach-Object` or `?{ ... }`
+aka `Where-Object`. Script Blocks have their own dynamic child
+scope, that is new variables defined in them are not visible to the
+parent scope, and are freed if and when the Script Block is
+released.
+
+Script Blocks can be assigned to variables and passed to functions,
+like lambdas or function pointers in other languages. Unlike
+lambdas, pwsh does not have lexical closure semantics, it uses
+dynamic scope. You can, however, use a module to get an effect
+similar to closure semantics, I use this in the
+[`$profile`](#setting-up-powershell). For example:
+
+```powershell
+new-module -script {
+  ...
+  code here
+  ...
+} | import-module
+```
+
+, the way this works is that the module parent scope is its own
+script scope, and any exported or global functions can access
+variables and non-exported functions in that scope without them
+being visible to anything else.
+
+You can use the call operator `&` to immediately execute a defined
+Script Block or one in a variable:
+
+```powershell
+&{ "this is running in a Script Block" }
+$script = { "this is another Script Block" }
+&$script
+```
+
+, this can be useful for defining a new scope, analogous to a `(
+...)` subshell in POSIX shells.
+
+#### Using and Writing Scripts
+
+PowerShell script files are any sequence of commands in a `.ps1`
+file, and you can run them directly:
 
 ```powershell
 ./script.ps1
 ```
-.
 
-The equivalent of `set -e` in POSIX shells is:
+. The equivalent of `set -e` in POSIX shells is:
 
 ```powershell
 $erroractionpreference = 'stop'
 ```
-.
 
-I highly recommend it adding it to the top of your scripts.
+. I highly recommend it adding it to the top of your scripts.
 
 Although this guide does not yet discuss programming much, I wanted
 to mention one thing that you must be aware of when writing
@@ -1794,7 +2072,7 @@ yield a value and return control to the caller, but any value will
 be yielded implicitly.
 
 In essence, everything in PowerShell runs in a pipeline, a section
-of code runs in a pipeline and yields values to it, if you are
+of code runs in a pipeline and yields values to it, and if you are
 running it from your terminal, the terminal takes the output objects
 from the pipeline and formats them using the formatters assigned to
 them.
@@ -1815,22 +2093,27 @@ function foo {
 # val1,val: 42,50,90
 ```
 
-The bash commands `pushd` and `popd` are also available for use in your scripts.
+The bash commands `pushd` and `popd` are also available for use in
+your scripts.
 
-Reading a PowerShell script into your current session works the same way as in
-bash, e.g.:
+Reading a PowerShell script into your current session works the same
+way as "dot-source" in bash, e.g.:
 
 ```powershell
 . ~/source/PowerShell/some_functions.ps1
 ```
-, this will also work to reload your `$profile` after making changes to it:
+
+, this will also work to reload your
+[`$profile`](#setting-up-powershell) after making changes to it:
 
 ```powershell
 . $profile
 ```
 .
 
-Another couple of extremely useful cmdlets are `get-clipboard` and
+#### Miscellaneous Usage Tips
+
+Another couple of extremely useful Cmdlets are `get-clipboard` and
 `set-clipboard` to access the clipboard, they are alias to `gcb` and
 `scb` respectively, for example:
 
@@ -1839,55 +2122,42 @@ gcb > clipboard-contents.txt
 gc somefile.txt | scb
 gc $profile | scb
 ```
-.
 
-To open the explorer file manager for the current or any folder you can just run
-`explorer`, e.g.:
+. To open the explorer file manager for the current or any folder
+you can just run `explorer`, e.g.:
 
 ```powershell
 explorer .
-explorer $(resolve-path /prog*s)
+explorer (resolve-path /prog*s)
 explorer shell:startup
 ```
-.
 
-To open a file in its associated program, similarly to `xdg-open` on Linux, use the `start` command, e.g.:
+. To open a file in its associated program, similarly to `xdg-open`
+on Linux, you can use the `start` command or invoke the file like a
+script, e.g.:
 
 ```powershell
 start some_text.txt
+./some_file.txt
 start some_code.cpp
-```
-.
-
-Here are a couple more example of PowerShell one-liners:
-
-```powershell
-# Name and command mapping for aliases starting with 'se'.
-alias se* | select name, resolvedcommand
-
-# Create new empty files foo1 .. foo7.
-1..7 | %{ ni "foo$_" }
-
-# Find the import libraries in the Windows SDK with symbol names matching
-# 'MessageBox'.
-gci -n '/program files (x86)/windows kits/10/lib/10.*/um/x64/*.lib' | `
-  %{ $_; dumpbin -headers $_ | grep MessageBox }
+./some_code.cpp
 ```
 .
 
 ### Elevated Access (sudo)
 
-There is currently no sudo-like utility to get elevated access in a terminal
-session that is not complete garbage, however a reasonable workaround is connect
-to localhost with ssh, as ssh gives you elevated access. This will not allow you
-to run GUI apps with elevated access, or preserve your current location, but
-most commands should work.
+There is currently no sudo-like utility to get elevated access in a
+terminal session that is not complete garbage, however a reasonable
+workaround is connect to localhost with ssh, as ssh gives you
+elevated access. This will not allow you to run GUI apps with
+elevated access, but most console commands should work.
 
-If you use the sudo function defined in the `$profile` I provide, then your
-current location will be preserved.
+If you use the sudo function defined in the
+[`$profile`](#setting-up-powershell), then your current location
+will be preserved.
 
-This assumes you installed the ssh server as described in the [Install
-Chocolatey and Some Packages](#install-chocolatey-and-some-packages) section.
+All of this assumes you installed the ssh server as described
+[here](#install-chocolatey-and-some-packages).
 
 To set this up:
 
@@ -1896,20 +2166,19 @@ sl ~/.ssh
 gc id_rsa.pub >> authorized_keys
 ```
 
-, then make sure the permissions are correct by running the commands in the
-[Setting up ssh](#setting-up-ssh) section.
+, then make sure the permissions are correct by running the commands
+in the [ssh](#setting-up-ssh) section.
 
-Test connecting to localhost with `ssh localhost` for the first time, if
-everything went well ssh will prompt you to trust the host key, and on
-subsequent connections you will connect with no prompts.
+Test connecting to localhost with `ssh localhost` for the first
+time, if everything went well, ssh will prompt you to trust the host
+key, and on subsequent connections you will connect with no prompts.
 
 You can now run console elevated commands, for example:
 
 ```powershell
 sudo choco upgrade -y all
 ```
-, the `sudo` function is defined in the sample `$profile` in the [Set up
-PowerShell Profile](#set-up-powershell-profile) section.
+.
 
 ### Using PowerShell Gallery
 
@@ -1918,7 +2187,8 @@ To enable PowerShell Gallery to install third-party modules, run this command:
 ```powershell
 set-psrepository psgallery -installationpolicy trusted
 ```
-.
+
+, this is not necessary on Windows PowerShell.
 
 You can then install modules using `install-module`, for example:
 
@@ -1927,7 +2197,7 @@ install-module PSWriteColor
 ```
 .
 
-You can then immediately use the new module, e.g.:
+You can immediately use the new module, e.g.:
 
 ```powershell
 write-color -t 'foo' -c 'magenta'
@@ -1944,39 +2214,85 @@ get-installedmodule | update-module
 ### Available Command-Line Tools and Utilities
 
 The commands installed in the list of packages [installed from
-Chocolatey](#install-chocolatey-and-some-packages) are pretty much the same as
-in Linux.
+Chocolatey](#install-chocolatey-and-some-packages) are pretty much
+the same as in Linux.
 
-There are a few very simplistic wrappers for Linux commands in the
-`$profile` above, including: `pwd`, `which`, `type`, `command`,
-`pgrep`, `pkill`, `head`, `tail`, `touch`, `sudo`, `nproc`.
+There are a few very simplistic wrappers for similar functions as
+the namesake Linux commands in the
+[`$profile`](#setting-up-powershell), including: `pwd`, `which`,
+`type`, `command`, `pgrep`, `pkill`, `head`, `tail`, `touch`, `sudo`
+and `nproc`.
 
-See [below](#elevated-access-sudo) about the `sudo` wrapper.
+See [here](#elevated-access-sudo) about the `sudo` wrapper.
+
+I made these because the normal pwsh approach for these is too
+cumbersome, I generally recommend using and getting used to the
+native idiom for whatever you are doing.
+
+You will very likely write many of your own functions and aliases to
+improve your workflow.
+
+For example, I also define `ltr` to add `sort lastwritetime` and
+`count` to add `measure | % count` to the end of a pipeline.
 
 The `readshim` function will give you the package target of choco
 `.exe` shims, which are kind of like symlinks, they are the `.exe`
 that is in your `$env:PATH` under your choco root which is something
-like `/ProgramData/chocolatey/bin/`.
+like `/ProgramData/chocolatey/bin/`. See
+[here](#chocolatey-filesystem-structure) about the choco fs
+structure.
 
-The `patch` command comes with Git for Windows, the `$profile` above adds an
-alias to it.
+The `pretty_path` function will convert a raw path to a nicer form
+with `~` substituted or the sysdrive removed, it can take args or
+pipeline input.
 
-You get `node` and `npm` from the nodejs package. You can install any NodeJS
-utilities you need with `npm install -g <utility>`, and it will be available in
-your `$env:PATH`.
+The `megs` function will show you the size of a file in mebibytes,
+this is not really the right way to do this, the right way would be to override the `FileInfo` and `DirectoryInfo` formats, I'm still researching a nice way to do this.
 
-The `python` and `pip` tools (version 3) come from the Chocolatey python
-package. There is nothing special you have to do to install modules with `pip`.
+The `syslog` function will show you a simple view of the System
+event log, while the `tasklog` function will show you a simple view
+of the Tasks event log, which you must first enable as described
+[here](#creating-scheduled-tasks-cron).
 
-The `perl` command comes from StrawberryPerl from Chocolatey, it is mostly fully
-functional and allows you to install many modules from CPAN without issues. See
-the `$env:PATH` override for it in the `$profile` above.
+The `patch` command comes with Git for Windows, the
+[`$profile`](#setting-up-powershell) adds an alias to it.
 
-The tools `cmake` and `ninja` come with Visual Studio, if you used my sample
-`$profile` section to set up the Visual Studio environment. You can get
-dependencies from Conan or VCPKG, I recommend Conan because it has binary
-packages. More on all that later when I expand this guide. Be sure to pass `-G
-Ninja` to `cmake`.
+You get `node` and `npm` from the nodejs package. You can install
+any NodeJS utilities you need with `npm install -g <utility>`, and
+it will be available in your `$env:PATH`. For example, I use
+`doctoc` to maintain this and other markdown documents.
+
+The `python` and `pip` tools (version 3) come from the Chocolatey
+python package. To install utilities from `pip` use the `--user`
+flag, e.g.:
+
+```powershell
+pip install --user conan
+```
+
+, you will also need the user directory in your `$env:PATH`, this is
+done for you in the [`$profile`](#setting-up-powershell), the path
+depends on the Python version and looks something like this:
+
+```console
+~/AppData/Roaming/Python/Python310/Scripts
+```
+
+, `pip` will give you a warning with the path if it's not in your
+`$env:PATH`.
+
+The `perl` command comes from StrawberryPerl from Chocolatey, it is
+mostly fully functional and allows you to install many modules from
+CPAN without issues. See the `$env:PATH` override for it in the
+[`$profile`](#setting-up-powershell) to remove the MinGW stuff it
+comes with.
+
+The tools `cmake` and `ninja` come with Visual Studio, the
+[`$profile`](#setting-up-powershell) sets up the Visual Studio
+environment. You can get dependencies from Conan or VCPKG, I
+recommend Conan because it has binary packages. More on all that
+later when I expand this guide. Be sure to pass `-G Ninja` to
+`cmake`.
 
 The Visual Studio C and C++ compiler command is `cl`. Here is a simple example:
 
@@ -2002,10 +2318,11 @@ devenv /debugexe file.exe arg1 arg2 ...
 ```
 .
 
-The tool `make` is a native port of GNU Make from Chocolatey. It will generally
-not run regular Linux Makefiles because it expects `cmd.exe` shell commands.
-However, it is possible to write Makefiles that work in both environments if the
-commands are the same, for example the one in this repository.
+The tool `make` is a native port of GNU Make from Chocolatey. It
+will generally not run regular Linux Makefiles because it expects
+`cmd.exe` shell commands. However, it is possible to write Makefiles
+that work in both environments if the commands are the same, for
+example the one in this repository.
 
 For an `ldd` replacement, you can do this:
 
@@ -2028,25 +2345,27 @@ dumpbin /symbols foo.lib
 .
 
 The commands `curl` and `tar` are now standard Windows commands. The
-implementation of `tar` is not particularly wonderful, it currently does not
-handle symbolic links correctly and will not save your ACLs. You can save your
-ACLs with `icacls`.
+implementation of `tar` is not particularly wonderful, it currently
+does not handle symbolic links correctly and will not save your
+ACLs. You can save your ACLs with `icacls`.
 
-For an `htop` replacement, use `ntop` (installed in the list of Chocolatey
-packages above.) with my wrapper function in the sample `$profile`.
+For an `htop` replacement, use `ntop`, installed
+[here](#install-chocolatey-and-some-packages), with the wrapper
+function in the [`$profile`](#setting-up-powershell).
 
 You can run any `cmd.exe` commands with `cmd /c <command>`.
 
-Many more things are available from Chocolatey and other sources of course, at
-varying degrees of functionality.
+Many more things are available from Chocolatey and other sources of
+course, at varying degrees of functionality.
 
 ### Creating Scheduled Tasks (cron)
 
-You can create and update tasks for the Windows Task Scheduler to run on a
-certain schedule or on certain conditions with a small PowerShell script. I will
-provide an example here.
+You can create and update tasks for the Windows Task Scheduler to
+run on a certain schedule or on certain conditions with a small
+PowerShell script. I will provide an example here.
 
-First, enable the tasks log by running the following in an admin shell:
+First, enable the tasks log by running the following in an admin
+shell:
 
 ```powershell
 $logname = 'Microsoft-Windows-TaskScheduler/Operational'
@@ -2061,11 +2380,12 @@ This is from:
 https://stackoverflow.com/questions/23227964/how-can-i-enable-all-tasks-history-in-powershell/23228436#23228436
 .
 
-This will allow you to use the `tasklog` function from the sample `$profile`
-above to view the Task Scheduler log.
+This will allow you to use the `tasklog` function from the
+[`$profile`](#setting-up-powershell) to view the Task Scheduler log.
 
-This is a script called `register-task.ps1` that I use for the nightly builds
-for a project. The script must be run in an elevated shell.
+This is a script called `register-task.ps1` that I use for the
+nightly builds for a project. The script must be run in an elevated
+shell.
 
 ```powershell
 $TASKNAME = 'Nightly Build'
@@ -2077,7 +2397,7 @@ if (-not (test-path /logs)) { mkdir /logs }
 
 $action  = new-scheduledtaskaction `
     -execute (get-command pwsh).source `
-    -argument "-noprofile -executionpolicy remotesigned -command `"& '$(resolve-path $psscriptroot/build-nightly.ps1)' *>> /logs/build-nightly.log`""
+    -argument "-noprofile -executionpolicy remotesigned -command `"& '(resolve-path $psscriptroot/build-nightly.ps1)' *>> /logs/build-nightly.log`""
 
 $password = (get-credential $env:username).getnetworkcredential().password
 
@@ -2095,15 +2415,17 @@ register-scheduledtask -force `
 ```
 .
 
-With the `-force` parameter to `register-scheduledtask`, you can update your
-task settings and re-run the script and the task will be updated.
+With the `-force` parameter to `register-scheduledtask`, you can
+update your task settings and re-run the script and the task will be
+updated.
 
-With `-runlevel` set to `highest` the task runs elevated, omit this parameter to
-run with standard permissions.
+With `-runlevel` set to `highest` the task runs elevated, omit this
+parameter to run with standard permissions.
 
-You can also pass a `-settings` parameter to `register-scheduledtask` taking a
-task settings object created with `new-scheduledtasksettingsset`, which allows
-you to change many options for how the task is run.
+You can also pass a `-settings` parameter to
+`register-scheduledtask` taking a task settings object created with
+`new-scheduledtasksettingsset`, which allows you to change many
+options for how the task is run.
 
 You can use:
 
@@ -2122,14 +2444,15 @@ unregister-scheduledtask -confirm:$false 'Task Name'
 
 ### Working With virt-manager VMs Using virt-viewer
 
-Unfortunately `virt-manager` is unavailable as a native utility, if you like you
-can run it using WSL or even Cygwin.
+Unfortunately `virt-manager` is unavailable as a native utility, if
+you like you can run it using WSL or even Cygwin.
 
-However, `virt-viewer` is available from Chocolatey and with a bit of setup can
-allow you to work with your remote `virt-manager` VMs conveniently.
+However, `virt-viewer` is available from Chocolatey and with a bit
+of setup can allow you to work with your remote `virt-manager` VMs
+conveniently.
 
-The first step is to edit the XML for your VMs and assign non-conflicting spice
-ports bound to localhost for each one.
+The first step is to edit the XML for your VMs and assign
+non-conflicting spice ports bound to localhost for each one.
 
 For example, for my Windows build VM I have:
 
@@ -2146,9 +2469,12 @@ Edit your sshd config and make sure the following is enabled:
 ```
 GatewayPorts yes
 ```
-. Restart sshd.
 
-Then, forward the spice ports for the VMs you are interested in working with over ssh. To do that, edit your `~/.ssh/config` and set your server entry to something like the following:
+. Then restart sshd.
+
+Forward the spice ports for the VMs you are interested in working
+with over ssh. To do that, edit your `~/.ssh/config` and set your
+server entry to something like the following:
 
 ```sshconfig
 Host your-server
@@ -2156,9 +2482,12 @@ Host your-server
   LocalForward 5901 localhost:5901
   LocalForward 5902 localhost:5902
 ```
-, then if you have a tab open in the terminal with an ssh connection to your server, the ports will be forwarded.
 
-You can also make a separate entry just for forwarding the ports with a different alias, for example:
+, then if you have a tab open in the terminal with an ssh connection
+to your server, the ports will be forwarded.
+
+You can also make a separate entry just for forwarding the ports
+with a different alias, for example:
 
 ```sshconfig
 Host your-server-ports
@@ -2167,34 +2496,36 @@ Host your-server-ports
   LocalForward 5901 localhost:5901
   LocalForward 5902 localhost:5902
 ```
-, and then create a continuously running task to keep the ports open, with a command such as:
+
+, and then create a continuously running
+[task](#creating-scheduled-tasks-cron) to keep the ports open, with
+a command such as:
 
 ```powershell
 ssh -NT your-server-ports
 ```
-.
 
-See the [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
-section for information on using tasks.
-
-As an alternative to creating a task, you can make a startup folder shortcut,
-first open the folder:
+. As an alternative to creating a task, you can make a startup
+folder shortcut, first open the folder:
 
 ```powershell
 explorer shell:startup
 ```
 
-, and then create a shortcut to `pwsh`, then open the properties for the
-shortcut and set the target to something like:
+, create a shortcut to `pwsh`, then open the properties for
+the shortcut and set the target to something like:
 
 ```powershell
 "C:\Program Files\PowerShell\7\pwsh.exe" -windowstyle hidden -c "ssh -NT server-ports"
 ```
-.
 
-Make sure `Run:` is changed from `Normal window` to `Minimized`.
+. Make sure `Run:` is changed from `Normal window` to `Minimized`.
 
-Once that is done, the last step is to install `virt-viewer` from Chocolatey and add the functions to your `$profile` for launching it for your VMs. I use these:
+Once that is done, the last step is to install `virt-viewer` from
+Chocolatey and add the functions to your
+[`$profile`](#setting-up-powershell) for launching it for your VMs.
+
+I use these:
 
 ```powershell
 function winbuilder {
@@ -2205,51 +2536,51 @@ function macbuilder {
     &(resolve-path 'C:\Program Files\VirtViewer*\bin\remote-viewer.exe') -f spice://localhost:5900 *> $null
 }
 ```
-.
 
-Launching the function will open a full screen graphics console to your VM.
+. Launching the function will open a full screen graphics console to
+your VM.
 
-Moving your mouse cursor to the top-middle will pop down the control panel with
-control and disconnect functions.
+Moving your mouse cursor to the top-middle will pop down the control
+panel with control and disconnect functions.
 
 ### Using X11 Forwarding Over SSH
 
 Install `vcxsrv` from Chocolatey.
 
-It is necessary to disable DPI scaling for this app. First, run this command in
-an admin terminal:
+It is necessary to disable DPI scaling for this app. First, run this
+command in an admin terminal:
 
 ```powershell
 [environment]::setenvironmentvariable('__COMPAT_LAYER', 'HighDpiAware /M', 'machine')
 ```
-.
 
-Open the app folder:
+. Open the app folder:
 
 ```powershell
-explorer $(resolve-path /progr*s/vcxsrv)
+explorer (resolve-path /progr*s/vcxsrv)
 ```
 
-and open the properties for `vcxsrv.exe` and go to `Compatibility -> Change High
-DPI settings` at the bottom under `High DPI scaling override` check the checkbox
-for `Override high DPI scaling behavior` and under `Scaling performed by:`
-select `Application`.
+, open the properties for `vcxsrv.exe` and go to `Compatibility ->
+Change High DPI settings`, at the bottom under `High DPI scaling
+override` check the checkbox for `Override high DPI scaling
+behavior` and under `Scaling performed by:` select `Application`.
 
-Reboot your computer.
+Reboot your computer, which by the way, you can do with
+`restart-computer`.
 
 Open your startup shortcuts:
 
 ```powershell
 explorer shell:startup
 ```
-and create a shortcut to `vcxsrv.exe` with the target set to:
+
+, and create a shortcut to `vcxsrv.exe` with the target set to:
 
 ```powershell
 "C:\Program Files\VcXsrv\vcxsrv.exe" -multiwindow -clipboard -wgl
 ```
-.
 
-Launch the shortcut.
+. Launch the shortcut.
 
 On your remote computer, add this function to your `~/.bashrc`:
 
@@ -2270,33 +2601,35 @@ x() {
     ) >/dev/null 2>&1
 }
 ```
-.
 
-Edit your remote computer sshd config and make sure the following is enabled:
+. Edit your remote computer sshd config and make sure the following
+is enabled:
 
 ```
 X11Forwarding yes
 ```
-. Restart sshd.
 
-On the local computer, edit `~/.ssh/config` and set the configuration for your
-remote computer as follows:
+, then restart sshd.
+
+On the local computer, edit `~/.ssh/config` and set the
+configuration for your remote computer as follows:
 
 ```sshconfig
 Host remote-computer
   ForwardX11 yes
   ForwardX11Trusted yes
 ```
-.
 
-Make sure `$env:DISPLAY` is set in your `$profile` as follows:
+. Make sure `$env:DISPLAY` is set in your
+[`$profile`](#setting-up-powershell) as follows:
 
 ```powershell
-$env:DISPLAY = '127.0.0.1:0.0'
+if (-not $env:DISPLAY) {
+    $env:DISPLAY = '127.0.0.1:0.0'
+}
 ```
-.
 
-Open a new ssh session to the remote computer.
+. Open a new ssh session to the remote computer.
 
 You can now open X11 apps with the `x` function you added to your `~/.bashrc`,
 e.g.:
@@ -2305,11 +2638,11 @@ e.g.:
 x gedit ~/.bashrc
 ```
 
-Set your desired scale in the `~/.bashrc` function and configure the appearance
-for your Qt apps with qt5ct.
+Set your desired scale in the `~/.bashrc` function and configure the
+appearance for your Qt apps with qt5ct.
 
-One huge benefit of this setup is that you can use `xclip` on your remote
-computer to put things into your local clipboard.
+One huge benefit of this setup is that you can use `xclip` on your
+remote computer to put things into your local clipboard.
 
 ### Mounting SMB/SSHFS Folders
 
@@ -2321,18 +2654,16 @@ For example, to mount a share on an SMB file server:
 sl ~
 ni -it sym work-documents -tar //corporate-server/documents
 ```
-.
 
-To mount my NAS over SSHFS I can do this, assuming the Chocolatey `sshfs`
-package is installed:
+. To mount my NAS over SSHFS I can do this, assuming the Chocolatey
+`sshfs` package is installed:
 
 ```powershell
 sl ~
 ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 ```
-.
 
-Here `2223` is the port for ssh. Use `sshfs.k` instead of `sshfs.kr`
-to specify a path relative to your home directory.
+. Here `2223` is the port for ssh. Use `sshfs.k` instead of
+`sshfs.kr` to specify a path relative to your home directory.
 
 <!--- vim:set et sw=4 tw=68: --->

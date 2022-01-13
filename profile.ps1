@@ -45,7 +45,7 @@ new-module MyProfile -script {
 
 $path_sep = [system.io.path]::pathseparator
 
-$global:ps_share_dir  = if ($iswindows) {
+$global:ps_share_dir = if ($iswindows) {
     '~/AppData/Roaming/Microsoft/Windows/PowerShell'
 }
 else {
@@ -86,18 +86,18 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
-function pretty_path($str) {
+function global:pretty_path($str) {
     if (-not $str) { $str = $input }
 
     $str | home_to_tilde | trim_sysdrive | backslashes_to_forward
 }
 
-# Replace OneDrive Documents path in $profile with ~/Documents
-# symlink, if you have one.
-if ($iswindows -and
-    ((gi ~/Documents -ea ignore).target -match 'OneDrive')) {
-
-    $global:profile = $profile -replace 'OneDrive\\',''
+if ($iswindows) {
+    # Replace OneDrive Documents path in $profile with ~/Documents
+    # symlink, if you have one.
+    if ((gi ~/Documents -ea ignore).target -match 'OneDrive') {
+        $global:profile = $profile -replace 'OneDrive\\',''
+    }
 
     # Remove Strawberry Perl MinGW stuff from PATH.
     $env:PATH = (split_env_path |
@@ -115,16 +115,25 @@ if ($iswindows) {
     $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | pretty_path
 }
 
-$prepend_paths = `
-    '~/.local/bin'
+$extra_paths = @{
+    prepend = '~/.local/bin'
+    append  = '~/AppData/Roaming/Python/Python*/Scripts'
+}
 
-foreach ($path in $prepend_paths) {
-    if (-not ($path = resolve-path $path -ea ignore)) {
-        continue
-    }
+foreach ($section in $extra_paths.keys) {
+    foreach ($path in $extra_paths[$section]) {
+        if (-not ($path = resolve-path $path -ea ignore)) {
+            continue
+        }
 
-    if (-not ((split_env_path) -contains $path)) {
-        $env:PATH = ($path,$env:PATH) -join $path_sep
+        if (-not ((split_env_path) -contains $path)) {
+            $env:PATH = $(if ($section -eq 'prepend') {
+                $path,$env:PATH
+            }
+            else {
+                $env:PATH,$path
+            }) -join $path_sep
+        }
     }
 }
 
@@ -198,7 +207,7 @@ function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
-    if ($cmd.commandtype -eq 'Application') {
+    if ($cmd.commandtype -match '^(Application|ExternalScript)$') {
         $cmd = $cmd.source | pretty_path
     }
 
@@ -208,7 +217,7 @@ function global:which {
 rmalias type
 
 function global:type {
-    try { which $args } catch { write-error $_ -ea stop }
+    try { which @args } catch { write-error $_ -ea stop }
 }
 
 function global:command {
@@ -216,7 +225,7 @@ function global:command {
     $args = $args | ?{ $_ -notmatch '^-' }
 
     try {
-        which -commandtype application $args
+        which -commandtype application,externalscript $args
     } catch { write-error $_ -ea stop }
 }
 
@@ -225,12 +234,12 @@ function global:command {
 $e = [char]27
 
 if ($iswindows) {
-    function global:pgrep {
-        get-ciminstance win32_process -filter "name like '%$($args[0])%' OR commandline like '%$($args[0])%'" | select processid, name, commandline
+    function global:pgrep($pat) {
+        get-ciminstance win32_process -filter "name like '%${pat}%' OR commandline like '%${pat}%'" | select ProcessId,Name,CommandLine
     }
 
-    function global:pkill {
-        pgrep $args[0] | %{ stop-process $_.processid }
+    function global:pkill($pat) {
+        pgrep $pat | %{ stop-process $_.ProcessId }
     }
 
     function format-eventlog {
@@ -243,14 +252,14 @@ if ($iswindows) {
     }
 
     function global:syslog {
-        get-winevent -log system -oldest | format-eventlog
+        get-winevent -log system -oldest | format-eventlog | less -r
     }
 
     # You have to enable the tasks log first as admin, see:
     # https://stackoverflow.com/q/13965997/262458
     function global:tasklog {
         get-winevent 'Microsoft-Windows-TaskScheduler/Operational' `
-            -oldest | format-eventlog
+            -oldest | format-eventlog | less -r
     }
 
     function global:ntop {
@@ -282,6 +291,8 @@ if ($iswindows) {
     }
 
     function global:touch {
+        if (-not $args) { $args = $input }
+
         $args | %{ $_ } | %{
             if (test-path $_) {
                 (gi $_).lastwritetime = get-date
@@ -293,6 +304,8 @@ if ($iswindows) {
     }
 
     function global:sudo {
+        if (-not $args) { $args = $input }
+
         ssh localhost -- "sl $(get-location); $($args -join " ")"
     }
 
@@ -302,7 +315,11 @@ if ($iswindows) {
 
     # To see what a choco shim is pointing to.
     function global:readshim {
-        $args | %{ $_ } | %{ &$_ --shimgen-help } | `
+        if (-not $args) { $args = $input }
+
+        $args | %{ get-command $_ -commandtype application `
+                       -ea ignore } | `
+            %{ &$_ --shimgen-help } | `
             ?{ $_ -match "^ Target: '(.*)'$" } | `
             %{ $matches[1] } | pretty_path
     }
@@ -435,8 +452,8 @@ if ($iswindows) {
     $hostname = $env:COMPUTERNAME.tolower()
 }
 else {
-    $username = $(whoami)
-    $hostname = $(hostname) -replace '\..*',''
+    $username = whoami
+    $hostname = (hostname) -replace '\..*',''
 }
 
 $gitpromptsettings.defaultpromptprefix.text = '{0} {1} ' `
