@@ -80,7 +80,7 @@ iwr 'https://chocolatey.org/install.ps1' | % content | iex
 Run this script, which is in the repo, like so:
 
 ```powershell
-./install.ps1.
+./install.ps1
 ```
 
 , it installs some choco packages and sets some QOL improvement
