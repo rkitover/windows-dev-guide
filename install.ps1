@@ -12,6 +12,6 @@ refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
 &(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
-import-module -force $(resolve-path /prog*s/openssh*/opensshutils.psd1)
+import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
 repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)

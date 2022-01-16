@@ -137,47 +137,17 @@ foreach ($section in $extra_paths.keys) {
     }
 }
 
-if ($iswindows) {
-    # This breaks terminal handling in some native Windows apps
-    # like vim.
-    ri env:TERM -ea ignore
+if (-not $env:TERM) {
+    $env:TERM = 'xterm-256color'
 }
-else {
-    if (-not $env:TERM) {
-        $env:TERM = 'xterm-256color'
-    }
-    elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
-        $env:TERM = $matches[0] + '-256color'
-    }
+elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
+    $env:TERM = $matches[0] + '-256color'
 }
+$env:COLORTERM = 'truecolor'
 
-if ($iswindows) {
-    $vim = ''
-
-    foreach ($cmd in '~/.local/bin/nvim.bat','nvim') {
-        if ($vim = (get-command $cmd -ea ignore).source) {
-            set-alias vim -val $vim -scope global
-            break
-        }
-    }
-
-    if (-not $vim) {
-        foreach ($cmd in '~/.local/bin/vim.bat','vim') {
-            if ($vim = (get-command $cmd -ea ignore).source) {
-                break
-            }
-        }
-    }
-
-    if ($vim) {
-        $env:EDITOR = $vim -replace '\\','/'
-    }
+if (-not $env:VCPKG_ROOT) {
+    $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
-else {
-    $env:EDITOR = 'vim'
-}
-
-$env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 
 if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
@@ -222,11 +192,36 @@ function global:type {
 
 function global:command {
     # Remove -v etc. for now.
-    $args = $args | ?{ $_ -notmatch '^-' }
+    if ($args[0] -match '^-') { $null,$args = $args }
 
     try {
-        which -commandtype application,externalscript $args
+        which @args -commandtype application,externalscript
     } catch { write-error $_ -ea stop }
+}
+
+# Find vim and set $env:EDITOR.
+if ($iswindows) {
+    $vim = ''
+
+    if ($vim = (get-command nvim -ea ignore).source) {
+        set-alias vim -value $vim -scope global
+    }
+    else {
+        $locs =
+            { (get-command vim.exe @args).source },
+            { resolve-path /tools/vim/vim*/vim.exe @args }
+
+        foreach ($loc in $locs) {
+            if ($vim = &$loc -ea ignore) { break }
+        }
+    }
+
+    if ($vim) {
+        $env:EDITOR = $vim -replace '\\','/'
+    }
+}
+else {
+    $env:EDITOR = 'vim'
 }
 
 # Windows PowerShell does not support the `e special character
@@ -369,14 +364,13 @@ function map_alias {
 
         if ($cmd = get-command $path -ea ignore) {
             rmalias $_.key
-            set-alias -scope global $_.key -value $cmd
+            set-alias $_.key -value $cmd -scope global
         }
     }}
 }
 
 if ($iswindows) {
     @{
-        notepad = '/prog*s/notepad++/notepad++'
         patch   = '/prog*s/git/usr/bin/patch'
         wordpad = '/prog*s/win*nt/accessories/wordpad'
     } | map_alias
@@ -388,6 +382,9 @@ if (command diff) { rmalias diff }
 @{
     vcpkg = '~/source/repos/vcpkg/vcpkg'
 } | map_alias
+
+# Aliases to pwsh Cmdlets/functions.
+set-alias s -value select-object -scope global
 
 if ($iswindows) {
     # Load VS env only once.
