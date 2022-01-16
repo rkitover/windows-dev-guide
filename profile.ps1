@@ -67,7 +67,7 @@ function trim_sysdrive($str) {
 
     if (-not $iswindows) { $str }
 
-    $str -replace ('^'+(sysdrive)),''
+    $str -replace ('^'+[regex]::escape((sysdrive))),''
 }
 
 function home_to_tilde($str) {
