@@ -737,7 +737,7 @@ if (-not (test-path variable:global:iswindows)) {
 
 if ($iswindows) {
     [Console]::OutputEncoding = [Console]::InputEncoding = `
-        $OutputEncoding = [System.Text.Encoding]::UTF8
+        $OutputEncoding = new-object System.Text.UTF8Encoding
 
     set-executionpolicy -scope currentuser remotesigned
     set-culture en-US
