@@ -97,10 +97,10 @@ settings. Copy over your `~/.ssh` first, but you can do this [later](#setting-up
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 set-service beep -startuptype disabled
 choco feature enable --name 'useRememberedArgumentsForUpgrades'
-choco install -y visualstudio2019community --params '--locale en-US'
-choco install -y visualstudio2019-workload-nativedesktop
+choco install -y visualstudio2022community --params '--locale en-US'
+choco install -y visualstudio2022-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
+choco install -y 7zip NTop.Portable StrawberryPerl bzip2 cmake.portable dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
 stop-service ssh-agent
 sc.exe delete ssh-agent
 choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
@@ -753,7 +753,7 @@ if ($iswindows) {
     # is not up to date.
     update-sessionenvironment
 }
-else {
+elseif (-not $env:LANG) {
     $env:LANG = 'en_US.UTF-8'
 }
 
@@ -1115,7 +1115,7 @@ set-alias s -value select-object -scope global
 if ($iswindows) {
     # Load VS env only once.
     foreach ($vs_type in 'buildtools','community') {
-        $vs_path="/program files (x86)/microsoft visual studio/2019/${vs_type}/vc/auxiliary/build"
+        $vs_path="/program files/microsoft visual studio/2022/${vs_type}/vc/auxiliary/build"
 
         if (test-path $vs_path) {
             break
@@ -1127,8 +1127,8 @@ if ($iswindows) {
 
     if ($vs_path -and -not $env:VSCMD_VER) {
         pushd $vs_path
-#        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
-        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
+        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
+#        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
 #        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
             set-item -force "env:\$var" -val $val

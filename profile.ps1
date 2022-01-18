@@ -33,7 +33,7 @@ if ($iswindows) {
     # is not up to date.
     update-sessionenvironment
 }
-else {
+elseif (-not $env:LANG) {
     $env:LANG = 'en_US.UTF-8'
 }
 
@@ -395,7 +395,7 @@ set-alias s -value select-object -scope global
 if ($iswindows) {
     # Load VS env only once.
     foreach ($vs_type in 'buildtools','community') {
-        $vs_path="/program files (x86)/microsoft visual studio/2019/${vs_type}/vc/auxiliary/build"
+        $vs_path="/program files/microsoft visual studio/2022/${vs_type}/vc/auxiliary/build"
 
         if (test-path $vs_path) {
             break
@@ -407,8 +407,8 @@ if ($iswindows) {
 
     if ($vs_path -and -not $env:VSCMD_VER) {
         pushd $vs_path
-#        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
-        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
+        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
+#        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
 #        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
             set-item -force "env:\$var" -val $val
