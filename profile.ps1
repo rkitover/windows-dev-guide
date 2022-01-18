@@ -65,7 +65,7 @@ function sysdrive {
 function trim_sysdrive($str) {
     if (-not $str) { $str = $input }
 
-    if (-not $iswindows) { $str }
+    if (-not $iswindows) { return $str }
 
     $str -replace ('^'+[regex]::escape((sysdrive))),''
 }
@@ -318,6 +318,12 @@ if ($iswindows) {
             ?{ $_ -match "^ Target: '(.*)'$" } | `
             %{ $matches[1] } | pretty_path
     }
+
+    function global:env {
+        gci env: | sort name | %{
+            "`${{env:{0}}}='{1}'" -f $_.name,$_.value
+        }
+    }
 }
 elseif ($ismacos) {
     function global:ls {
@@ -401,10 +407,9 @@ if ($iswindows) {
 
     if ($vs_path -and -not $env:VSCMD_VER) {
         pushd $vs_path
-        # vcvars64.bat          for x86_64 native builds.
-        # vcvars32.bat          for x86_32 native builds.
-        # vcvarsamd64_arm64.bat for ARM64  cross  builds.
-        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
+#        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
+        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
+#        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
             set-item -force "env:\$var" -val $val
         }
