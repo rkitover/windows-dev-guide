@@ -806,10 +806,17 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
-function global:pretty_path($str) {
+function global:shortpath($str) {
     if (-not $str) { $str = $input }
 
-    $str | home_to_tilde | trim_sysdrive | backslashes_to_forward
+    $str | resolve-path -ea ignore | % path | home_to_tilde | `
+        trim_sysdrive | backslashes_to_forward
+}
+
+function global:realpath($str) {
+    if (-not $str) { $str = $input }
+
+    $str | resolve-path -ea ignore | % path | backslashes_to_forward
 }
 
 if ($iswindows) {
@@ -825,14 +832,14 @@ if ($iswindows) {
     ) -join $path_sep
 }
 
-$global:profile = $profile | pretty_path
+$global:profile = $profile | shortpath
 
 $global:ps_config_dir = split-path $profile -parent
 
 $global:ps_history = "$ps_share_dir/ConsoleHost_history.txt"
 
 if ($iswindows) {
-    $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | pretty_path
+    $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | shortpath
 }
 
 $extra_paths = @{
@@ -863,7 +870,10 @@ if (-not $env:TERM) {
 elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
     $env:TERM = $matches[0] + '-256color'
 }
-$env:COLORTERM = 'truecolor'
+
+if (-not $env:COLORTERM) {
+    $env:COLORTERM = 'truecolor'
+}
 
 if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
@@ -882,7 +892,7 @@ function global:megs {
 }
 
 function global:cmconf {
-    grep -E --color 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
+    sls 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
 }
 
 # Windows PowerShell does not have Remove-Alias.
@@ -893,12 +903,19 @@ function rmalias($alias) {
     }
 }
 
+# Check if invocation of external command works correctly.
+function ext_cmd_works($exe) {
+    $wors = $false
+    $($input | &$exe @args | out-null; $works = $?) 2>&1 | sv err_out
+    $works -and -not $err_out
+}
+
 function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
     if ($cmd.commandtype -match '^(Application|ExternalScript)$') {
-        $cmd = $cmd.source | pretty_path
+        $cmd = $cmd.source | shortpath
     }
 
     $cmd
@@ -937,7 +954,7 @@ if ($iswindows) {
     }
 
     if ($vim) {
-        $env:EDITOR = $vim -replace '\\','/'
+        $env:EDITOR = realpath $vim
     }
 }
 else {
@@ -1036,7 +1053,7 @@ if ($iswindows) {
                        -ea ignore } | `
             %{ &$_ --shimgen-help } | `
             ?{ $_ -match "^ Target: '(.*)'$" } | `
-            %{ $matches[1] } | pretty_path
+            %{ $matches[1] } | shortpath
     }
 
     function global:env {
@@ -1048,24 +1065,29 @@ if ($iswindows) {
 elseif ($ismacos) {
     function global:ls {
         &(command ls) -Gh $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 else { # linux
     function global:ls {
         &(command ls) --color=auto -h $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
-if (command grep) {
+if ((get-command -commandtype application grep -ea ignore) -and `
+    ('foo' | ext_cmd_works (command grep) --color foo)) {
+
     function global:grep {
-        $input | &(command grep) --color=auto $args
+        $input | &(command grep) --color $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
 rmalias pwd
 
 function global:pwd {
-    get-location | % path | pretty_path
+    get-location | % path | shortpath
 }
 
 function global:ltr { $input | sort lastwritetime }
@@ -1214,7 +1236,7 @@ if ($private:posh_vcpkg = resolve-path `
 if ($private:src = resolve-path `
     $ps_config_dir/private-profile.ps1 -ea ignore) {
 
-    $global:private_profile = $src | pretty_path
+    $global:private_profile = $src | shortpath
 
     . $private_profile
 }
@@ -1472,6 +1494,8 @@ Here are a few:
 | which (custom)                     | Get-Command                                     | command -v, which      |
 | gci -r                             | Get-ChildItem -Recurse                          | find                   |
 | ni                                 | New-Item                                        | touch <new-file>       |
+| sls -ca                            | Select-String -CaseSensitive                    | grep                   |
+| sls                                | Select-String                                   | grep -i                |
 | sort                               | Sort-Object                                     | sort                   |
 | sort -u                            | Sort-Object -Unique                             | sort -u                |
 | measure -l                         | Measure-Object -Line                            | wc -l                  |
@@ -1538,8 +1562,8 @@ less $ps_history
 
 . Command-line editing and history search works about the same way
 as in bash. I have also defined the `PSReadLine` options to make up
-arrow not only cycle through previous commands, but also allow you
-to type the beginning of a previous command and cycle through
+arrow not only cycle through previous commands, but will also allow
+you to type the beginning of a previous command and cycle through
 matches.
 
 For examining variables and objects, unlike in POSIX shells, a value
@@ -1595,7 +1619,8 @@ $repos.count # 29
 
 . You usually do not have to do anything to work with an array value
 as opposed to a single value, occasionally you might have to enclose
-it in `@( ... )`.
+it in `@( ... )` to for example force a single value into an array
+of one element.
 
 Occasionally you may want to write a long pipeline directly to a
 variable, you can use `set-variable` which has the standard alias
@@ -1665,7 +1690,7 @@ help about_output_streams
 ```
 
 . There is no analogue to the `STDIN` stream. This gets quite
-complex because the pipeline paradigm is central in pwsh.
+complex because the pipeline paradigm is central in PowerShell.
 
 For example, text data is generally broken up into string objects
 for each line. If you pipe to `out-string` they will be combined
@@ -1692,19 +1717,31 @@ function capitalize_foo {
 . The equivalent of `/dev/null` is `$null`, so a command such as:
 
 ```bash
-cmd >/dev/null 2>&1
-# Or, using a non-POSIX bash feature:
-cmd &>/dev/null
+cmd 2>/dev/null
 ```
 
 , would be:
 
 ```powershell
+cmd 2>$null
+```
+
+. While a command such as:
+
+```bash
+cmd >/dev/null 2>&1
+# Or, using a non-POSIX bash feature:
+cmd &>/dev/null
+```
+
+, would generally be written as:
+
+```powershell
 cmd *> $null
 ```
 
-. This is generally what you would do to suppress `SUCCESS`, `ERROR`
-and any other streams. If you just want to suppress the output
+, to silence all streams, including extra streams PowerShell has
+such as Verbose. If you just want to suppress the output
 (`SUCCESS`) stream, you would generally use:
 
 ```powershell
@@ -1714,12 +1751,12 @@ cmd | out-null
 . The `ERROR` stream also behaves quite differently from POSIX
 shells.
 
-While external commands return an exit code in `$?` in the same way
-as in POSIX, PowerShell commands use a different mechanism to
-indicate an error status. They throw an exception or write an error
-to the `ERROR` stream, which is essentially the same thing, just
-results in different types of objects being written to the `ERROR`
-stream.
+Both external commands and PowerShell functions and cmdlets indicate success or failure via `$?`, which is `$true` or `$false`. For external commands the actual exit code is available via `$LastExitCode`.
+
+However, PowerShell commands use a different mechanism to indicate
+an error status. They throw an exception or write an error to the
+`ERROR` stream, which is essentially the same thing, just resulting
+in different types of objects being written to the `ERROR` stream.
 
 You can examine the error/exception objects in the `$error` array,
 for example:
@@ -1737,20 +1774,14 @@ $error[0] | select *
 ```console
 PSMessageDetails      :
 Exception             : Microsoft.PowerShell.Commands.WriteErrorException: Something bad happened.
-TargetObject          :
-CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
-FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
-ErrorDetails          :
-InvocationInfo        : System.Management.Automation.InvocationInfo
-ScriptStackTrace      : at <ScriptBlock>, <No file>: line 1
-PipelineIterationInfo : {0, 0, 0}
+...
 ```
 .
 
 Now I must admit to lying to you previously, that is:
 
 ```powershell
-pwsh-cmd *> $null
+pwsh-cmd 2> $null
 ```
 
 , is not the same thing as suppressing `STDERR` in bash, for
@@ -1818,19 +1849,10 @@ gci HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion | less
 , here `HKLM` stands for the `HKEY_LOCAL_MACHINE` section of the
 registry. `HKCU` stands for `HKEY_CURRENT_USER`.
 
-You can go into these objects and work with them similar to a
-filesystem, for example try this:
-
-```powershell
-sl HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion
-gci | less
-sl WindowsUpdate
-gci
-sl ..
-```
-
-, etc.. The properties displayed and their contents will depend on
-the types of objects you are working with.
+You can go into these objects using `sl` (`Set-Location`) and work
+with them similar to a filesystem. The properties displayed and
+their contents will depend on the types of objects you are working
+with.
 
 You can get a list of "drive" type devices including actual drive letters with:
 
@@ -2081,9 +2103,9 @@ gci | measure | % count
 gci | count
 ```
 
-. This is essentially the same thing, because lines of text in pwsh
-pipelines are actually string objects, as I already mentioned at
-least 3 times.
+. This is essentially the same thing, because lines of text in
+PowerShell pipelines are actually string objects, as I already
+mentioned at least 3 times.
 
 #### Sub-Expressions and Strings
 
@@ -2097,6 +2119,10 @@ an expression in a string or in some other contexts, for example:
 . Executing an external command is also an expression, that returns
 string objects for the lines outputted, which gives you essentially
 the same thing as POSIX command substitution.
+
+The `@( ... )` syntax works identically to the `$( ... )` syntax to
+evaluate expressions, however, it cannot be used in a string by
+itself and will always result in an array even for one value.
 
 When not inside a string, you can simply use parenthesis, and when
 assigning to variables you need nothing at all, for example:
@@ -2179,7 +2205,7 @@ released.
 
 Script Blocks can be assigned to variables and passed to functions,
 like lambdas or function pointers in other languages. Unlike
-lambdas, pwsh does not have lexical closure semantics, it uses
+lambdas, PowerShell does not have lexical closure semantics, it uses
 dynamic scope. You can, however, use a module to get an effect
 similar to closure semantics, I use this in the
 [`$profile`](#setting-up-powershell). For example:
@@ -2192,7 +2218,7 @@ new-module SomeName -script {
 } | import-module
 ```
 
-, the way this works is that the module parent scope is its own
+, the way this works is that the module scope is its own independent
 script scope, and any exported or global functions can access
 variables and non-exported functions in that scope without them
 being visible to anything else. When you see the `GetNewClosure()`
@@ -2207,8 +2233,8 @@ $script = { "this is another Script Block" }
 &$script
 ```
 
-, this can be useful for defining a new scope, analogous to a `(
-...)` subshell in POSIX shells.
+, this can be useful for defining a new scope, somewhat but not
+really analogous to a `( ...)` subshell in POSIX shells.
 
 #### Using and Writing Scripts
 
@@ -2226,6 +2252,9 @@ $erroractionpreference = 'stop'
 ```
 
 . I highly recommend it adding it to the top of your scripts.
+
+The bash commands `pushd` and `popd` are also available for use in
+your scripts.
 
 Although this guide does not yet discuss programming much, I wanted
 to mention one thing that you must be aware of when writing
@@ -2257,14 +2286,38 @@ function foo {
     66
 }
 
+$array = foo
+$array -join ','
+# or
 (foo) -join ','
+# will yield:
 # val1,val: 42,50,90
 ```
 
-The bash commands `pushd` and `popd` are also available for use in
-your scripts.
+. Since arrays are in PowerShell are fixed size, it is more
+computationally expensive to manipulate them via adding and removing
+elements. To build an array it is better to assign the result of a
+pipeline or a loop, for example:
 
-Reading a PowerShell script into your current session and scope
+```powershell
+$arr1 = gci /windows
+
+$arr2 = foreach ($file in gci /windows) { $file }
+```
+
+, and to remove elements of an array it's better to assign the
+source elements you want to a new array by filtering or index, for
+example:
+
+```powershell
+$arr1 = gci /windows
+
+$arr2 = $arr1 | ?{ (split-path -extension $_) -ne '.exe' }
+
+$arr3 = $arr2[20..29]
+```
+
+. Reading a PowerShell script into your current session and scope
 works the same way as "dot-source" in POSIX shells, e.g.:
 
 ```powershell
@@ -2276,6 +2329,28 @@ works the same way as "dot-source" in POSIX shells, e.g.:
 
 ```powershell
 . $profile
+```
+
+. Function parameter specifications get extremely complex in
+PowerShell, but for simple functions this is all you need to know:
+
+```powershell
+function foo($arg1) {
+    # $arg1 will be first arg, $args will be the rest
+}
+function bar([array]$arg1, [string]$arg2) {
+    # $arg1 must be an array, $arg2 must be a string, $args is the
+    # rest.
+}
+# For more complex param definitions:
+function baz {
+    param(
+        [array]$arg1,
+        [string]$arg2
+    )
+    # Same as previous.
+}
+}
 ```
 .
 
@@ -2327,7 +2402,7 @@ many, many, many times, which you can do with:
 import-module -force ~/source/pwsh/modules/open-thingy.psm1
 ```
 . Sometimes this will not be sufficient, and you will need to unload
-it, or even start a new pwsh session.
+it, or even start a new PowerShell session.
 
 #### Miscellaneous Usage Tips
 
@@ -2443,7 +2518,7 @@ and `nproc`.
 
 See [here](#elevated-access-sudo) about the `sudo` wrapper.
 
-I made these because the normal pwsh approach for these is too
+I made these because the normal PowerShell approach for these is too
 cumbersome, I generally recommend using and getting used to the
 native idiom for whatever you are doing.
 
@@ -2461,9 +2536,10 @@ like `/ProgramData/chocolatey/bin/`. See
 [here](#chocolatey-filesystem-structure) about the choco filesystem
 structure.
 
-The `pretty_path` function will convert a raw path to a nicer form
+The `shortpath` function will convert a raw path to a nicer form
 with `~` substituted or the sysdrive removed, it can take args or
-pipeline input.
+pipeline input. The `realpath` function will give the canonical path
+with sysdrive using forward slashes.
 
 The `megs` function will show you the size of a file in mebibytes,
 this is not really the right way to do this, the right way would be to override the `FileInfo` and `DirectoryInfo` formats, I'm still researching a nice way to do this.

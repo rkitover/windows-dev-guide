@@ -86,10 +86,17 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
-function global:pretty_path($str) {
+function global:shortpath($str) {
     if (-not $str) { $str = $input }
 
-    $str | home_to_tilde | trim_sysdrive | backslashes_to_forward
+    $str | resolve-path -ea ignore | % path | home_to_tilde | `
+        trim_sysdrive | backslashes_to_forward
+}
+
+function global:realpath($str) {
+    if (-not $str) { $str = $input }
+
+    $str | resolve-path -ea ignore | % path | backslashes_to_forward
 }
 
 if ($iswindows) {
@@ -105,14 +112,14 @@ if ($iswindows) {
     ) -join $path_sep
 }
 
-$global:profile = $profile | pretty_path
+$global:profile = $profile | shortpath
 
 $global:ps_config_dir = split-path $profile -parent
 
 $global:ps_history = "$ps_share_dir/ConsoleHost_history.txt"
 
 if ($iswindows) {
-    $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | pretty_path
+    $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | shortpath
 }
 
 $extra_paths = @{
@@ -143,7 +150,10 @@ if (-not $env:TERM) {
 elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
     $env:TERM = $matches[0] + '-256color'
 }
-$env:COLORTERM = 'truecolor'
+
+if (-not $env:COLORTERM) {
+    $env:COLORTERM = 'truecolor'
+}
 
 if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
@@ -162,7 +172,7 @@ function global:megs {
 }
 
 function global:cmconf {
-    grep -E --color 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
+    sls 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
 }
 
 # Windows PowerShell does not have Remove-Alias.
@@ -173,12 +183,19 @@ function rmalias($alias) {
     }
 }
 
+# Check if invocation of external command works correctly.
+function ext_cmd_works($exe) {
+    $wors = $false
+    $($input | &$exe @args | out-null; $works = $?) 2>&1 | sv err_out
+    $works -and -not $err_out
+}
+
 function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
     if ($cmd.commandtype -match '^(Application|ExternalScript)$') {
-        $cmd = $cmd.source | pretty_path
+        $cmd = $cmd.source | shortpath
     }
 
     $cmd
@@ -217,7 +234,7 @@ if ($iswindows) {
     }
 
     if ($vim) {
-        $env:EDITOR = $vim -replace '\\','/'
+        $env:EDITOR = realpath $vim
     }
 }
 else {
@@ -316,7 +333,7 @@ if ($iswindows) {
                        -ea ignore } | `
             %{ &$_ --shimgen-help } | `
             ?{ $_ -match "^ Target: '(.*)'$" } | `
-            %{ $matches[1] } | pretty_path
+            %{ $matches[1] } | shortpath
     }
 
     function global:env {
@@ -328,24 +345,29 @@ if ($iswindows) {
 elseif ($ismacos) {
     function global:ls {
         &(command ls) -Gh $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 else { # linux
     function global:ls {
         &(command ls) --color=auto -h $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
-if (command grep) {
+if ((get-command -commandtype application grep -ea ignore) -and `
+    ('foo' | ext_cmd_works (command grep) --color foo)) {
+
     function global:grep {
-        $input | &(command grep) --color=auto $args
+        $input | &(command grep) --color $args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
 rmalias pwd
 
 function global:pwd {
-    get-location | % path | pretty_path
+    get-location | % path | shortpath
 }
 
 function global:ltr { $input | sort lastwritetime }
@@ -494,7 +516,7 @@ if ($private:posh_vcpkg = resolve-path `
 if ($private:src = resolve-path `
     $ps_config_dir/private-profile.ps1 -ea ignore) {
 
-    $global:private_profile = $src | pretty_path
+    $global:private_profile = $src | shortpath
 
     . $private_profile
 }
