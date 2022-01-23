@@ -185,8 +185,14 @@ function rmalias($alias) {
 
 # Check if invocation of external command works correctly.
 function ext_cmd_works($exe) {
-    $wors = $false
+    $works = $false
+
+    if ((get-command $exe).commandtype -ne 'Application') {
+        write-error 'not an external command' -ea stop
+    }
+
     $($input | &$exe @args | out-null; $works = $?) 2>&1 | sv err_out
+
     $works -and -not $err_out
 }
 
