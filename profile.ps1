@@ -16,15 +16,15 @@ if (-not (test-path variable:global:iswindows)) {
 }
 
 if ($iswindows) {
-    [Console]::OutputEncoding = [Console]::InputEncoding = `
-        $OutputEncoding = new-object System.Text.UTF8Encoding
+    [Console]::OutputEncoding = [Console]::InputEncoding `
+        = $OutputEncoding = new-object System.Text.UTF8Encoding
 
     set-executionpolicy -scope currentuser remotesigned
     set-culture en-US
 
-    if ($private:chocolatey_profile = resolve-path `
-        "$env:chocolateyinstall\helpers\chocolateyprofile.psm1" `
-        -ea ignore) {
+    if ($private:chocolatey_profile = resolve-path (
+            "$env:chocolateyinstall\helpers\chocolateyprofile.psm1"`
+        ) -ea ignore) {
 
         import-module $chocolatey_profile
     }
@@ -44,6 +44,7 @@ $env:PAGER = 'less'
 new-module MyProfile -script {
 
 $path_sep = [system.io.path]::pathseparator
+$dir_sep  = [system.io.path]::directoryseparatorchar
 
 $global:ps_share_dir = if ($iswindows) {
     '~/AppData/Roaming/Microsoft/Windows/PowerShell'
@@ -73,9 +74,10 @@ function trim_sysdrive($str) {
 function home_to_tilde($str) {
     if (-not $str) { $str = $input }
 
-    $home_dir = [regex]::escape($home)
+    $home_dir_re = [regex]::escape($home)
+    $dir_sep_re  = [regex]::escape($dir_sep)
 
-    $str -replace ('^'+$home_dir),'~'
+    $str -replace ('^'+$home_dir_re+"($dir_sep_re"+'|$)'),'~$1'
 }
 
 function backslashes_to_forward($str) {
@@ -89,14 +91,20 @@ function backslashes_to_forward($str) {
 function global:shortpath($str) {
     if (-not $str) { $str = $input }
 
-    $str | resolve-path -ea ignore | % path | home_to_tilde | `
-        trim_sysdrive | backslashes_to_forward
+    $str | resolve-path -ea ignore | % path | home_to_tilde `
+        | trim_sysdrive | backslashes_to_forward
 }
 
 function global:realpath($str) {
     if (-not $str) { $str = $input }
 
     $str | resolve-path -ea ignore | % path | backslashes_to_forward
+}
+
+function global:syspath($str) {
+    if (-not $str) { $str = $input }
+
+    $str | resolve-path -ea ignore | % path
 }
 
 if ($iswindows) {
@@ -183,26 +191,32 @@ function rmalias($alias) {
     }
 }
 
+function is_ext_cmd($cmd) {
+    (get-command $cmd -ea ignore).commandtype `
+        -cmatch '^(Application|ExternalScript)$'
+}
+
 # Check if invocation of external command works correctly.
 function ext_cmd_works($exe) {
     $works = $false
 
-    if ((get-command $exe).commandtype -ne 'Application') {
+    if (-not (is_ext_cmd $exe)) {
         write-error 'not an external command' -ea stop
     }
 
-    $($input | &$exe @args | out-null; $works = $?) 2>&1 | sv err_out
+    $($input | &$exe @args | out-null; $works = $?) 2>&1 `
+        | sv err_out
 
     $works -and -not $err_out
 }
+
+function global:%? { $input | %{ $_ } | ?{ $_ } }
 
 function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
-    if ($cmd.commandtype -match '^(Application|ExternalScript)$') {
-        $cmd = $cmd.source | shortpath
-    }
+    if (is_ext_cmd $cmd) { $cmd = $cmd.source | shortpath }
 
     $cmd
 }
@@ -220,6 +234,171 @@ function global:command {
     try {
         which @args -commandtype application,externalscript
     } catch { write-error $_ -ea stop }
+}
+
+function ver_windows {
+    $osver = [environment]::osversion.version
+    $major = $osver.major
+    $build = $osver.build
+
+    if ($major -eq 10 -and $build -gt 22000) {
+        $major = 11
+    }
+
+    try {
+        $arch = [System.Runtime.InteropServices.RuntimeInformation,mscorlib]::OSArchitecture
+    } catch {}
+
+    'Windows {0} build {1}{2}' `
+        -f $major,
+           $build,
+           $(if ($arch) { " $arch" })
+}
+
+function global:ver {
+    if ($iswindows) {
+        ver_windows
+    }
+    else {
+        $uname_parts = $(if     ($islinux) { 'sri' }
+                         elseif ($ismacos) { 'srm' }
+                       ).getenumerator() | %{ uname "-$_" }
+
+        # Remove -xxx-xxx suffixes from kernel versions.
+        if ($islinux) {
+            $uname_parts[1] = $uname_parts[1] -replace '-.*',''
+        }
+
+        "{0} kernel {1} {2}" -f $uname_parts
+    }
+}
+
+function global:mklink {
+    $usage = 'args: [link] target'
+
+    $args = $args | %{ $_ } | ? length
+
+    if (-not $args) { $args = @($input) }
+
+    while ($args.count -gt 2 -and $args[0] -match '^/[A-Z]$') {
+        $null,$args = $args
+    }
+
+    if (-not $args -or $args.count -gt 2) {
+        write-error $usage -ea stop
+    }
+
+    $link,$target = $args
+
+    if (-not $target) {
+        $target = $link
+
+        if (-not (split-path -parent $target)) {
+            write-error ($usage + "`n" + 'cannot make link with the same name as target') -ea stop
+        }
+
+        $link = split-path -leaf $target
+    }
+
+    if (-not ($link_parent = split-path -parent $link)) {
+        $link_parent = get-location
+    }
+    if (-not ($target_parent = split-path -parent $target)) {
+        $target_parent = get-location
+    }
+
+    try {
+        $link_parent,$target | resolve-path -ea stop `
+            | out-null
+    }
+    catch { write-error $_ -ea stop }
+
+    $absolute = @{
+        link = join-path (resolve-path $link_parent) `
+                         (split-path -leaf $link)
+
+        target = resolve-path $target | % path
+    }
+
+    $home_dir_re = [regex]::escape($home)
+    $dir_sep_re  = [regex]::escape($dir_sep)
+
+    $in_home = @{}
+
+    $absolute.getenumerator() | %{
+      if ($_.value -match ('^'+$home_dir_re+"($dir_sep_re"+'|$)')) {
+        $in_home[$_.key] = $true
+      }
+    }
+
+    # If target is in home, make sure ~ is resolved.
+    #
+    # Make sure relative links are relative to link parent
+    # (::ispathrooted() does not understand ~ paths and considers
+    # them relative.)
+    #
+    # And if both link and target are in home dir, force relative
+    # link, this is to make backups/copies/moves and SMB shares of
+    # the home/profile dir easier and less error-prone.
+    $target = if (-not (
+                      $in_home.target `
+                      -or [system.io.path]::ispathrooted($target)
+                  ) -or $in_home.count -eq 2) {
+
+        pushd $link_parent
+        resolve-path -relative $absolute.target
+        popd
+    }
+    elseif($in_home.target) {
+        $absolute.target
+    }
+
+    if (-not $iswindows -or $psversiontable.psversion.major -ge 6) {
+        # PSCore.
+        try {
+            new-item -itemtype symboliclink $absolute.link `
+                -target $target -ea stop
+        }
+        catch { write-error $_ -ea stop }
+    }
+    else {
+        # WinPS or older.
+        $params = @(
+            if (test-path -pathtype container $target) { '/D' }
+        )
+        cmd /c mklink @params $absolute.link $target
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+    }
+}
+
+function global:rmlink {
+    $args = @($input),$args | %{ $_ } | ? length
+
+    if (-not $args) {
+        write-error 'args: link1 [link2 ...]' -ea stop
+    }
+
+    $args | %{
+        try { $_ = gi $_ -ea stop }
+        catch { write-error $_ -ea stop }
+
+        if (-not $_.target) {
+            write-error "$_ is not a symbolic link" -ea stop
+        }
+
+        if ((test-path -pathtype container $_) `
+            -and $iswindows `
+            -and $psversiontable.psversion.major -lt 7) {
+
+            # In WinPS remove-item does not work for dir links.
+            cmd /c rmdir $_
+            if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        }
+        else {
+            try { ri $_ }
+            catch { write-error $_ -ea stop }
+        }
+    }
 }
 
 # Find vim and set $env:EDITOR.
@@ -262,10 +441,10 @@ if ($iswindows) {
 
     function format-eventlog {
         $input | %{
-            ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) + `
-            "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) + `
-            "$e[95m]$e[0m " + `
-            ($_.message -replace "`n.*",''))
+            ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) `
+            + "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) `
+            + "$e[95m]$e[0m " `
+            + ($_.message -replace "`n.*",''))
         }
     }
 
@@ -282,6 +461,7 @@ if ($iswindows) {
 
     function global:ntop {
         ntop.exe -s 'CPU%' @args
+        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 
     function head_tail([scriptblock]$cmd, $arglist) {
@@ -335,11 +515,12 @@ if ($iswindows) {
     function global:readshim {
         if (-not $args) { $args = $input }
 
-        $args | %{ get-command $_ -commandtype application `
-                       -ea ignore } | `
-            %{ &$_ --shimgen-help } | `
-            ?{ $_ -match "^ Target: '(.*)'$" } | `
-            %{ $matches[1] } | shortpath
+        $args | %{ $_ } |
+            %{ get-command $_ -commandtype application `
+                -ea ignore } `
+            | %{ &$_ --shimgen-help } `
+            | ?{ $_ -match "^ Target: '(.*)'$" } `
+            | %{ $matches[1] } | shortpath
     }
 
     function global:env {
@@ -350,31 +531,31 @@ if ($iswindows) {
 }
 elseif ($ismacos) {
     function global:ls {
-        &(command ls) -Gh $args
+        &(command ls) -Gh @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
-else { # linux
+elseif ($islinux) {
     function global:ls {
-        &(command ls) --color=auto -h $args
+        &(command ls) --color=auto -h @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
-if ((get-command -commandtype application grep -ea ignore) -and `
-    ('foo' | ext_cmd_works (command grep) --color foo)) {
+if ((get-command -commandtype application grep -ea ignore) `
+    -and ('foo' | ext_cmd_works (command grep) --color foo)) {
 
     function global:grep {
-        $input | &(command grep) --color $args
+        $input | &(command grep) --color @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 
+rmalias gl
 rmalias pwd
 
-function global:pwd {
-    get-location | % path | shortpath
-}
+function global:gl  { get-location | % path | shortpath }
+function global:pwd { get-location | % path | shortpath }
 
 function global:ltr { $input | sort lastwritetime }
 
@@ -466,8 +647,8 @@ function global:prompt_error_indicator() {
     }
 }
 
-$env_indicator = "$e[38;2;173;127;168m{0}{1}{2}$e[38;2;173;127;168m{3}$e[0m" -f `
-    'PWSH',
+$env_indicator = "$e[38;2;173;127;168m{0}{1}{2}$e[38;2;173;127;168m{3}$e[0m" `
+    -f 'PWSH',
     ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '{'),
     $(if ($islinux)
           { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'L' }
@@ -513,16 +694,20 @@ set-psreadlinekeyhandler -key downarrow -function historysearchforward
 set-psreadlinekeyhandler -chord 'ctrl+spacebar' -function menucomplete
 set-psreadlinekeyhandler -chord 'alt+enter'     -function addline
 
-if ($private:posh_vcpkg = resolve-path `
-    ~/source/repos/vcpkg/scripts/posh-vcpkg -ea ignore) {
+if ($private:posh_vcpkg = `
+    resolve-path ~/source/repos/vcpkg/scripts/posh-vcpkg `
+        -ea ignore) {
 
     import-module $posh_vcpkg
 }
 
-if ($private:src = resolve-path `
-    $ps_config_dir/private-profile.ps1 -ea ignore) {
+if ($private:src = `
+    resolve-path $ps_config_dir/private-profile.ps1 `
+        -ea ignore) {
 
     $global:private_profile = $src | shortpath
 
     . $private_profile
 }
+
+# vim:set sw=4 et:
