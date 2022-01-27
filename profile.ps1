@@ -176,7 +176,10 @@ if (-not $env:XAUTHORITY) {
     $env:XAUTHORITY = join-path $home .Xauthority
 
     if (-not (test-path $env:XAUTHORITY) `
-        -and (get-command -commandtype application xauth)) {
+        -and (
+          ($xauth = (get-command -commandtype application xauth -ea ignore).source) `
+          -or ($xauth = (gi '/program files/VcXsrv/xauth.exe' -ea ignore).fullname) `
+        )) {
 
         $cookie = (1..4 | %{ "{0:x8}" -f (get-random) }) -join ''
 
@@ -185,6 +188,8 @@ if (-not $env:XAUTHORITY) {
 }
 
 function global:megs {
+    if (-not $args) { $args = $input }
+
     gci @args | select mode, lastwritetime, @{ name="MegaBytes"; expression={ [math]::round($_.length / 1MB, 2) }}, name
 }
 
@@ -442,11 +447,20 @@ $e = [char]27
 
 if ($iswindows) {
     function global:pgrep($pat) {
+        if (-not $pat) { $pat = $($input) }
+
         get-ciminstance win32_process -filter "name like '%${pat}%' OR commandline like '%${pat}%'" | select ProcessId,Name,CommandLine
     }
 
-    function global:pkill($pat) {
-        pgrep $pat | %{ stop-process $_.ProcessId }
+    function global:pkill($proc) {
+        if (-not $proc) { $proc = $($input) }
+
+        if ($pid = $proc.ProcessId) {
+            stop-process $pid
+        }
+        else {
+            pgrep $proc | %{ stop-process $_.ProcessId }
+        }
     }
 
     function format-eventlog {
@@ -541,12 +555,14 @@ if ($iswindows) {
 }
 elseif ($ismacos) {
     function global:ls {
+        if (-not $args) { $args = $input }
         &(command ls) -Gh @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 elseif ($islinux) {
     function global:ls {
+        if (-not $args) { $args = $input }
         &(command ls) --color=auto -h @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
@@ -574,6 +590,8 @@ function global:count { $input | measure | % count }
 
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
 function global:hexcolortorgb {
+    if (-not ($color = $args[0])) { $color = $($input) }
+
     'rgb(' + ((($args[0] -replace '^(#|0x)','' -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
 }
 

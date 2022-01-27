@@ -20,12 +20,13 @@
     - [Using Git](#using-git)
     - [Dealing with Line Endings](#dealing-with-line-endings)
   - [Setting up gpg](#setting-up-gpg)
+  - [Profile (Home) Directory Structure](#profile-home-directory-structure)
   - [PowerShell Usage Notes](#powershell-usage-notes)
     - [Introduction](#introduction-1)
     - [Finding Documentation](#finding-documentation)
     - [Commands, Parameters and Environment](#commands-parameters-and-environment)
     - [Values, Arrays and Hashes](#values-arrays-and-hashes)
-    - [Redirection and Streams](#redirection-and-streams)
+    - [Redirection, Streams, $input and Exit Codes](#redirection-streams-input-and-exit-codes)
     - [Command/Expression Sequencing Operators](#commandexpression-sequencing-operators)
     - [Commands and Operations on Filesystems and Filesystem-Like Objects](#commands-and-operations-on-filesystems-and-filesystem-like-objects)
     - [Pipelines](#pipelines)
@@ -901,7 +902,10 @@ if (-not $env:XAUTHORITY) {
     $env:XAUTHORITY = join-path $home .Xauthority
 
     if (-not (test-path $env:XAUTHORITY) `
-        -and (get-command -commandtype application xauth)) {
+        -and (
+          ($xauth = (get-command -commandtype application xauth -ea ignore).source) `
+          -or ($xauth = (gi '/program files/VcXsrv/xauth.exe' -ea ignore).fullname) `
+        )) {
 
         $cookie = (1..4 | %{ "{0:x8}" -f (get-random) }) -join ''
 
@@ -910,6 +914,8 @@ if (-not $env:XAUTHORITY) {
 }
 
 function global:megs {
+    if (-not $args) { $args = $input }
+
     gci @args | select mode, lastwritetime, @{ name="MegaBytes"; expression={ [math]::round($_.length / 1MB, 2) }}, name
 }
 
@@ -1167,11 +1173,20 @@ $e = [char]27
 
 if ($iswindows) {
     function global:pgrep($pat) {
+        if (-not $pat) { $pat = $($input) }
+
         get-ciminstance win32_process -filter "name like '%${pat}%' OR commandline like '%${pat}%'" | select ProcessId,Name,CommandLine
     }
 
-    function global:pkill($pat) {
-        pgrep $pat | %{ stop-process $_.ProcessId }
+    function global:pkill($proc) {
+        if (-not $proc) { $proc = $($input) }
+
+        if ($pid = $proc.ProcessId) {
+            stop-process $pid
+        }
+        else {
+            pgrep $proc | %{ stop-process $_.ProcessId }
+        }
     }
 
     function format-eventlog {
@@ -1266,12 +1281,14 @@ if ($iswindows) {
 }
 elseif ($ismacos) {
     function global:ls {
+        if (-not $args) { $args = $input }
         &(command ls) -Gh @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
 }
 elseif ($islinux) {
     function global:ls {
+        if (-not $args) { $args = $input }
         &(command ls) --color=auto -h @args
         if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
     }
@@ -1299,6 +1316,8 @@ function global:count { $input | measure | % count }
 
 # Example utility function to convert CSS hex color codes to rgb(x,x,x) color codes.
 function global:hexcolortorgb {
+    if (-not ($color = $args[0])) { $color = $($input) }
+
     'rgb(' + ((($args[0] -replace '^(#|0x)','' -split '(..)(..)(..)')[1,2,3] | %{ [uint32]"0x$_" }) -join ',') + ')'
 }
 
@@ -1621,6 +1640,41 @@ git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
 ```
 .
 
+### Profile (Home) Directory Structure
+
+Your Windows profile directory, analogous to a UNIX home directory,
+will usually be something like `C:\Users\username`, it may be on a
+server share if you are using a domain in an organization.
+
+The automatic PowerShell variable `$home` will contain the path to
+your profile directory as well as the environment variable
+`$env:USERPROFILE`. You can use the environment variable in things
+such as Explorer using the cmd syntax, e.g. try entering
+`%USERPFOFILE%` in the Explorer address bar.
+
+The `~/AppData` directory is analogous to the Linux `~/.config`
+directory, except it has two parts, `Local` and `Roaming`. The
+`Roaming` directory may be synced by various things across your
+computers, and the `Local` directory is generally intended for your
+specific computer configurations.
+
+It is up to any particular application whether it uses the `Local`
+or `Roaming` directory, or both, and for what. When backing up any
+particular application configuration, check if it uses one or the
+other or both.
+
+The [install script](#install-chocolatey-and-some-packages) makes a
+`~/.config` symlink pointing to `~/AppData/Local`. This is adequate
+for some Linux ports such as Neovim.
+
+There is one other important difference you must be aware of. When
+you uninstall an application on Windows, it will often **DELETE**
+its configuration directory or directories under `~/AppData`. This
+is one reason why in this guide I give instructions for making a
+directory under your `$home` and symlinking the `AppData` directory
+to it. Make sure you backup your terminal `settings.json` for this
+reason as well.
+
 ### PowerShell Usage Notes
 
 #### Introduction
@@ -1866,9 +1920,10 @@ $repos.count # 29
 
 . You usually do not have to do anything to work with an array value
 as opposed to a single value, but sometimes it is very useful to
-enclose values or commands in `@( ... )` to coerce the result to an
+enclose values or commands in `@(...)` to coerce the result to an
 array. This will also exhaust any iterator-like objects such as
-`$input` into an immediate array value.
+`$input` into an immediate array value. `$(...)` will have the same
+effect, but it will not coerce single values to an array.
 
 Occasionally you may want to write a long pipeline directly to a
 variable, you can use `set-variable` which has the standard alias
@@ -1908,7 +1963,7 @@ $ordered_hash = [ordered]@{
 ```
 .
 
-#### Redirection and Streams
+#### Redirection, Streams, $input and Exit Codes
 
 Redirection for files and commands works like in POSIX shells on a
 basic level, that is, you can expect `>`, `>>` and `|` to redirect
@@ -1973,7 +2028,9 @@ function got_pipeline {
 }
 ```
 
-. This is of course much less efficient than using a process block,
+. For a single value from the pipeline use `$($input)` instead.
+
+This is of course much less efficient than using a process block,
 but for small inputs of a couple of values it's fine.
 
 The equivalent of `/dev/null` is `$null`, so a command such as:
@@ -2180,7 +2237,11 @@ You can get a list of "drive" type devices including actual drive letters with:
 get-psdrive
 ```
 
-. For actual Windows filesystems, the first column in directory
+. These also include variables, environment variables, functions and
+aliases, and you can operate on them with `Remove-Item`, `Set-Item`,
+etc..
+
+For actual Windows filesystems, the first column in directory
 listings from `gci` or `gi` is the mode or attributes of the object.
 The positions of the letters will vary, but here is their meaning:
 
@@ -2471,6 +2532,10 @@ For string values, it can be nicer to use formats, e.g.:
 "This shade of {0} is the hex code #{1:X6}." -f 'Blue',13883343
 "Today is: {0}." -f (get-date)
 ```
+
+See
+[here](https://social.technet.microsoft.com/wiki/contents/articles/7855.powershell-using-the-f-format-operator.aspx)
+for more about the `-f` format operator.
 
 . Variables can also be interpolated in strings just like in POSIX
 shells, for example:
