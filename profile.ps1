@@ -132,7 +132,8 @@ if ($iswindows) {
 
 $extra_paths = @{
     prepend = '~/.local/bin'
-    append  = '~/AppData/Roaming/Python/Python*/Scripts'
+    append  = '~/AppData/Roaming/Python/Python*/Scripts',
+              '/program files/VcXsrv'
 }
 
 foreach ($section in $extra_paths.keys) {
@@ -171,8 +172,16 @@ if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
 }
 
-if (-not $iswindows -and -not $env:XAUTHORITY) {
+if (-not $env:XAUTHORITY) {
     $env:XAUTHORITY = join-path $home .Xauthority
+
+    if (-not (test-path $env:XAUTHORITY) `
+        -and (get-command -commandtype application xauth)) {
+
+        $cookie = (1..4 | %{ "{0:x8}" -f (get-random) }) -join ''
+
+        xauth add ':0' . $cookie | out-null
+    }
 }
 
 function global:megs {
@@ -301,23 +310,24 @@ function global:mklink {
     }
 
     if (-not ($link_parent = split-path -parent $link)) {
-        $link_parent = get-location
+        $link_parent = get-location | % path
     }
     if (-not ($target_parent = split-path -parent $target)) {
-        $target_parent = get-location
+        $target_parent = get-location | % path
     }
 
-    try {
-        $link_parent,$target | resolve-path -ea stop `
-            | out-null
+    $link_parent = try {
+        $link_parent | resolve-path -ea stop | % path
     }
     catch { write-error $_ -ea stop }
 
-    $absolute = @{
-        link = join-path (resolve-path $link_parent) `
-                         (split-path -leaf $link)
+    if (-not (resolve-path $target -ea ignore)) {
+        write-warning "target '${target}' does not yet exist"
+    }
 
-        target = resolve-path $target | % path
+    $absolute = @{
+        link   = join-path $link_parent   (split-path -leaf $link)
+        target = join-path $target_parent (split-path -leaf $target)
     }
 
     $home_dir_re = [regex]::escape($home)
@@ -349,7 +359,7 @@ function global:mklink {
         resolve-path -relative $absolute.target
         popd
     }
-    elseif($in_home.target) {
+    else {
         $absolute.target
     }
 
@@ -542,7 +552,8 @@ elseif ($islinux) {
     }
 }
 
-if ((get-command -commandtype application grep -ea ignore) `
+if (-not (test-path function:global:grep) `
+    -and (get-command -commandtype application grep -ea ignore) `
     -and ('foo' | ext_cmd_works (command grep) --color foo)) {
 
     function global:grep {
@@ -638,25 +649,56 @@ new-module MyPrompt -script {
 # sequence for Escape, so we use a variable $e for this.
 $e = [char]27
 
+$reset          = "$e[0m"
+$bold           = "$e[1m"
+
+# Tango colors.
+$white          = "$e[38;2;211;215;207m"
+$bright_white   = "$e[38;2;238;238;236m"
+$green          = "$e[38;2;078;154;006m"
+$bright_magenta = "$e[38;2;173;127;168m"
+$bright_black   = "$e[38;2;085;087;083m"
+
+# Other colors.
+$red            = "$e[38;2;220;020;060m"
+$light_blue     = "$e[38;2;140;206;250m"
+$linux_color    = "$e[38;2;175;095;000m"
+$windows_color  = "$e[38;2;032;178;170m"
+$mac_blue       = "$e[38;2;098;137;213m"
+$mac_grey       = "$e[38;2;196;205;239m"
+
+$path_color     = 0xC4A000
+$suffix_color   = 0xDC143C
+
 function global:prompt_error_indicator() {
     if ($gitpromptvalues.dollarquestion) {
-        "$e[38;2;078;154;06m{0}$e[0m" -f 'v'
+        "${green}{0}${reset}" -f 'v'
     }
     else {
-        "$e[38;2;220;020;60m{0}$e[0m" -f 'x'
+        "${red}{0}${reset}"   -f 'x'
     }
 }
 
-$env_indicator = "$e[38;2;173;127;168m{0}{1}{2}$e[38;2;173;127;168m{3}$e[0m" `
-    -f 'PWSH',
-    ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '{'),
-    $(if ($islinux)
-          { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'L' }
-      elseif ($ismacos)
-          { "$e[1m$e[38;2;175;095;000m{0}$e[0m" -f 'M' }
-      else # windows
-          { "$e[1m$e[38;2;032;178;170m{0}$e[0m" -f 'W' }),
-    ("$e[1m$e[38;2;85;87;83m{0}$e[0m" -f '}')
+$env_indicator = if ($islinux -or $iswindows) {
+    "${bright_magenta}{0}{1}{2}{3}${reset}" `
+    -f @('PWSH';
+        ("${bright_black}{0}${reset}"            -f '{'),
+        $(if ($islinux) {
+            "${bold}${linux_color}{0}${reset}"   -f 'L'
+        }
+        else { # windows
+            "${bold}${windows_color}{0}${reset}" -f 'W'
+        }),
+        ("${bright_black}{0}${reset}"            -f '}')
+    )
+}
+elseif ($ismacos) {
+    "${mac_grey}{0}{1}{2}{3}${reset}" `
+        -f 'PWSH',
+            ("${bright_black}{0}${reset}"    -f '{'),
+            ("${bold}${mac_blue}{0}${reset}" -f 'M'),
+            ("${bright_black}{0}${reset}"    -f '}')
+}
 
 if ($iswindows) {
     $username = $env:USERNAME
@@ -670,13 +712,21 @@ else {
 $gitpromptsettings.defaultpromptprefix.text = '{0} {1} ' `
     -f '$(prompt_error_indicator)',$env_indicator
 
-$gitpromptsettings.defaultpromptbeforesuffix.text ="`n$e[0m$e[38;2;140;206;250m{0}$e[1;97m@$e[0m$e[38;2;140;206;250m{1} " `
-    -f $username,$hostname
+$gitpromptsettings.defaultpromptbeforesuffix.text =
+    ("`n${reset}${light_blue}{0}${reset}" `
+    + "${bright_white}{1}${reset}" `
+    + "${light_blue}{2}${reset} ") `
+        -f $username,'@',$hostname
 
 $gitpromptsettings.defaultpromptabbreviatehomedirectory = $true
 $gitpromptsettings.defaultpromptwritestatusfirst        = $false
-$gitpromptsettings.defaultpromptpath.foregroundcolor    = 0xC4A000
-$gitpromptsettings.defaultpromptsuffix.foregroundcolor  = 0xDC143C
+
+$gitpromptsettings.defaultpromptpath.foregroundcolor =
+    $path_color
+
+$gitpromptsettings.defaultpromptsuffix.foregroundcolor =
+    $suffix_color
+
 $gitpromptsettings.windowtitle = $null
 
 $host.ui.rawui.windowtitle = $hostname
