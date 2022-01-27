@@ -26,6 +26,7 @@
     - [Commands, Parameters and Environment](#commands-parameters-and-environment)
     - [Values, Arrays and Hashes](#values-arrays-and-hashes)
     - [Redirection and Streams](#redirection-and-streams)
+    - [Command/Expression Sequencing Operators](#commandexpression-sequencing-operators)
     - [Commands and Operations on Filesystems and Filesystem-Like Objects](#commands-and-operations-on-filesystems-and-filesystem-like-objects)
     - [Pipelines](#pipelines)
     - [The Measure-Object Cmdlet](#the-measure-object-cmdlet)
@@ -2055,8 +2056,7 @@ function cmd_wrapper {
 pwsh-cmd 2> $null
 ```
 
-, is not the same thing as suppressing `STDERR` in bash, for
-example:
+, is not the same thing as suppressing `STDERR` in sh, for example:
 
 ```powershell
 write-error '' *> $null
@@ -2084,6 +2084,55 @@ mkdir existing-dir -ea ignore
 
 , this sets `ErrorAction` to `Ignore`, and does not trigger an error
 condition, and does not write an error object to `ERROR`.
+
+#### Command/Expression Sequencing Operators
+
+The operators `;`, `&&` and `||` will generally work how you expect
+in sh, but there are some differences you should be aware of.
+
+The `;` operator can not only separate commands, but can also be
+very useful to output multiple values (commands are also values.)
+
+Both the ';' and the ',' operator will yield values, but sometimes
+using the ',' operator will limit the syntax you can use inside an
+expression.
+
+The ';' operator will not work in a parenthesized expression, but
+will work in value and array expressions `$(...)` and `@(...)`. For
+example:
+
+```powershell
+# This will not work:
+(cmd; 'foo', 'bar')
+# This will work:
+$(cmd1; 'foo'; cmd2)
+```
+
+The `&&` and `||` operators are only available in PSCore, and their
+semantics are different from what you would expect in sh and other
+languages.
+
+The do not work on `$true`/`$false` values, but on the `$?` variable
+I described [previously](#redirection-and-streams). This variable is
+`$true` or `$false` based on whether the exit code of an external
+command is zero or if a PowerShell function or cmdlet executed
+successfully.
+
+That is, this will not work:
+
+```powershell
+$false || some-cmd
+```
+
+, but things like this will work fine:
+
+```powershell
+cmake && ninja || write-error 'build failed'
+```
+
+. As I mentioned previously, since this is a PSCore feature, I do
+not recommend using it in scripts or modules intended to be
+distributed by themselves.
 
 #### Commands and Operations on Filesystems and Filesystem-Like Objects
 
@@ -2804,9 +2853,15 @@ the namesake Linux commands in the
 
 See [here](#elevated-access-sudo) about the `sudo` wrapper.
 
-The `ver` function will give you some OS details, the `mklink
-<link> <target>` function will make symlinks and the `rmlink`
-function will delete them.
+The `ver` function will give you some OS details.
+
+The `mklink <link> <target>` function will make symlinks. With one
+parameter, `mklink` will assume it is the target and make a link
+with the name of the leaf in the current directory.
+
+The `rmlink` function will delete symlinks, it is primarily intended
+for compatibility with WinPS which does not support deleting
+directory links with `remove-item`.
 
 I made these because the normal PowerShell approach for these is too
 cumbersome, I generally recommend using and getting used to the
