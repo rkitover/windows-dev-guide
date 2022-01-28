@@ -1326,14 +1326,30 @@ function map_alias {
         $path = $_.value
 
         # Expand any globs in path.
-        if ($dir = resolve-path (
-                split-path -parent $path) -ea ignore) {
+        if ($parent = split-path -parent $path) {
+            $parent = try { resolve-path $parent -ea stop }
+                      catch { write-error $_ -ea stop }
 
-            $path = "$dir/$(split-path -leaf $path)"
+            $path = join-path $parent (split-path -leaf $path)
         }
 
         if ($cmd = get-command $path -ea ignore) {
             rmalias $_.key
+
+            $type = $cmd.commandtype
+
+            $cmd = if ($type `
+                    -cmatch '^(Application|ExternalScript)$') {
+
+                $cmd.source
+            }
+            elseif ($type -cmatch '^(Cmdlet|Function)$') {
+                $cmd.name
+            }
+            else {
+                throw "Cannot alias command of type '$type'."
+            }
+
             set-alias $_.key -value $cmd -scope global
         }
     }}
