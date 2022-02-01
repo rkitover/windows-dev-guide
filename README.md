@@ -758,6 +758,9 @@ if ($iswindows) {
     # Update environment in case the terminal session environment
     # is not up to date.
     update-sessionenvironment
+
+    # Tell Chocolatey to not add code to $profile.
+    $env:ChocolateyNoProfile = 'yes'
 }
 elseif (-not $env:LANG) {
     $env:LANG = 'en_US.UTF-8'
@@ -921,6 +924,10 @@ function global:megs {
 
 function global:cmconf {
     sls 'CMAKE_BUILD_TYPE|VCPKG_TARGET_TRIPLET|UPSTREAM_RELEASE' CMakeCache.txt
+}
+
+function global:cmclean {
+    ri -r CMakeCache.txt,CMakeFiles
 }
 
 # Windows PowerShell does not have Remove-Alias.
