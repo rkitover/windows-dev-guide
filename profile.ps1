@@ -131,6 +131,7 @@ $global:ps_history = "$ps_share_dir/ConsoleHost_history.txt"
 
 if ($iswindows) {
     $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | shortpath
+    $global:terminal_settings_preview = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_*/LocalState/settings.json -ea ignore | shortpath
 }
 
 $extra_paths = @{

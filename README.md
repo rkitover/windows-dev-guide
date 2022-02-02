@@ -318,7 +318,10 @@ In the profile list section, in the entry that lists:
 "commandline": "pwsh -nologp"
 ```
 
-. In the `"actions"` section add these keybindings:
+. You can do the same for the "Windows PowerShell" profile if you
+like.
+
+In the `"actions"` section add these keybindings:
 
 ```jsonc
 { "command": null, "keys": "alt+enter" },
@@ -401,8 +404,18 @@ position will be preserved.
 
 #### Transparency
 
-To get transparency in Windows Terminal, use this AutoHotkey
-script:
+As of this writing, only Terminal Preview supports non-acrylic
+transparency. This works correctly with Neovim but not regular vim.
+To enable this, add the following to the profile defaults
+configuration:
+
+```jsonc
+"useAcrylic": false,
+"opacity": 70
+```
+
+. To get transparency in the released version of Windows Terminal,
+use this AutoHotkey script:
 
 ```autohotkey
 #NoEnv
@@ -857,6 +870,7 @@ $global:ps_history = "$ps_share_dir/ConsoleHost_history.txt"
 
 if ($iswindows) {
     $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | shortpath
+    $global:terminal_settings_preview = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_*/LocalState/settings.json -ea ignore | shortpath
 }
 
 $extra_paths = @{
