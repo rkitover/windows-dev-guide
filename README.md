@@ -730,7 +730,7 @@ adding this:
 
 , you can also link or copy this profile to yours and add your own
 things in `~/Documents/PowerShell/private-profile.ps1`, which will
-be automatically read with the path set in `$private_profile`.
+be automatically read with the path set in `$profile_private`.
 
 Or just copy the parts you are interested in to yours.
 
@@ -831,20 +831,23 @@ function backslashes_to_forward($str) {
 }
 
 function global:shortpath($str) {
-    if (-not $str) { $str = $input }
+    if (-not $str) { $str = $($input) }
+    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path | home_to_tilde `
         | trim_sysdrive | backslashes_to_forward
 }
 
 function global:realpath($str) {
-    if (-not $str) { $str = $input }
+    if (-not $str) { $str = $($input) }
+    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path | backslashes_to_forward
 }
 
 function global:syspath($str) {
-    if (-not $str) { $str = $input }
+    if (-not $str) { $str = $($input) }
+    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path
 }
@@ -941,7 +944,7 @@ function global:cmconf {
 }
 
 function global:cmclean {
-    ri -r CMakeCache.txt,CMakeFiles
+    ri -r CMakeCache.txt,CMakeFiles -ea ignore
 }
 
 # Windows PowerShell does not have Remove-Alias.
@@ -1406,7 +1409,7 @@ if ($iswindows) {
         }
     }
 
-    if ($vs_path -and -not $env:VSCMD_VER) {
+    if ($vs_path) {
         pushd $vs_path
         cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
 #        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
@@ -1536,9 +1539,9 @@ if ($private:src = `
     resolve-path $ps_config_dir/private-profile.ps1 `
         -ea ignore) {
 
-    $global:private_profile = $src | shortpath
+    $global:profile_private = $src | shortpath
 
-    . $private_profile
+    . $profile_private
 }
 
 # vim:set sw=4 et:
@@ -3067,8 +3070,7 @@ devenv /debugexe file.exe arg1 arg2 ...
 will generally not run regular Linux Makefiles because it expects
 `cmd.exe` shell commands. However, it is possible to write Makefiles
 that work in both environments if the commands are the same, for
-example the one in this repository (if you look at mine you will see
-that this may not be the best idea...)
+example the one in this repository.
 
 For an `ldd` replacement, you can do this:
 
