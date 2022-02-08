@@ -647,8 +647,30 @@ if ($iswindows) {
     } | map_alias
 }
 
+
+$have_perl = if (get-command `
+                -commandtype Application,ExternalScript perl `
+                -ea ignore) { $true }
+
 # For diff on Windows install diffutils from choco.
-if (command diff) { rmalias diff }
+#
+# Clone git@github.com:daveewart/colordiff to ~/source/repos
+# for colors.
+if (command diff) {
+    rmalias diff
+
+    if ($have_perl -and ($colordiff = resolve-path `
+            ~/source/repos/colordiff/colordiff.pl -ea ignore)) {
+
+        function global:colordiff {
+            if (-not $args) { $args = @($input) }
+            perl $colordiff @args
+            if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        }
+
+        set-alias -scope global diff -value colordiff
+    }
+}
 
 @{
     vcpkg = '~/source/repos/vcpkg/vcpkg'
