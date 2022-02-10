@@ -30,7 +30,12 @@ if ($iswindows) {
     }
 
     # Update environment in case the terminal session environment
-    # is not up to date.
+    # is not up to date, but first clear VS env so it does not
+    # accumulate duplicates.
+    gci env: | % name `
+        | ?{ $_ -match '^(__VSCMD|INCLUDE$|LIB$|LIBPATH$)' } `
+        | %{ ri env:\$_ }
+
     update-sessionenvironment
 
     # Tell Chocolatey to not add code to $profile.
@@ -43,6 +48,15 @@ elseif (-not $env:LANG) {
 # Make help nicer.
 $PSDefaultParameterValues["get-help:Full"] = $true
 $env:PAGER = 'less'
+
+# Turn on these options for less:
+#    -Q,--QUIET             # No bells.
+#    -r,--raw-control-chars # Show ANSI colors.
+#    -X,--no-init           # No term init, does not use alt screen.
+#    -F,--quit-if-one-screen
+#    -K,--quit-on-intr      # Quit on CTRL-C immediately.
+#    --mouse                # Scroll with mouse wheel.
+$env:LESS = '-Q$-r$-X$-F$-K$--mouse'
 
 new-module MyProfile -script {
 
@@ -93,7 +107,6 @@ function backslashes_to_forward($str) {
 
 function global:shortpath($str) {
     if (-not $str) { $str = $($input) }
-    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path | home_to_tilde `
         | trim_sysdrive | backslashes_to_forward
@@ -101,14 +114,12 @@ function global:shortpath($str) {
 
 function global:realpath($str) {
     if (-not $str) { $str = $($input) }
-    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path | backslashes_to_forward
 }
 
 function global:syspath($str) {
     if (-not $str) { $str = $($input) }
-    if (-not $str) { $str = get-location }
 
     $str | resolve-path -ea ignore | % path
 }
@@ -209,7 +220,7 @@ function global:cmclean {
 }
 
 # Windows PowerShell does not have Remove-Alias.
-function rmalias($alias) {
+function global:rmalias($alias) {
     # Use a loop to remove aliases from all scopes.
     while (test-path "alias:\$alias") {
         ri -force "alias:\$alias"
@@ -393,7 +404,7 @@ function global:mklink {
             if (test-path -pathtype container $target) { '/D' }
         )
         cmd /c mklink @params $absolute.link $target
-        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
     }
 }
 
@@ -418,7 +429,7 @@ function global:rmlink {
 
             # In WinPS remove-item does not work for dir links.
             cmd /c rmdir $_
-            if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+            if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
         }
         else {
             try { ri $_ }
@@ -496,7 +507,7 @@ if ($iswindows) {
 
     function global:ntop {
         ntop.exe -s 'CPU%' @args
-        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
     }
 
     function head_tail([scriptblock]$cmd, $arglist) {
@@ -568,14 +579,14 @@ elseif ($ismacos) {
     function global:ls {
         if (-not $args) { $args = $input }
         &(command ls) -Gh @args
-        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
     }
 }
 elseif ($islinux) {
     function global:ls {
         if (-not $args) { $args = $input }
         &(command ls) --color=auto -h @args
-        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
     }
 }
 
@@ -585,7 +596,7 @@ if (-not (test-path function:global:grep) `
 
     function global:grep {
         $input | &(command grep) --color @args
-        if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+        if (-not $?) { write-error "exited: $lastexitcode" -ea stop }
     }
 }
 
@@ -612,10 +623,12 @@ function map_alias {
 
         # Expand any globs in path.
         if ($parent = split-path -parent $path) {
-            $parent = try { resolve-path $parent -ea stop }
-                      catch { write-error $_ -ea stop }
-
-            $path = join-path $parent (split-path -leaf $path)
+            if ($parent = resolve-path $parent -ea ignore) {
+                $path = join-path $parent (split-path -leaf $path)
+            }
+            else {
+                return
+            }
         }
 
         if ($cmd = get-command $path -ea ignore) {
@@ -647,28 +660,54 @@ if ($iswindows) {
     } | map_alias
 }
 
+$cmds = @{}
 
-$have_perl = if (get-command `
-                -commandtype Application,ExternalScript perl `
-                -ea ignore) { $true }
+foreach ($cmd in 'perl','diff','colordiff') {
+    $cmds[$cmd] = try {
+        get-command -commandtype application,externalscript $cmd `
+            -ea ignore | select -first 1 | % source
+    }
+    catch { $false }
+}
 
 # For diff on Windows install diffutils from choco.
 #
 # Clone git@github.com:daveewart/colordiff to ~/source/repos
 # for colors.
-if (command diff) {
+if ($cmds.diff) {
     rmalias diff
+    rmalias colordiff
 
-    if ($have_perl -and ($colordiff = resolve-path `
-            ~/source/repos/colordiff/colordiff.pl -ea ignore)) {
+    $cmd = $clone = $null
+    $prepend_args = @()
 
-        function global:colordiff {
-            if (-not $args) { $args = @($input) }
-            perl $colordiff @args
-            if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
+    function global:diff {
+        $args = $prepend_args,$args
+
+        $rc = 2
+
+        @( $input | &$cmd @args; $rc = $lastexitcode ) | less -Q -r -X -F -K --mouse -E
+
+        if ($rc -ge 2) {
+            write-error "exited: $rc" -ea stop
         }
+    }
 
-        set-alias -scope global diff -value colordiff
+    $cmd = if ($cmds.colordiff) {
+        $cmds.colordiff
+    }
+    elseif ($cmds.perl -and ($clone = resolve-path `
+                ~/source/repos/colordiff/colordiff.pl `
+                -ea ignore)) {
+        $prepend_args = @($clone)
+        $cmds.perl
+    }
+    else {
+        $cmds.diff
+    }
+
+    if ($cmds.colordiff -or $clone) {
+        set-alias -scope global colordiff -value diff
     }
 }
 
@@ -801,8 +840,9 @@ $host.ui.rawui.windowtitle = $hostname
 
 import-module psreadline
 
-set-psreadlineoption     -editmode emacs
-set-psreadlineoption     -historysearchcursormovestoend
+set-psreadlineoption -editmode emacs
+set-psreadlineoption -historysearchcursormovestoend
+set-psreadlineoption -bellstyle none
 
 set-psreadlinekeyhandler -key tab       -function complete
 set-psreadlinekeyhandler -key uparrow   -function historysearchbackward
