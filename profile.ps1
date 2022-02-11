@@ -667,7 +667,7 @@ foreach ($cmd in 'perl','diff','colordiff') {
         get-command -commandtype application,externalscript $cmd `
             -ea ignore | select -first 1 | % source
     }
-    catch { $false }
+    catch { $null }
 }
 
 # For diff on Windows install diffutils from choco.
@@ -686,7 +686,7 @@ if ($cmds.diff) {
 
         $rc = 2
 
-        @( $input | &$cmd @args; $rc = $lastexitcode ) | less -Q -r -X -F -K --mouse -E
+        @( $input | &$cmd @args; $rc = $lastexitcode ) | less -Q -r -X -F -K --mouse
 
         if ($rc -ge 2) {
             write-error "exited: $rc" -ea stop
