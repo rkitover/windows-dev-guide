@@ -662,7 +662,7 @@ if ($iswindows) {
 
 $cmds = @{}
 
-foreach ($cmd in 'perl','diff','colordiff') {
+foreach ($cmd in 'perl','diff','colordiff','tac') {
     $cmds[$cmd] = try {
         get-command -commandtype application,externalscript $cmd `
             -ea ignore | select -first 1 | % source
@@ -714,6 +714,14 @@ if ($cmds.diff) {
 @{
     vcpkg = '~/source/repos/vcpkg/vcpkg'
 } | map_alias
+
+if (-not $cmds.tac) {
+    function global:tac {
+        $file = if ($args) { gc $args } else { @($input) }
+
+        $file[($file.count - 1) .. 0]
+    }
+}
 
 # Aliases to pwsh Cmdlets/functions.
 set-alias s -value select-object -scope global

@@ -1401,7 +1401,7 @@ if ($iswindows) {
 
 $cmds = @{}
 
-foreach ($cmd in 'perl','diff','colordiff') {
+foreach ($cmd in 'perl','diff','colordiff','tac') {
     $cmds[$cmd] = try {
         get-command -commandtype application,externalscript $cmd `
             -ea ignore | select -first 1 | % source
@@ -1453,6 +1453,14 @@ if ($cmds.diff) {
 @{
     vcpkg = '~/source/repos/vcpkg/vcpkg'
 } | map_alias
+
+if (-not $cmds.tac) {
+    function global:tac {
+        $file = if ($args) { gc $args } else { @($input) }
+
+        $file[($file.count - 1) .. 0]
+    }
+}
 
 # Aliases to pwsh Cmdlets/functions.
 set-alias s -value select-object -scope global
@@ -3015,7 +3023,7 @@ the same as in Linux.
 There are a few very simplistic wrappers for similar functions as
 the namesake Linux commands in the
 [`$profile`](#setting-up-powershell), including: `pwd`, `which`,
-`type`, `command`, `pgrep`, `pkill`, `head`, `tail`, `touch`,
+`type`, `command`, `pgrep`, `pkill`, `head`, `tail`, `tac`, `touch`,
 `sudo`, `env`, and `nproc`.
 
 See [here](#elevated-access-sudo) about the `sudo` wrapper.
