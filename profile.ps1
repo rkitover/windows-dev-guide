@@ -252,7 +252,14 @@ function global:which {
     $cmd = try { get-command @args -ea stop | select -first 1 }
            catch { write-error $_ -ea stop }
 
-    if (is_ext_cmd $cmd) { $cmd = $cmd.source | shortpath }
+    if (is_ext_cmd $cmd) {
+        $cmd = $cmd.source | shortpath
+    }
+    elseif ($cmd.commandtype -eq 'Alias' `
+            -and (is_ext_cmd $cmd.Definition)) {
+
+        $cmd = $cmd.definition | shortpath
+    }
 
     $cmd
 }
