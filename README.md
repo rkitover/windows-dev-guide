@@ -1,3 +1,4 @@
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -3404,12 +3405,6 @@ that you generate an `~/.Xauthority` file, the sample [`$profile`](#setting-up-p
 
 ```powershell
 xauth add ':0' . ((1..4 | %{ "{0:x8}" -f (get-random) }) -join '') | out-null
-```
-
-. Add the following to the top of your `~/.ssh/config`:
-
-```sshconfig
-XAuthLocation "/Program Files/VcXsrv/xauth.exe"
 ```
 
 . On your remote computer, add this function to your `~/.bashrc`:
