@@ -7,7 +7,7 @@ choco install -y vim --params '/NoDesktopShortcuts'
 choco install -y 7zip NTop.Portable StrawberryPerl bzip2 cmake.portable dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make microsoft-windows-terminal neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
 stop-service ssh-agent
 sc.exe delete ssh-agent
-choco install -y openssh --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
+choco install -y openssh --prerelease --force --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
 refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
