@@ -664,6 +664,7 @@ if ($iswindows) {
     @{
         patch   = '/prog*s/git/usr/bin/patch'
         wordpad = '/prog*s/win*nt/accessories/wordpad'
+        ssh     = '/prog*s/OpenSSH-*/ssh.exe'
     } | map_alias
 }
 
