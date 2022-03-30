@@ -10,7 +10,7 @@
   - [Configure the Terminal](#configure-the-terminal)
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
-    - [Transparency](#transparency)
+    - [Transparency (Old Method)](#transparency-old-method)
   - [Setting up an Editor](#setting-up-an-editor)
     - [Setting up Vim](#setting-up-vim)
     - [Setting up nano](#setting-up-nano)
@@ -287,9 +287,15 @@ In the global settings, above the `"profiles"` section, add:
     "scrollbarState": "hidden",
     "closeOnExit": "always",
     "bellStyle": "none",
-    "intenseTextStyle": "bold"
+    "intenseTextStyle": "bold",
+    "useAcrylic": false,
+    "opacity": 77
 },
 ```
+
+The settings `useAcrylic` and `opacity` make the terminal
+transparent, leave those out or set `opacity` to 100 to turn this
+off.
 
 . I prefer the 'SF Mono' font which you can get here:
 
@@ -403,20 +409,15 @@ following process:
 You can scroll the terminal while a search is active and your match
 position will be preserved.
 
-#### Transparency
+#### Transparency (Old Method)
 
-As of this writing, only Terminal Preview supports non-acrylic
-transparency. This works correctly with Neovim but not regular vim.
-To enable this, add the following to the profile defaults
-configuration:
+The transparency configuration in the terminal described
+[above](#configure-the-terminal) works correctly with neovim but not
+regular vim. For older versions of Terminal or to get transparency
+in regular vim, use the autohotkey method described here. You can
+install autohotkey from Chocolatey.
 
-```jsonc
-"useAcrylic": false,
-"opacity": 70
-```
-
-. To get transparency in the released version of Windows Terminal,
-use this AutoHotkey script:
+This is the autohotkey script:
 
 ```autohotkey
 #NoEnv
@@ -433,8 +434,6 @@ If (TransLevel = 255) {
 }
 return
 ```
-
-. You can install the `autohotkey` package from Chocolatey.
 
 This will toggle transparency in a window when you press
 `CTRL+WIN+ESC`, you have to press it twice the first time.
