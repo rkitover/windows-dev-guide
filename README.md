@@ -253,12 +253,11 @@ drop-down, this will open the settings json in visual studio.
 In the global settings, above the `"profiles"` section, add:
 
 ```jsonc
+// If enabled, formatted data is also copied to your clipboard
 "copyFormatting": "all",
 "focusFollowMouse": true,
 // If enabled, selections are automatically copied to your clipboard.
 "copyOnSelect": true,
-// If enabled, formatted data is also copied to your clipboard
-"copyFormatting": true,
 "tabSwitcherMode": "disabled",
 "tabWidthMode": "equal",
 "wordDelimiters": " ",
