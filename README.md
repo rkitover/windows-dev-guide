@@ -2,6 +2,7 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
@@ -2287,7 +2288,7 @@ semantics are different from what you would expect in sh and other
 languages.
 
 The do not work on `$true`/`$false` values, but on the `$?` variable
-I described [previously](#redirection-and-streams). This variable is
+I described [previously](#redirection-streams-input-and-exit-codes). This variable is
 `$true` or `$false` based on whether the exit code of an external
 command is zero or if a PowerShell function or cmdlet executed
 successfully.
