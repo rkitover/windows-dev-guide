@@ -880,7 +880,7 @@ $global:profile = $profile | shortpath
 
 $global:ps_config_dir = split-path $profile -parent
 
-$global:ps_history = "$ps_share_dir/ConsoleHost_history.txt"
+$global:ps_history = "$ps_share_dir/PSReadLine/ConsoleHost_history.txt"
 
 if ($iswindows) {
     $global:terminal_settings = resolve-path ~/AppData/Local/Packages/Microsoft.WindowsTerminal_*/LocalState/settings.json -ea ignore | shortpath
