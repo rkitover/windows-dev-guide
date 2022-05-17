@@ -2,7 +2,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
   - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)

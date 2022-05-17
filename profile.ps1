@@ -736,14 +736,18 @@ set-alias s -value select-object -scope global
 
 if ($iswindows) {
     # Load VS env only once.
-    foreach ($vs_type in 'buildtools','community') {
-        $vs_path="/program files/microsoft visual studio/2022/${vs_type}/vc/auxiliary/build"
+    :OUTER foreach ($vs_year in '2022','2019','2017') {
+        foreach ($vs_type in 'buildtools','community') {
+            foreach ($x86 in '',' (x86)') {
+                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/vc/auxiliary/build"
 
-        if (test-path $vs_path) {
-            break
-        }
-        else {
-            $vs_path=$null
+                if (test-path $vs_path) {
+                    break OUTER
+                }
+                else {
+                    $vs_path=$null
+                }
+            }
         }
     }
 
