@@ -652,9 +652,9 @@ $erroractionpreference = 'stop'
 
 $releases = 'https://files.lhmouse.com/nano-win/'
 
-ri -r -fo ~/Downloads/nano-installer -ea ignore
-mkdir ~/Downloads/nano-installer | out-null
-pushd ~/Downloads/nano-installer
+ri -r -fo ~/nano-installer -ea ignore
+mkdir ~/nano-installer | out-null
+pushd ~/nano-installer
 curl -sLO ($releases + (
     iwr -usebasicparsing $releases | % links |
     ? href -match '\.7z$' | select -last 1 | % href
@@ -669,6 +669,8 @@ popd
 ("include `"" + (($env:USERPROFILE -replace '\\','/') `
     -replace '^[^/]+','').tolower() + `
     "/.nano/*.nanorc`"") >> ~/.nanorc
+
+ri -r -fo ~/nano-installer
 
 gi ~/.nanorc,~/.nano,~/.local/bin/nano.exe
 ```
