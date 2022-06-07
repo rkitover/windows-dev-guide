@@ -445,24 +445,23 @@ function global:rmlink {
     }
 }
 
-# Find vim and set $env:EDITOR.
+# Find neovim or vim and set $env:EDITOR, prefer neovim.
 if ($iswindows) {
     $vim = ''
 
-    if ($vim = (get-command nvim -ea ignore).source) {
-        set-alias vim -value $vim -scope global
-    }
-    else {
-        $locs =
-            { (get-command vim.exe @args).source },
-            { resolve-path /tools/vim/vim*/vim.exe @args }
+    $locs =
+        { (get-command nvim.exe @args).source },
+        { resolve-path /tools/neovim/nvim*/bin/nvim.exe @args },
+        { (get-command vim.exe @args).source },
+        { (get-command vim.bat @args).source },
+        { resolve-path /tools/vim/vim*/vim.exe @args }
 
-        foreach ($loc in $locs) {
-            if ($vim = &$loc -ea ignore) { break }
-        }
+    foreach ($loc in $locs) {
+        if ($vim = &$loc -ea ignore) { break }
     }
 
     if ($vim) {
+        set-alias vim -value $vim -scope global
         $env:EDITOR = realpath $vim
     }
 }
