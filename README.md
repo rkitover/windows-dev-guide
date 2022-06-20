@@ -4,7 +4,7 @@
 
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
-  - [Install Chocolatey and Some Packages](#install-chocolatey-and-some-packages)
+  - [Installing Chocolatey and Some Packages](#installing-chocolatey-and-some-packages)
   - [Chocolatey Usage Notes](#chocolatey-usage-notes)
     - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
   - [Configure the Terminal](#configure-the-terminal)
@@ -69,7 +69,7 @@ things like using `cmake` with `vcpkg` or `Conan` etc..
 
 Your feedback via issues or pull requests on Github is appreciated.
 
-### Install Chocolatey and Some Packages
+### Installing Chocolatey and Some Packages
 
 Make sure developer mode is turned on in Windows settings, this is
 necessary for making unprivileged symlinks.
@@ -306,7 +306,7 @@ install from:
 https://github.com/IBM/plex
 
 , and 'DejaVu Sans Mono' which was in the [list of
-packages](#install-chocolatey-and-some-packages).
+packages](#installing-chocolatey-and-some-packages).
 
 The Terminal also comes with a nice new Microsoft font called
 "Cascadia Code", if you leave out the `"face": "<name>",` line, it
@@ -483,7 +483,7 @@ I recommend using neovim on Windows because it has working mouse
 support and is almost 100% compatible with vim.
 
 If you are using neovim only, you can copy your `~/.config/nvim`
-over directly, the [install script](#install-chocolatey-and-some-packages) makes `~/.config` a symlink to `~/AppData/Local` which serves a similar purpose on Windows.
+over directly, the [install script](#installing-chocolatey-and-some-packages) makes `~/.config` a symlink to `~/AppData/Local` which serves a similar purpose on Windows.
 
 If you would like to use both Neovim and regular vim, or to keep
 your vim files in `~/.vim`, do something like the following:
@@ -1785,7 +1785,7 @@ or `Roaming` directory, or both, and for what. When backing up any
 particular application configuration, check if it uses one or the
 other or both.
 
-The [install script](#install-chocolatey-and-some-packages) makes a
+The [install script](#installing-chocolatey-and-some-packages) makes a
 `~/.config` symlink pointing to `~/AppData/Local`. This is adequate
 for some Linux ports such as Neovim.
 
@@ -2972,7 +2972,7 @@ If you use the sudo function defined in the
 will be preserved.
 
 All of this assumes you installed the ssh server as described
-[here](#install-chocolatey-and-some-packages).
+[here](#installing-chocolatey-and-some-packages).
 
 To set this up:
 
@@ -3029,7 +3029,7 @@ get-installedmodule | update-module
 ### Available Command-Line Tools and Utilities
 
 The commands installed in the list of packages [installed from
-Chocolatey](#install-chocolatey-and-some-packages) are pretty much
+Chocolatey](#installing-chocolatey-and-some-packages) are pretty much
 the same as in Linux.
 
 There are a few very simplistic wrappers for similar functions as
@@ -3181,7 +3181,7 @@ currently does not handle symbolic links correctly and will not save
 your ACLs. You can save your ACLs with `icacls`.
 
 For an `htop` replacement, use `ntop`, installed
-[here](#install-chocolatey-and-some-packages), with the wrapper
+[here](#installing-chocolatey-and-some-packages), with the wrapper
 function in the [`$profile`](#setting-up-powershell).
 
 You can run any `cmd.exe` commands with `cmd /c <command>`.
