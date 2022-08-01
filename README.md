@@ -1975,7 +1975,14 @@ sl /prog<TAB>
 `C:\Program Files` type `` `<SPACE> `` and it will be completed with
 a starting quote. More on the `` ` `` escape character later.
 
-The [`$profile`](#setting-up-powershell) defines the variable
+For completing `\Program Files` it may be easier to use the
+environment variable, e.g.:
+
+```powershell
+sl $env:programfiles/WindowsPowerShell
+```
+
+. The [`$profile`](#setting-up-powershell) defines the variable
 `$ps_history` for the command history file location which is
 analogous to `~/.bash_history` on Linux, you can view it with e.g.:
 
@@ -3025,6 +3032,13 @@ To update all your modules, you can do this:
 get-installedmodule | update-module
 ```
 .
+
+Your modules are written to the `~/Documents/PowerShell/Modules`
+directory, with each module written to a `<Module>/<version>` tree.
+You can delete them if they are not in use.
+
+For Windows PowerShell the location of modules is
+`$env:programfiles\WindowsPowerShell\Modules`.
 
 ### Available Command-Line Tools and Utilities
 
