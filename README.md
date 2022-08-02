@@ -2878,6 +2878,13 @@ function baz {
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$Password
+        [validatescript({
+            if (-not (test-path -pathtype leaf $_)) {
+                throw "Certificate file '$_' does not exist."
+            }
+            $true
+        })]
+        [system.io.fileinfo]$CertificateFile
     )
 }
 ```
@@ -2932,6 +2939,15 @@ import-module -force ~/source/pwsh/modules/open-thingy.psm1
 ```
 . Sometimes this will not be sufficient, and you will need to unload
 it, or even start a new PowerShell session.
+
+For more about modules, see the [Using PowerShell Gallery
+section](#using-powershell-gallery).
+
+If you want to publish a module to the PowerShell Gallery, you can
+follow this [excellent
+guide](https://jeffbrown.tech/how-to-publish-your-first-powershell-gallery-package/).
+Just be aware that `publish-module` doesn't exist anymore, and you
+should use `publish-psresource -repo psgallery` instead.
 
 #### Miscellaneous Usage Tips
 
@@ -3009,7 +3025,6 @@ To enable PowerShell Gallery to install third-party modules, run this command:
 ```powershell
 set-psrepository psgallery -installationpolicy trusted
 ```
-
 , this is not necessary on Windows PowerShell.
 
 You can then install modules using `install-module`, for example:
@@ -3017,28 +3032,41 @@ You can then install modules using `install-module`, for example:
 ```powershell
 install-module PSWriteColor
 ```
-.
-
-You can immediately use the new module, e.g.:
+. You can immediately use the new module, e.g.:
 
 ```powershell
 write-color -t 'foo' -c 'magenta'
 ```
-.
-
-To update all your modules, you can do this:
+. To update all your modules, you can do this:
 
 ```powershell
 get-installedmodule | update-module
 ```
 .
 
-Your modules are written to the `~/Documents/PowerShell/Modules`
-directory, with each module written to a `<Module>/<version>` tree.
-You can delete them if they are not in use.
+In PowerShell Core, your modules are written to the
+`~/Documents/PowerShell/Modules` directory, with each module written
+to a `<Module>/<Version>` tree. You can delete them if they are not
+in use. The system-wide directory is
+`$env:programfiles/PowerShell/7/Modules`.
 
 For Windows PowerShell the location of modules is
-`$env:programfiles\WindowsPowerShell\Modules`.
+`$env:programfiles/WindowsPowerShell/Modules`.
+
+To see where an imported module is installed, you can do, e.g.:
+
+```powershell
+get-module posh-git | select path
+```
+. You can use `import-module` to load your installed modules by name
+into your current session and `remove-module` to remove them.
+
+The `uninstall-module` cmdlet can uninstall modules, usually.
+
+If you get yourself into some trouble with module installations,
+remember that `.nupkg` files are zip files, and you can extract them
+to the appropriate `<Module>/<Version>` directory and this will
+generally work.
 
 ### Available Command-Line Tools and Utilities
 
