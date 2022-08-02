@@ -2915,9 +2915,10 @@ start some_code.cpp
 
 There is currently no good sudo-like utility to get elevated access
 in a terminal session, however a reasonable workaround is connect to
-localhost with ssh, as ssh gives you elevated access. This will not
-allow you to run GUI apps with elevated access, but most console
-commands should work.
+localhost with ssh, as ssh gives you elevated access (if you are an
+admin user, which is the normal case.) This will not allow you to
+run GUI apps with elevated access, but most console commands should
+work.
 
 If you use the sudo function defined in the
 [`$profile`](#setting-up-powershell), then your current location
@@ -2932,7 +2933,6 @@ To set this up:
 sl ~/.ssh
 gc id_rsa.pub >> authorized_keys
 ```
-
 , then make sure the permissions are correct by running the commands
 [here](#setting-up-ssh).
 
