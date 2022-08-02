@@ -691,8 +691,15 @@ git config --global core.editor (get-command nano).source
 
 ### Setting up PowerShell
 
-If you use my `posh-git` prompt, you'll need to install the module
-`posh-git` from [PSGallery](#using-powershell-gallery).
+If you want to use my
+[posh-git](https://github.com/dahlbyk/posh-git) theme, install the
+module
+[posh-git-theme-bluelotus](https://github.com/rkitover/posh-git-theme-bluelotus)
+from [PSGallery](#using-powershell-gallery).
+
+You can also install [posh-git](https://github.com/dahlbyk/posh-git)
+and make your own
+[customizations](https://github.com/dahlbyk/posh-git/wiki/Customizing-Your-PowerShell-Prompt).
 
 To get colors in filesystem listings and enable some other necessary
 experimental features, run the following (**NOT** for Windows
@@ -754,6 +761,8 @@ if (-not (test-path variable:global:iswindows)) {
         $global:IsLinux   = $true
     }
 }
+
+import-module packagemanagement,powershellget
 
 if ($iswindows) {
     [Console]::OutputEncoding = [Console]::InputEncoding `
@@ -1404,6 +1413,7 @@ if ($iswindows) {
         patch   = '/prog*s/git/usr/bin/patch'
         wordpad = '/prog*s/win*nt/accessories/wordpad'
         ssh     = '/prog*s/OpenSSH-*/ssh.exe'
+        '7zfm'  = '/prog*s/7-zip/7zfm.exe'
     } | map_alias
 }
 
@@ -1507,95 +1517,16 @@ $env:PATH = (split_env_path | select -unique) -join $path_sep
 
 } | import-module
 
-import-module posh-git
+# This is my posh-git prompt theme:
+import-module posh-git-theme-bluelotus
 
-new-module MyPrompt -script {
-# Windows PowerShell does not support the `e special character
-# sequence for Escape, so we use a variable $e for this.
-$e = [char]27
+# If you want the posh-git window title, uncomment this:
+#
+#$gitpromptsettings.windowtitle =
+#    $gitprompt_theme_bluelotus.originalwindowtitle;
 
-$reset          = "$e[0m"
-$bold           = "$e[1m"
-
-# Tango colors.
-$white          = "$e[38;2;211;215;207m"
-$bright_white   = "$e[38;2;238;238;236m"
-$green          = "$e[38;2;078;154;006m"
-$bright_magenta = "$e[38;2;173;127;168m"
-$bright_black   = "$e[38;2;085;087;083m"
-
-# Other colors.
-$red            = "$e[38;2;220;020;060m"
-$light_blue     = "$e[38;2;140;206;250m"
-$linux_color    = "$e[38;2;175;095;000m"
-$windows_color  = "$e[38;2;032;178;170m"
-$mac_blue       = "$e[38;2;098;137;213m"
-$mac_grey       = "$e[38;2;196;205;239m"
-
-$path_color     = 0xC4A000
-$suffix_color   = 0xDC143C
-
-function global:prompt_error_indicator() {
-    if ($gitpromptvalues.dollarquestion) {
-        "${green}{0}${reset}" -f 'v'
-    }
-    else {
-        "${red}{0}${reset}"   -f 'x'
-    }
-}
-
-$env_indicator = if ($islinux -or $iswindows) {
-    "${bright_magenta}{0}{1}{2}{3}${reset}" `
-    -f @('PWSH';
-        ("${bright_black}{0}${reset}"            -f '{'),
-        $(if ($islinux) {
-            "${bold}${linux_color}{0}${reset}"   -f 'L'
-        }
-        else { # windows
-            "${bold}${windows_color}{0}${reset}" -f 'W'
-        }),
-        ("${bright_black}{0}${reset}"            -f '}')
-    )
-}
-elseif ($ismacos) {
-    "${mac_grey}{0}{1}{2}{3}${reset}" `
-        -f 'PWSH',
-            ("${bright_black}{0}${reset}"    -f '{'),
-            ("${bold}${mac_blue}{0}${reset}" -f 'M'),
-            ("${bright_black}{0}${reset}"    -f '}')
-}
-
-if ($iswindows) {
-    $username = $env:USERNAME
-    $hostname = $env:COMPUTERNAME.tolower()
-}
-else {
-    $username = whoami
-    $hostname = (hostname) -replace '\..*',''
-}
-
-$gitpromptsettings.defaultpromptprefix.text = '{0} {1} ' `
-    -f '$(prompt_error_indicator)',$env_indicator
-
-$gitpromptsettings.defaultpromptbeforesuffix.text =
-    ("`n${reset}${light_blue}{0}${reset}" `
-    + "${bright_white}{1}${reset}" `
-    + "${light_blue}{2}${reset} ") `
-        -f $username,'@',$hostname
-
-$gitpromptsettings.defaultpromptabbreviatehomedirectory = $true
-$gitpromptsettings.defaultpromptwritestatusfirst        = $false
-
-$gitpromptsettings.defaultpromptpath.foregroundcolor =
-    $path_color
-
-$gitpromptsettings.defaultpromptsuffix.foregroundcolor =
-    $suffix_color
-
-$gitpromptsettings.windowtitle = $null
-
-$host.ui.rawui.windowtitle = $hostname
-} | import-module
+# If you want to use the regular posh-git prompt and do your own customizations:
+#import-module posh-git
 
 import-module psreadline
 
@@ -1827,7 +1758,6 @@ You can see your PowerShell version with:
 ```powershell
 $PSVersionTable
 ```
-
 . Everything in this guide is compatible with both versions, except
 when I explicitly state that it isn't.
 
@@ -2914,13 +2844,11 @@ set-alias thingy -value OpenMyThingy
 # Here you specify what is actually visible.
 export-modulemember -function OpenMyThingy -alias thingy
 ```
-
 You can then load the module with:
 
 ```powershell
 import-module ~/source/pwsh/modules/open-thingy.psm1
 ```
-
 , it will tell you if the verbs you are using as the first word of
 your exported functions are not up to standard, which is why my
 example function has such a stupid name.
@@ -2930,7 +2858,6 @@ You unload it with:
 ```powershell
 remove-module open-thingy
 ```
-
 , and while you are debugging the module you will need to load it
 many, many, many times, which you can do with:
 
@@ -2946,8 +2873,10 @@ section](#using-powershell-gallery).
 If you want to publish a module to the PowerShell Gallery, you can
 follow this [excellent
 guide](https://jeffbrown.tech/how-to-publish-your-first-powershell-gallery-package/).
-Just be aware that `publish-module` doesn't exist anymore, and you
-should use `publish-psresource -repo psgallery` instead.
+Just be aware that the `publish-module` cmdlet is called
+`publish-psresource -repo psgallery` in newer versions of
+PackageManagement/PowerShellGet. Also look at the sources of other
+people's Gallery modules for ideas on how to do things.
 
 #### Miscellaneous Usage Tips
 
@@ -3025,12 +2954,23 @@ To enable PowerShell Gallery to install third-party modules, run this command:
 ```powershell
 set-psrepository psgallery -installationpolicy trusted
 ```
+, for new versions of PowerShellGet/PackageManagement, do this
+instead:
+
+```powershell
+set-psresourcerepository psgallery -trusted
+```
 , this is not necessary on Windows PowerShell.
 
 You can then install modules using `install-module`, for example:
 
 ```powershell
 install-module PSWriteColor
+```
+. On newer versions the command is:
+
+```powershell
+install-psresource PSWriteColor
 ```
 . You can immediately use the new module, e.g.:
 
@@ -3042,7 +2982,18 @@ write-color -t 'foo' -c 'magenta'
 ```powershell
 get-installedmodule | update-module
 ```
-.
+. On newer versions the command is:
+
+```powershell
+get-psresource | update-psresource
+```
+. The `uninstall-module` cmdlet can uninstall modules, usually, the
+new cmdlet is `uninstall-psresource`.
+
+. You may need to unload the module in all your sessions for the
+package commands to be able to uninstall or update it, and sometimes
+you will need to manually delete module directories, preferably in
+an admin cmd prompt not running PowerShell, core or Windows.
 
 In PowerShell Core, your modules are written to the
 `~/Documents/PowerShell/Modules` directory, with each module written
@@ -3060,8 +3011,6 @@ get-module posh-git | select path
 ```
 . You can use `import-module` to load your installed modules by name
 into your current session and `remove-module` to remove them.
-
-The `uninstall-module` cmdlet can uninstall modules, usually.
 
 If you get yourself into some trouble with module installations,
 remember that `.nupkg` files are zip files, and you can extract them
