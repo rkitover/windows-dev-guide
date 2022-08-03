@@ -3195,7 +3195,6 @@ $log = new-object System.Diagnostics.Eventing.Reader.EventLogConfiguration $logn
 $log.isenabled=$true
 $log.savechanges()
 ```
-
 . This is from:
 
 https://stackoverflow.com/questions/23227964/how-can-i-enable-all-tasks-history-in-powershell/23228436#23228436
@@ -3203,35 +3202,37 @@ https://stackoverflow.com/questions/23227964/how-can-i-enable-all-tasks-history-
 . This will allow you to use the `tasklog` function from the
 [`$profile`](#setting-up-powershell) to view the Task Scheduler log.
 
-This is a script called `register-task.ps1` that I use for the
-nightly builds for a project. The script must be run in an elevated
-shell.
+This is a script that I use for the nightly builds for a project.
+The script must be run in an elevated shell, as this is required to
+register a task:
+
+[//]: # "BEGIN INCLUDED build-task.ps1"
 
 ```powershell
-$TASKNAME = 'Nightly Build'
-$RUNAT    = '23:00'
+$taskname = 'Nightly Build'
+$runat    = '23:00'
 
-$trigger = new-scheduledtasktrigger -at $RUNAT -daily
+$trigger = new-scheduledtasktrigger -at $runat -daily
 
 if (-not (test-path /logs)) { mkdir /logs }
 
 $action  = new-scheduledtaskaction `
     -execute (get-command pwsh).source `
-    -argument "-noprofile -executionpolicy remotesigned -command `"& '(resolve-path $psscriptroot/build-nightly.ps1)' *>> /logs/build-nightly.log`""
+    -argument ("-noprofile -executionpolicy remotesigned " + `
+	"-command ""& '$(join-path $psscriptroot build-nightly.ps1)'""" + `
+	" *>> /logs/build-nightly.log")
 
 $password = (get-credential $env:username).getnetworkcredential().password
 
 register-scheduledtask -force `
-    -taskname $TASKNAME `
+    -taskname $taskname `
     -trigger $trigger -action $action `
     -user $env:username `
     -password $password `
     -runlevel highest `
     -ea stop | out-null
 
-"Task '$TASKNAME' successfully registered to run daily at $RUNAT."
-
-# vim:sw=4 et:
+"Task '$taskname' successfully registered to run daily at $runat."
 ```
 
 . With the `-force` parameter to `register-scheduledtask`, you can
@@ -3252,7 +3253,6 @@ You can use:
 ```powershell
 start-scheduledtask 'Task Name'
 ```
-
 , to test running your task.
 
 To delete a task, run:
@@ -3260,7 +3260,9 @@ To delete a task, run:
 ```powershell
 unregister-scheduledtask -confirm:$false 'Task Name'
 ```
-.
+. See also the [virt-viewer
+section](#working-with-virt-manager-vms-using-virt-viewer) for an
+example of a task that runs at logon.
 
 ### Working With virt-manager VMs Using virt-viewer
 
@@ -3316,29 +3318,51 @@ Host your-server-ports
   LocalForward 5901 localhost:5901
   LocalForward 5902 localhost:5902
 ```
-
 , and then create a continuously running
-[task](#creating-scheduled-tasks-cron) to keep the ports open, with
-a command such as:
+[task](#creating-scheduled-tasks-cron) that starts at logon to keep
+the ports open, with a command such as:
 
 ```powershell
 ssh -NT your-server-ports
 ```
+. Here is a script to create this task:
 
+[//]: # "BEGIN INCLUDED ports-task.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+$taskname = 'Forward Server Ports'
+
+$trigger = new-scheduledtasktrigger -atlogon
+
+$action  = new-scheduledtaskaction `
+    -execute (get-command pwsh).source `
+    -argument '-noprofile -executionpolicy remotesigned -command "ssh -NT server-ports"'
+
+$password = (get-credential $env:username).getnetworkcredential().password
+
+register-scheduledtask -force `
+    -taskname $taskname `
+    -trigger $trigger -action $action `
+    -user $env:username `
+    -password $password `
+    -ea stop | out-null
+
+"Task '$taskname' successfully registered to run at logon."
+```
 . As an alternative to creating a task, you can make a startup
 folder shortcut, first open the folder:
 
 ```powershell
 explorer shell:startup
 ```
-
 , create a shortcut to `pwsh`, then open the properties for
 the shortcut and set the target to something like:
 
 ```powershell
 "C:\Program Files\PowerShell\7\pwsh.exe" -windowstyle hidden -c "ssh -NT server-ports"
 ```
-
 . Make sure `Run:` is changed from `Normal window` to `Minimized`.
 
 Once that is done, the last step is to install `virt-viewer` from
@@ -3357,7 +3381,6 @@ function macbuilder {
         --hotkeys=release-cursor=ctrl+alt *> $null
 }
 ```
-
 . Launching the function will open a full screen graphics console to
 your VM.
 
