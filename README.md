@@ -3353,15 +3353,21 @@ function winbuilder {
 }
 
 function macbuilder {
-    &(resolve-path 'C:\Program Files\VirtViewer*\bin\remote-viewer.exe') -f spice://localhost:5900 *> $null
+    &(resolve-path 'C:\Program Files\VirtViewer*\bin\remote-viewer.exe') -f spice://localhost:5900 `
+        --hotkeys=release-cursor=ctrl+alt *> $null
 }
 ```
 
 . Launching the function will open a full screen graphics console to
 your VM.
 
-Moving your mouse cursor to the top-middle will pop down the control
-panel with control and disconnect functions.
+Moving your mouse cursor when it's not grabbed to the top-middle
+will pop down the control panel with control and disconnect
+functions.
+
+If your VM requires grabbing and ungrabbing input, use the
+`--hotkeys` parameter as in the example above to define a hotkey to
+release input.
 
 ### Using X11 Forwarding Over SSH
 
