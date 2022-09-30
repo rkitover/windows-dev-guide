@@ -276,6 +276,7 @@ In the global settings, above the `"profiles"` section, add:
     "font": 
     {
         "face": "Hack",
+        "weight": "light",
         "size": 11
     },
     "antialiasingMode": "cleartype",
