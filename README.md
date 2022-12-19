@@ -774,7 +774,8 @@ if ($iswindows) {
         = $OutputEncoding = new-object System.Text.UTF8Encoding
 
     set-executionpolicy -scope currentuser remotesigned
-    set-culture en-US
+
+    [System.Globalization.CultureInfo]::CurrentCulture = 'en-US'
 
     if ($private:chocolatey_profile = resolve-path (
             "$env:chocolateyinstall\helpers\chocolateyprofile.psm1"`
@@ -862,7 +863,7 @@ function backslashes_to_forward($str) {
 function global:shortpath($str) {
     if (-not $str) { $str = $($input) }
 
-    $str | resolve-path -ea ignore | % path | home_to_tilde `
+    $str | resolve-path -ea ignore | % path `
         | trim_sysdrive | backslashes_to_forward
 }
 
