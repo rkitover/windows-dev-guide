@@ -706,19 +706,6 @@ You can also install [posh-git](https://github.com/dahlbyk/posh-git)
 and make your own
 [customizations](https://github.com/dahlbyk/posh-git/wiki/Customizing-Your-PowerShell-Prompt).
 
-To get colors in filesystem listings and enable some other necessary
-experimental features, run the following (**NOT** for Windows
-PowerShell:)
-
-```powershell
-enable-experimentalfeature PSAnsiRenderingFileInfo
-enable-experimentalfeature PSNativeCommandArgumentPassing
-enable-experimentalfeature PSNativePSPathResolution
-```
-
-, and then restart your terminal or open a new tab for them to take
-effect.
-
 Here is a profile to get you started, it has a few examples of
 functions and aliases which you will invariably write for yourself.
 
