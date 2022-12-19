@@ -3073,14 +3073,15 @@ like `/ProgramData/chocolatey/bin/`. See
 structure.
 
 The `shortpath` function will convert a raw path to a nicer form
-with `~` substituted or the sysdrive removed, it can take args or
-pipeline input. The `realpath` function will give the canonical path
-with sysdrive using forward slashes, while `sysppath` will give you
-the standard Windows path with backslashes for e.g. passing to `cmd
-/c` commands.
+with the sysdrive removed, it can take args or pipeline input. The
+`realpath` function will give the canonical path with sysdrive using
+forward slashes, while `sysppath` will give you the standard Windows
+path with backslashes for e.g. passing to `cmd /c` commands.
 
 The `megs` function will show you the size of a file in mebibytes,
-this is not really the right way to do this, the right way would be to override the `FileInfo` and `DirectoryInfo` formats, I'm still researching a nice way to do this.
+this is not really the right way to do this, the right way would be
+to override the `FileInfo` and `DirectoryInfo` formats, I'm still
+researching a nice way to do this.
 
 The `syslog` function will show you a simple view of the System
 event log, while the `tasklog` function will show you a simple view
