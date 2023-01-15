@@ -1242,19 +1242,19 @@ if ($iswindows) {
             ("$e[95m[$e[34m" + ('{0:MM-dd} ' -f $_.timecreated) `
             + "$e[36m" + ('{0:HH:mm:ss}' -f $_.timecreated) `
             + "$e[95m]$e[0m " `
-            + ($_.message -replace "`n.*",''))
+            + $_.message) | out-string
         }
     }
 
     function global:syslog {
-        get-winevent -log system -oldest | format-eventlog | less -r
+        get-winevent -log system -oldest | format-eventlog | less
     }
 
     # You have to enable the tasks log first as admin, see:
     # https://stackoverflow.com/q/13965997/262458
     function global:tasklog {
         get-winevent 'Microsoft-Windows-TaskScheduler/Operational' `
-            -oldest | format-eventlog | less -r
+            -oldest | format-eventlog | less
     }
 
     function global:ntop {
