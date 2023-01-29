@@ -3215,7 +3215,7 @@ $trigger = new-scheduledtasktrigger -at $runat -daily
 if (-not (test-path /logs)) { mkdir /logs }
 
 $action  = new-scheduledtaskaction `
-    -execute (get-command pwsh).source `
+    -execute 'pwsh' `
     -argument ("-noprofile -executionpolicy remotesigned " + `
 	"-command ""& '$(join-path $psscriptroot build-nightly.ps1)'""" + `
 	" *>> /logs/build-nightly.log")
@@ -3227,7 +3227,6 @@ register-scheduledtask -force `
     -trigger $trigger -action $action `
     -user $env:username `
     -password $password `
-    -runlevel highest `
     -ea stop | out-null
 
 "Task '$taskname' successfully registered to run daily at $runat."
@@ -3335,8 +3334,8 @@ $taskname = 'Forward Server Ports'
 $trigger = new-scheduledtasktrigger -atlogon
 
 $action  = new-scheduledtaskaction `
-    -execute (get-command pwsh).source `
-    -argument '-noprofile -executionpolicy remotesigned -command "ssh -NT server-ports"'
+    -execute 'ssh' `
+    -argument '-NT server-ports'
 
 $password = (get-credential $env:username).getnetworkcredential().password
 
