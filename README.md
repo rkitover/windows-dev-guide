@@ -108,9 +108,7 @@ choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils d
 #choco install -y microsoft-windows-terminal
 ## If you had previously installed it and are now using Windows 11, run:
 #choco uninstall microsoft-windows-terminal -n --skipautouninstaller
-stop-service ssh-agent
-sc.exe delete ssh-agent
-choco install -y openssh --prerelease --force --params '/SSHServerFeature /SSHAgentFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
+choco install -y openssh --prerelease --force --params '/SSHServerFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
 refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
