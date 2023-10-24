@@ -119,6 +119,12 @@ ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)
 ```
 .
 
+For Visual Studio and build tools, you may choose to just install
+the `visualstudio-installer` package from choco and use the GUI app
+to choose your Visual Studio version and components. In the cases of
+some individual components, such as the ARM64 cross build tools, the
+Visual Studio Installer app is the only way to install them.
+
 ### Chocolatey Usage Notes
 
 Here are some commands for using the Chocolatey package manager.
