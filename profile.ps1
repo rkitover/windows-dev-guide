@@ -759,6 +759,8 @@ if ($iswindows) {
     }
 
     if ($vs_path) {
+        $saved_vcpkg_root = $env:VCPKG_ROOT
+
         pushd $vs_path
         cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
 #        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
@@ -767,6 +769,10 @@ if ($iswindows) {
             set-item -force "env:\$var" -val $val
         }
         popd
+
+        if ($saved_vcpkg_root) {
+            $env:VCPKG_ROOT = $saved_vcpkg_root
+        }
     }
 }
 
