@@ -792,7 +792,9 @@ import-module posh-git-theme-bluelotus
 # If you want to use the regular posh-git prompt and do your own customizations:
 #import-module posh-git
 
-import-module psreadline
+if (-not (get-module psreadline)) {
+    import-module psreadline
+}
 
 set-psreadlineoption -editmode emacs
 set-psreadlineoption -historysearchcursormovestoend
