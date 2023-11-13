@@ -782,7 +782,9 @@ if ($iswindows) {
         | ?{ $_ -match '^(__VSCMD|INCLUDE$|LIB$|LIBPATH$)' } `
         | %{ ri env:\$_ }
 
-    update-sessionenvironment
+    if (get-command -ea ignore update-sessionenvironment) {
+        update-sessionenvironment
+    }
 
     # Tell Chocolatey to not add code to $profile.
     $env:ChocolateyNoProfile = 'yes'
