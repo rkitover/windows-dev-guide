@@ -4,9 +4,7 @@
 
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
-  - [Installing Chocolatey and Some Packages](#installing-chocolatey-and-some-packages)
-  - [Chocolatey Usage Notes](#chocolatey-usage-notes)
-    - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
+  - [Installing Visual Studio, Some Packages and Scoop](#installing-visual-studio-some-packages-and-scoop)
   - [Configure the Terminal](#configure-the-terminal)
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
@@ -44,6 +42,8 @@
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
+  - [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes)
+    - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -69,189 +69,58 @@ things like using `cmake` with `vcpkg` or `Conan` etc..
 
 Your feedback via issues or pull requests on Github is appreciated.
 
-### Installing Chocolatey and Some Packages
+### Installing Visual Studio, Some Packages and Scoop
 
-Make sure developer mode is turned on in Windows settings, this is
-necessary for making unprivileged symlinks.
+Make sure developer mode is turned on in Windows settings, this is necessary for
+making unprivileged symlinks. Also in developer settings, change powershell
+execution policy to RemoteSigned.
 
 - Press Win+X and open PowerShell (Administrator).
-
-- Run these commands:
-
-```powershell
-set-executionpolicy -force remotesigned -scope localmachine
-iwr 'https://chocolatey.org/install.ps1' | % content | iex
-```
-
-. Close the Administrator PowerShell window and open it again.
 
 Run this script, which is in the repo, like so:
 
 ```powershell
 ./install.ps1
 ```
-
-, it installs some choco packages and sets some QOL improvement
-settings. Copy over your `~/.ssh` first, but you can do this [later](#setting-up-ssh).
+, it installs some winget packages, the Visual Studio C++ workload, scoop and
+some scoop packages of UNIX ports, sets up the OpenSSH server and sets some QOL
+improvement settings. Copy over your `~/.ssh` first, but you can do this
+[later](#setting-up-ssh).
 
 [//]: # "BEGIN INCLUDED install.ps1"
 
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 set-service beep -startuptype disabled
-choco feature enable --name 'useRememberedArgumentsForUpgrades'
-choco install -y visualstudio2022community --params '--locale en-US'
-choco install -y visualstudio2022-workload-nativedesktop
-choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
+winget install --force Microsoft.VisualStudio.2022.Community vim.vim 7zip.7zip gsass1.NTop StrawberryPerl.StrawberryPerl Git.Git GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta
+$env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
+iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
+./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
+$pwsh = [system.diagnostics.process]::getcurrentprocess().mainmodule.filename
+start-process $pwsh '-noprofile', '-executionpolicy', 'bypass', '-windowstyle', 'hidden', `
+    '-command', "while (test-path $pwd/vs_community.exe) { sleep 5; ri -fo $pwd/vs_community.exe }"
+ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
+if (-not (test-path ~/scoop)) {
+    iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
+}
+scoop install bzip2 diffutils dos2unix file gawk grep gzip less make netcat ripgrep sed zip unzip
+$env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
+scoop bucket add nerd-fonts
+scoop install DejaVuSansMono-NF
 ## Only run this on Windows 10 or older, this package is managed by Windows 11.
-#choco install -y microsoft-windows-terminal
-## If you had previously installed it and are now using Windows 11, run:
-#choco uninstall microsoft-windows-terminal -n --skipautouninstaller
-choco install -y openssh --prerelease --force --params '/SSHServerFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
-refreshenv
+#winget install Microsoft.WindowsTerminal
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\PowerShell\7\pwsh.exe" -PropertyType String -Force
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
-restart-service sshd
+set-service sshd -startuptype automatic
+set-service ssh-agent -startuptype automatic
+start-service sshd
+start-service ssh-agent
 &(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
 import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
 repair-authorizedkeypermission -file ~/.ssh/authorized_keys
-ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)
 ```
-.
-
-For Visual Studio and build tools, you may choose to just install
-the `visualstudio-installer` package from choco and use the GUI app
-to choose your Visual Studio version and components. In the cases of
-some individual components, such as the ARM64 cross build tools, the
-Visual Studio Installer app is the only way to install them.
-
-### Chocolatey Usage Notes
-
-Here are some commands for using the Chocolatey package manager.
-
-To search for a package:
-
-```powershell
-choco search vim
-```
-
-. To install a package:
-
-```powershell
-choco install -y vim
-```
-
-. To get the description of a package:
-
-```powershell
-choco info vim
-```
-
-, this will also include possible installation parameters that you
-can pass as a single string on install, e.g.:
-
-```powershell
-choco install -y package --params '/NoDesktopShortcuts
-/SomeOtherParam'
-```
-
-, if you use install params make sure you enabled the
-`useRememberedArgumentsForUpgrades` choco feature, otherwise your
-params will not be applied on upgrades and your package may break,
-to do this run:
-
-```powershell
-choco feature enable --name 'useRememberedArgumentsForUpgrades'
-```
-
-. To uninstall a package:
-
-```powershell
-choco uninstall -y vim
-```
-
-, you might run into packages that can't uninstall, this can happen
-when a package was installed with an installer and there is no
-specification for how to uninstall, in which case you would have to
-clean it up manually.
-
-If you need to uninstall packages that depend on each other, you
-must pass the list in the correct order, or choco will throw a
-dependency error. For example, this would be the correct order in
-one particular case:
-
-```powershell
-choco uninstall -y transifex-client python python3
-```
-
-, any other order would not work. You can also use the `-x` option
-to remove packages and all of their dependencies, or run the command
-repeatedly until all packages are uninstalled.
-
-To list installed packages:
-
-```powershell
-choco list --local
-```
-
-. To update all installed packages:
-
-```powershell
-choco upgrade -y all
-```
-
-. Sometimes after you install a package, your terminal session will
-not have it in `$env:PATH`, you can restart your terminal or run
-`refreshenv` to re-read your environment settings. This is also in
-the [`$profile`](#setting-up-powershell), so starting a new tab will
-also work.
-
-#### Chocolatey Filesystem Structure
-
-The main default directory for choco and packages is
-`/ProgramData/chocolatey`.
-
-You can change this directory **BEFORE** you install choco itself like so:
-
-```powershell
-[environment]::setenvironmentvariable('ChocolateyInstall', 'C:\Some\Path', 'machine')
-```
-
-. This can only be changed before you install choco and any
-packages, it **CANNOT** be changed after it is already installed and
-any packages are installed.
-
-The directory `/ProgramData/chocolatey/bin` contains the `.exe`
-"shims", which are kind of like symbolic links, that point to the
-actual program executables. You can run e.g.:
-
-```powershell
-grep --shimgen-help
-```
-
-, to see the target path and more information about shims. The
-[`$profile`](#setting-up-powershell) has a `shimread` function to
-get the target of shims.
-
-The directory `/ProgramData/chocolatey/lib` contains the package
-install directories with various package metadata and sometimes the
-executables as well.
-
-The directory `/tools` is sometimes used by packages as the
-installation target as well.
-
-You can change this directory like so:
-
-```powershell
-[environment]::setenvironmentvariable('ChocolateyToolsLocation', 'C:\Some\Path', 'machine')
-```
-
-, this can be changed after installation, in which case make sure to
-move any files there to the new location.
-
-Many packages simply run an installer and do not install to any
-specific location, however various package metadata will still be
-available under `/ProgramData/chocolatey/lib/<package>`.
+. if you want to use the Chocolatey package manager instead of winget and scoop,
+see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
 ### Configure the Terminal
 
@@ -315,7 +184,7 @@ install from:
 https://github.com/IBM/plex
 
 , and 'DejaVu Sans Mono' which was in the [list of
-packages](#installing-chocolatey-and-some-packages).
+packages](#installing-visual-studio-some-packages-and-scoop).
 
 The Terminal also comes with a nice new Microsoft font called
 "Cascadia Code", if you leave out the `"face": "<name>",` line, it
@@ -423,7 +292,7 @@ The transparency configuration in the terminal described
 [above](#configure-the-terminal) works correctly with neovim but not
 regular vim. For older versions of Terminal or to get transparency
 in regular vim, use the autohotkey method described here. You can
-install autohotkey from Chocolatey.
+install autohotkey from winget using the id `AutoHotkey.AutoHotkey`.
 
 This is the autohotkey script:
 
@@ -492,7 +361,10 @@ I recommend using neovim on Windows because it has working mouse
 support and is almost 100% compatible with vim.
 
 If you are using neovim only, you can copy your `~/.config/nvim`
-over directly, the [install script](#installing-chocolatey-and-some-packages) makes `~/.config` a symlink to `~/AppData/Local` which serves a similar purpose on Windows.
+over directly, the [install
+script](#installing-visual-studio-some-packages-and-scoop) makes
+`~/.config` a symlink to `~/AppData/Local` which serves a similar
+purpose on Windows.
 
 If you would like to use both Neovim and regular vim, or to keep
 your vim files in `~/.vim`, do something like the following:
@@ -1321,10 +1193,21 @@ if ($iswindows) {
 
         $args | %{ $_ } |
             %{ get-command $_ -commandtype application `
-                -ea ignore } `
-            | %{ &$_ --shimgen-help } `
-            | ?{ $_ -match "^ Target: '(.*)'$" } `
-            | %{ $matches[1] } | shortpath
+                -ea ignore } | %{ $_.source }`
+                # winget symlinks
+            | %{ if ($link_target = (gi $_).target) {
+                    $link_target | shortpath
+                }
+                # scoop shims
+                elseif (test-path ($shim = $_ -replace '\.exe$','.shim')) {
+                    gc $shim | %{ $_ -replace '^path = "([^"]+)"$','$1' } | shortpath
+                }
+                # chocolatey shims
+                elseif (&$_ --shimgen-help) {
+                    $_ | ?{ $_ -match "^ Target: '(.*)'$" } `
+                       | %{ $matches[1] } | shortpath
+                }
+            }
     }
 
     function global:env {
@@ -1727,7 +1610,8 @@ or `Roaming` directory, or both, and for what. When backing up any
 particular application configuration, check if it uses one or the
 other or both.
 
-The [install script](#installing-chocolatey-and-some-packages) makes a
+The [install
+script](#installing-visual-studio-some-packages-and-scoop) makes a
 `~/.config` symlink pointing to `~/AppData/Local`. This is adequate
 for some Linux ports such as Neovim.
 
@@ -2936,7 +2820,7 @@ If you use the sudo function defined in the
 will be preserved.
 
 All of this assumes you installed the ssh server as described
-[here](#installing-chocolatey-and-some-packages).
+[here](#installing-visual-studio-some-packages-and-scoop).
 
 To set this up:
 
@@ -2951,12 +2835,7 @@ Test connecting to localhost with `ssh localhost` for the first
 time, if everything went well, ssh will prompt you to trust the host
 key, and on subsequent connections you will connect with no prompts.
 
-You can now run console elevated commands, for example:
-
-```powershell
-sudo choco upgrade -y all
-```
-.
+You can now run console elevated commands using the `sudo` function.
 
 ### Using PowerShell Gallery
 
@@ -3031,8 +2910,8 @@ generally work.
 ### Available Command-Line Tools and Utilities
 
 The commands installed in the list of packages [installed from
-Chocolatey](#installing-chocolatey-and-some-packages) are pretty much
-the same as in Linux.
+scoop](#installing-visual-studio-some-packages-and-scoop) are
+pretty much the same as in Linux.
 
 There are a few very simplistic wrappers for similar functions as
 the namesake Linux commands in the
@@ -3066,12 +2945,8 @@ For example, I also define `ltr` to add `sort lastwritetime` and
 `count` to add `measure | % count` to the end of a pipeline, and
 alias `select-object` to `s`.
 
-The `readshim` function will give you the package target of choco
-`.exe` shims, which are kind of like symlinks, they are the `.exe`
-that is in your `$env:PATH` under your choco root which is something
-like `/ProgramData/chocolatey/bin/`. See
-[here](#chocolatey-filesystem-structure) about the choco filesystem
-structure.
+The `readshim` function will give you the installed target of winget symlinks,
+scoop shims and Chocolatey shims for executables you have installed.
 
 The `shortpath` function will convert a raw path to a nicer form
 with the sysdrive removed, it can take args or pipeline input. The
@@ -3098,7 +2973,7 @@ it will be available in your `$env:PATH`. For example, I use
 `doctoc` and `markdown-link-check` to maintain this and other
 markdown documents.
 
-The `python` and `pip` tools (version 3) come from the Chocolatey
+The `python` and `pip` tools (version 3) come from the winget
 `python` package. To install utilities from `pip` use the `--user`
 flag, e.g.:
 
@@ -3118,7 +2993,7 @@ this:
 , `pip` will give you a warning with the path if it's not in your
 `$env:PATH`.
 
-The `perl` command comes from StrawberryPerl from Chocolatey, it is
+The `perl` command comes from StrawberryPerl from winget, it is
 mostly fully functional and allows you to install many modules from
 CPAN without issues. See the `$env:PATH` override for it in the
 [`$profile`](#setting-up-powershell) to remove the MinGW stuff it
@@ -3154,7 +3029,7 @@ can do this:
 devenv /debugexe file.exe arg1 arg2 ...
 ```
 
-. The tool `make` is a native port of GNU Make from Chocolatey. It
+. The tool `make` is a native port of GNU Make from scoop. It
 will generally not run regular Linux Makefiles because it expects
 `cmd.exe` shell commands. However, it is possible to write Makefiles
 that work in both environments if the commands are the same, for
@@ -3184,13 +3059,13 @@ currently does not handle symbolic links correctly and will not save
 your ACLs. You can save your ACLs with `icacls`.
 
 For an `htop` replacement, use `ntop`, installed
-[here](#installing-chocolatey-and-some-packages), with the wrapper
-function in the [`$profile`](#setting-up-powershell).
+[here](#installing-visual-studio-some-packages-and-scoop), with the
+wrapper function in the [`$profile`](#setting-up-powershell).
 
 You can run any `cmd.exe` commands with `cmd /c <command>`.
 
-Many more things are available from Chocolatey and other sources of
-course, at varying degrees of functionality.
+Many more things are available from winget, scoop and Chcolatey and other
+sources of course, at varying degrees of functionality.
 
 ### Creating Scheduled Tasks (cron)
 
@@ -3280,9 +3155,9 @@ example of a task that runs at logon.
 Unfortunately `virt-manager` is unavailable as a native utility, if
 you like you can run it using WSL or even Cygwin.
 
-However, `virt-viewer` is available from Chocolatey and with a bit
-of setup can allow you to work with your remote `virt-manager` VMs
-conveniently.
+However, `virt-viewer` is available from winget using the id `RedHat.VirtViewer`
+and with a bit of setup can allow you to work with your remote `virt-manager`
+VMs conveniently.
 
 The first step is to edit the XML for your VMs and assign
 non-conflicting spice ports bound to localhost for each one.
@@ -3379,8 +3254,8 @@ the shortcut and set the target to something like:
 ```
 . Make sure `Run:` is changed from `Normal window` to `Minimized`.
 
-Once that is done, the last step is to install `virt-viewer` from
-Chocolatey and add the functions to your
+Once that is done, the last step is to install `virt-viewer` from winget using
+the id `RedHat.VirtViewer` and add the functions to your
 [`$profile`](#setting-up-powershell) for launching it for your VMs.
 
 I use these:
@@ -3408,7 +3283,7 @@ release input.
 
 ### Using X11 Forwarding Over SSH
 
-Install `vcxsrv` from Chocolatey.
+Install `vcxsrv` from winget using the id `marha.VcXsrv`.
 
 It is necessary to disable DPI scaling for this app. First, run this
 command in an admin terminal:
@@ -3525,8 +3400,8 @@ sl ~
 ni -it sym work-documents -tar //corporate-server/documents
 ```
 
-. To mount my NAS over SSHFS I can do this, assuming the Chocolatey
-`sshfs` package is installed:
+. To mount my NAS over SSHFS I can do this, assuming the winget
+`sshfs` package (id `SSHFS-Win.SSHFS-Win`) is installed:
 
 ```powershell
 sl ~
@@ -3535,5 +3410,160 @@ ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 
 . Here `2223` is the port for ssh. Use `sshfs.k` instead of
 `sshfs.kr` to specify a path relative to your home directory.
+
+### Appendix A: Chocolatey Usage Notes
+
+I have switched this guide to winget and scoop because that's what people want
+to use these days, however Chocolatey is still a very useful source of software
+that you may want to use, I will describe it here.
+
+To install the Chocolatey package manager, run this from an admin PowerShell:
+
+```powershell
+iwr 'https://chocolatey.org/install.ps1' | % content | iex
+```
+, then relaunch your terminal session.
+
+This is the old install script for this guide using Chocolatey if
+you would prefer to use it instead of winget and scoop:
+
+[//]: # "BEGIN INCLUDED choco-install.ps1"
+
+```powershell
+[environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
+set-service beep -startuptype disabled
+choco feature enable --name 'useRememberedArgumentsForUpgrades'
+choco install -y visualstudio2022community --params '--locale en-US'
+choco install -y visualstudio2022-workload-nativedesktop
+choco install -y vim --params '/NoDesktopShortcuts'
+choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
+## Only run this on Windows 10 or older, this package is managed by Windows 11.
+#choco install -y microsoft-windows-terminal
+## If you had previously installed it and are now using Windows 11, run:
+#choco uninstall microsoft-windows-terminal -n --skipautouninstaller
+choco install -y openssh --prerelease --force --params '/SSHServerFeature /PathSpecsToProbeForShellEXEString:$env:programfiles\PowerShell\*\pwsh.exe'
+refreshenv
+sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
+restart-service sshd
+&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
+import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
+repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)
+```
+, run it in an admin PowerShell terminal.
+
+Here are some commands for using the Chocolatey package manager.
+
+To search for a package:
+
+```powershell
+choco search vim
+```
+. To install a package:
+
+```powershell
+choco install -y vim
+```
+. To get the description of a package:
+
+```powershell
+choco info vim
+```
+, this will also include possible installation parameters that you
+can pass as a single string on install, e.g.:
+
+```powershell
+choco install -y package --params '/NoDesktopShortcuts
+/SomeOtherParam'
+```
+, if you use install params make sure you enabled the
+`useRememberedArgumentsForUpgrades` choco feature, otherwise your
+params will not be applied on upgrades and your package may break,
+to do this run:
+
+```powershell
+choco feature enable --name 'useRememberedArgumentsForUpgrades'
+```
+. To uninstall a package:
+
+```powershell
+choco uninstall -y vim
+```
+, you might run into packages that can't uninstall, this can happen
+when a package was installed with an installer and there is no
+specification for how to uninstall, in which case you would have to
+clean it up manually.
+
+If you need to uninstall packages that depend on each other, you
+must pass the list in the correct order, or choco will throw a
+dependency error. For example, this would be the correct order in
+one particular case:
+
+```powershell
+choco uninstall -y transifex-client python python3
+```
+, any other order would not work. You can also use the `-x` option
+to remove packages and all of their dependencies, or run the command
+repeatedly until all packages are uninstalled.
+
+To list installed packages:
+
+```powershell
+choco list --local
+```
+. To update all installed packages:
+
+```powershell
+choco upgrade -y all
+```
+. Sometimes after you install a package, your terminal session will
+not have it in `$env:PATH`, you can restart your terminal or run
+`refreshenv` to re-read your environment settings. This is also in
+the [`$profile`](#setting-up-powershell), so starting a new tab will
+also work.
+
+#### Chocolatey Filesystem Structure
+
+The main default directory for choco and packages is
+`/ProgramData/chocolatey`.
+
+You can change this directory **BEFORE** you install choco itself like so:
+
+```powershell
+[environment]::setenvironmentvariable('ChocolateyInstall', 'C:\Some\Path', 'machine')
+```
+. This can only be changed before you install choco and any
+packages, it **CANNOT** be changed after it is already installed and
+any packages are installed.
+
+The directory `/ProgramData/chocolatey/bin` contains the `.exe`
+"shims", which are kind of like symbolic links, that point to the
+actual program executables. You can run e.g.:
+
+```powershell
+grep --shimgen-help
+```
+, to see the target path and more information about shims. The
+[`$profile`](#setting-up-powershell) has a `shimread` function to
+get the target of shims.
+
+The directory `/ProgramData/chocolatey/lib` contains the package
+install directories with various package metadata and sometimes the
+executables as well.
+
+The directory `/tools` is sometimes used by packages as the
+installation target as well.
+
+You can change this directory like so:
+
+```powershell
+[environment]::setenvironmentvariable('ChocolateyToolsLocation', 'C:\Some\Path', 'machine')
+```
+, this can be changed after installation, in which case make sure to
+move any files there to the new location.
+
+Many packages simply run an installer and do not install to any
+specific location, however various package metadata will still be
+available under `/ProgramData/chocolatey/lib/<package>`.
 
 <!--- vim:set et sw=4 tw=68: --->

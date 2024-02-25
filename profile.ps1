@@ -471,7 +471,10 @@ if ($iswindows) {
 
     if ($vim) {
         set-alias vim -value $vim -scope global
-        $env:EDITOR = realpath $vim
+        # Remove spaces from path if possible, because this breaks UNIX ports.
+        $env:EDITOR = realpath $vim `
+            | %{ $_ -replace '/Program Files/','/progra~1/' } `
+            | %{ $_ -replace '/Program Files (x86)/','/progra~2/' } `
     }
 }
 else {
@@ -578,10 +581,21 @@ if ($iswindows) {
 
         $args | %{ $_ } |
             %{ get-command $_ -commandtype application `
-                -ea ignore } `
-            | %{ &$_ --shimgen-help } `
-            | ?{ $_ -match "^ Target: '(.*)'$" } `
-            | %{ $matches[1] } | shortpath
+                -ea ignore } | %{ $_.source }`
+                # winget symlinks
+            | %{ if ($link_target = (gi $_).target) {
+                    $link_target | shortpath
+                }
+                # scoop shims
+                elseif (test-path ($shim = $_ -replace '\.exe$','.shim')) {
+                    gc $shim | %{ $_ -replace '^path = "([^"]+)"$','$1' } | shortpath
+                }
+                # chocolatey shims
+                elseif (&$_ --shimgen-help) {
+                    $_ | ?{ $_ -match "^ Target: '(.*)'$" } `
+                       | %{ $matches[1] } | shortpath
+                }
+            }
     }
 
     function global:env {
