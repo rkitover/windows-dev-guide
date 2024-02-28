@@ -92,7 +92,9 @@ improvement settings. Copy over your `~/.ssh` first, but you can do this
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 set-service beep -startuptype disabled
-winget install --force Microsoft.VisualStudio.2022.Community vim.vim 7zip.7zip gsass1.NTop StrawberryPerl.StrawberryPerl Git.Git GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta
+'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','StrawberryPerl.StrawberryPerl','Git.Git','GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++','Microsoft.Powershell','Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta' | %{
+	winget install --force $_
+}
 $env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
 iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
@@ -122,7 +124,16 @@ repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 . if you want to use the Chocolatey package manager instead of winget and scoop,
 see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
-To update your winget packages, run this in an admin PowerShell:
+If `winget` exits abnormally, update this app from the Windows
+Store:
+
+https://apps.microsoft.com/detail/9nblggh4nns1
+
+. If something fails in the script, run it again until everything
+succeeds.
+
+To later update your winget packages, run this in an admin
+PowerShell:
 
 ```powershell
 winget upgrade --all
@@ -1099,7 +1110,10 @@ if ($iswindows) {
 
     if ($vim) {
         set-alias vim -value $vim -scope global
-        $env:EDITOR = realpath $vim
+        # Remove spaces from path if possible, because this breaks UNIX ports.
+        $env:EDITOR = realpath $vim `
+            | %{ $_ -replace '/Program Files/','/progra~1/' } `
+            | %{ $_ -replace '/Program Files (x86)/','/progra~2/' } `
     }
 }
 else {

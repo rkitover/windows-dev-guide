@@ -1,6 +1,8 @@
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
 set-service beep -startuptype disabled
-winget install --force Microsoft.VisualStudio.2022.Community vim.vim 7zip.7zip gsass1.NTop StrawberryPerl.StrawberryPerl Git.Git GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta
+'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','StrawberryPerl.StrawberryPerl','Git.Git','GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++','Microsoft.Powershell','Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta' | %{
+	winget install --force $_
+}
 $env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
 iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
