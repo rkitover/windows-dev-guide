@@ -1813,14 +1813,9 @@ sl /prog<TAB>
 `C:\Program Files` type `` `<SPACE> `` and it will be completed with
 a starting quote. More on the `` ` `` escape character later.
 
-For completing `\Program Files` it may be easier to use the
-environment variable, e.g.:
-
-```powershell
-sl $env:programfiles/WindowsPowerShell
-```
-
-. The [`$profile`](#setting-up-powershell) defines the variable
+For completing `/Program Files` it's easier to use DOS short alias
+`/progra~1` and for `/Program Files (x86)` the `/progra~2` alias.
+The [`$profile`](#setting-up-powershell) defines the variable
 `$ps_history` for the command history file location which is
 analogous to `~/.bash_history` on Linux, you can view it with e.g.:
 
