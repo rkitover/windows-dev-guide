@@ -581,9 +581,9 @@ if ($iswindows) {
 
         $args | %{ $_ } |
             %{ get-command $_ -commandtype application `
-                -ea ignore } | %{ $_.source }`
+                -ea ignore } | %{ $_.source } | `
                 # winget symlinks
-            | %{ if ($link_target = (gi $_).target) {
+            %{ if ($link_target = (gi $_).target) {
                     $link_target | shortpath
                 }
                 # scoop shims
