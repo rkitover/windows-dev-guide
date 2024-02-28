@@ -122,6 +122,19 @@ repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 . if you want to use the Chocolatey package manager instead of winget and scoop,
 see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
+To update your winget packages, run this in an admin PowerShell:
+
+```powershell
+winget upgrade --all
+```
+, to update your scoop packages, run this (also in an admin
+PowerShell:)
+
+```powershell
+scoop update *
+```
+.
+
 ### Configure the Terminal
 
 Launch the Windows Terminal and choose Settings from the tab
