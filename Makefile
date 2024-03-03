@@ -5,8 +5,8 @@ touch=echo >
 all: README.md .doctoc-stamp .link-check-stamp
 
 README.md: .profile-include-stamp .nanosetup-include-stamp \
-	.install-include-stamp .ports-task-include-stamp .build-task-include-stamp \
-	.choco-install-include-stamp
+	.install-include-stamp .install-user-include-stamp .ports-task-include-stamp \
+	.build-task-include-stamp .choco-install-include-stamp
 
 .%-include-stamp: %.ps1
 	@echo Inserting updated $<

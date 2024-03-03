@@ -5,6 +5,7 @@
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
   - [Installing Visual Studio, Some Packages and Scoop](#installing-visual-studio-some-packages-and-scoop)
+  - [winget and scoop notes](#winget-and-scoop-notes)
   - [Configure the Terminal](#configure-the-terminal)
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
@@ -82,44 +83,38 @@ Run this script, which is in the repo, like so:
 ```powershell
 ./install.ps1
 ```
-, it installs some winget packages, the Visual Studio C++ workload, scoop and
-some scoop packages of UNIX ports, sets up the OpenSSH server and sets some QOL
-improvement settings. Copy over your `~/.ssh` first, but you can do this
-[later](#setting-up-ssh).
+, it installs some winget packages, the Visual Studio C++ workload, sets up the
+OpenSSH server and sets some QOL improvement settings.
 
 [//]: # "BEGIN INCLUDED install.ps1"
 
 ```powershell
 [environment]::setenvironmentvariable('POWERSHELL_UPDATECHECK', 'off', 'machine')
+
 set-service beep -startuptype disabled
-'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','StrawberryPerl.StrawberryPerl','Git.Git','GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++','Microsoft.Powershell','Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta' | %{
-	winget install --force $_
+
+'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','StrawberryPerl.StrawberryPerl',`
+'Git.Git','GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++',`
+'Microsoft.Powershell','Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
+	winget install $_
 }
-$env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
+
 iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
+
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
-$pwsh = [system.diagnostics.process]::getcurrentprocess().mainmodule.filename
-start-process $pwsh '-noprofile', '-executionpolicy', 'bypass', '-windowstyle', 'hidden', `
+
+start-process pwsh '-noprofile', '-windowstyle', 'hidden', `
     '-command', "while (test-path $pwd/vs_community.exe) { sleep 5; ri -fo $pwd/vs_community.exe }"
-ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
-if (-not (test-path ~/scoop)) {
-    iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
-}
-scoop install bzip2 diffutils dos2unix file gawk grep gzip less make netcat ripgrep sed zip unzip
-$env:path = [system.environment]::getenvironmentvariable("path", "machine") + ';' + [system.environment]::getenvironmentvariable("path", "user")
-scoop bucket add nerd-fonts
-scoop install DejaVuSansMono-NF
-## Only run this on Windows 10 or older, this package is managed by Windows 11.
-#winget install Microsoft.WindowsTerminal
-New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\PowerShell\7\pwsh.exe" -PropertyType String -Force
-sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
+
+new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value (get-command pwsh).source -propertytype string -force > $null
+
+(gc /programdata/ssh/sshd_config) | %{ $_ -replace '^([^#].*administrators.*)','#$1' } | set-content /programdata/ssh/sshd_config
+
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic
+
 start-service sshd
 start-service ssh-agent
-&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
-import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
-repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
 . if you want to use the Chocolatey package manager instead of winget and scoop,
 see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
@@ -132,19 +127,50 @@ https://apps.microsoft.com/detail/9nblggh4nns1
 . If something fails in the script, run it again until everything
 succeeds.
 
-To later update your winget packages, run this in an admin
-PowerShell:
+- Press Win+X and open PowerShell (**NOT** Administrator)
+
+Now run the user-mode install script:
+```powershell
+./install-user.ps1
+```
+, which installs scoop and some scoop packages of UNIX ports, and fixes your
+`~/.ssh` files permissions, copy it over first, but you can do this
+[later](#setting-up-ssh) as well.
+
+[//]: # "BEGIN INCLUDED install-user.ps1"
+
+```powershell
+ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
+
+iwr get.scoop.sh | iex
+
+~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make netcat ripgrep sed zip unzip
+~/scoop/shims/scoop.cmd bucket add nerd-fonts
+~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
+
+&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
+import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
+repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+```
+.
+
+### winget and scoop notes
+
+To update your winget packages, run this in either a user or admin PowerShell:
 
 ```powershell
 winget upgrade --all
 ```
-, to update your scoop packages, run this (also in an admin
-PowerShell:)
+, to update your scoop packages, run this in a normal user
+PowerShell:
 
 ```powershell
 scoop update *
 ```
-.
+. Never run scoop in an elevated shell, only as the user.
+
+Use `winget search` and `scoop search` to look for packages, and `install` to
+install them.
 
 ### Configure the Terminal
 
