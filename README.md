@@ -170,7 +170,7 @@ scoop update *
 . Never run scoop in an elevated shell, only as the user.
 
 Use `winget search` and `scoop search` to look for packages, and `install` to
-install them.
+install them, and `list` to see locally installed packages.
 
 ### Configure the Terminal
 
