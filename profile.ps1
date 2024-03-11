@@ -195,6 +195,8 @@ if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
 
+$global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
+
 if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
 }
