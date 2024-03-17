@@ -140,6 +140,11 @@ if ($iswindows) {
     $env:PATH = (split_env_path |
         ?{ $_ -notmatch '\bStrawberry\\c\\bin$' }
     ) -join $path_sep
+
+    # Add npm module bin wrappers to PATH.
+    if (resolve-path ~/AppData/Roaming/npm) {
+        $env:PATH += ';' + (gi ~/AppData/Roaming/npm)
+    }
 }
 
 $global:profile = $profile | shortpath

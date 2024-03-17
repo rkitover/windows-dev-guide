@@ -93,9 +93,9 @@ OpenSSH server and sets some QOL improvement settings.
 
 set-service beep -startuptype disabled
 
-'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','StrawberryPerl.StrawberryPerl',`
-'Git.Git','GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++',`
-'Microsoft.Powershell','Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
+'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','Git.Git','GnuPG.GnuPG',`
+'SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++','Microsoft.Powershell',`
+'Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
 	winget install $_
 }
 
@@ -103,18 +103,18 @@ iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
 
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
 
-start-process pwsh '-noprofile', '-windowstyle', 'hidden', `
+start-process powershell '-noprofile', '-windowstyle', 'hidden', `
     '-command', "while (test-path $pwd/vs_community.exe) { sleep 5; ri -fo $pwd/vs_community.exe }"
 
-new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value (get-command pwsh).source -propertytype string -force > $null
+new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Program Files/PowerShell/7/pwsh.exe' -propertytype string -force > $null
 
 (gc /programdata/ssh/sshd_config) | %{ $_ -replace '^([^#].*administrators.*)','#$1' } | set-content /programdata/ssh/sshd_config
 
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic
 
-start-service sshd
-start-service ssh-agent
+restart-service sshd
+restart-service ssh-agent
 ```
 . if you want to use the Chocolatey package manager instead of winget and scoop,
 see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
@@ -142,7 +142,9 @@ Now run the user-mode install script:
 ```powershell
 ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
 
-iwr get.scoop.sh | iex
+if (-not (test-path ~/scoop)) {
+    iwr get.scoop.sh | iex
+}
 
 ~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make netcat ripgrep sed zip unzip
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
@@ -805,6 +807,11 @@ if ($iswindows) {
     $env:PATH = (split_env_path |
         ?{ $_ -notmatch '\bStrawberry\\c\\bin$' }
     ) -join $path_sep
+
+    # Add npm module bin wrappers to PATH.
+    if (resolve-path ~/AppData/Roaming/npm) {
+        $env:PATH += ';' + (gi ~/AppData/Roaming/npm)
+    }
 }
 
 $global:profile = $profile | shortpath
@@ -859,6 +866,8 @@ if (-not $env:COLORTERM) {
 if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
+
+$global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
 
 if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
@@ -3041,12 +3050,13 @@ this:
 , `pip` will give you a warning with the path if it's not in your
 `$env:PATH`.
 
-The `perl` command comes from StrawberryPerl from winget, it is
-mostly fully functional and allows you to install many modules from
-CPAN without issues. See the `$env:PATH` override for it in the
-[`$profile`](#setting-up-powershell) to remove the MinGW stuff it
-comes with (you may need to disable that temporarily to install
-modules from CPAN.)
+The `perl` command comes from `StrawberryPerl.StrawberryPerl` from
+winget, it is mostly fully functional and allows you to install many
+modules from CPAN without issues. See the `$env:PATH` override for
+it in the [`$profile`](#setting-up-powershell) to remove the MinGW
+stuff it comes with. I would recommend removing it from your system
+PATH entirely and only adding it when you need to install CPAN
+modules that need a compiler.
 
 The tools `cmake` and `ninja` come with Visual Studio, the
 [`$profile`](#setting-up-powershell) sets up the Visual Studio
