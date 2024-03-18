@@ -2,9 +2,10 @@
 
 set-service beep -startuptype disabled
 
-'Microsoft.VisualStudio.2022.Community','vim.vim','7zip.7zip','gsass1.NTop','Git.Git','GnuPG.GnuPG',`
-'SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS','Notepad++.Notepad++','Microsoft.Powershell',`
-'Python.Python.3.13','SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
+'Microsoft.VisualStudio.2022.Community','7zip.7zip','gsass1.NTop','Git.Git',`
+'GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS',`
+'Notepad++.Notepad++','Microsoft.Powershell',`,'Python.Python.3.13',`
+'SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
 	winget install $_
 }
 
