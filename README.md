@@ -410,83 +410,24 @@ get config --global core.editor (get-command notepad++).source
 
 #### Setting up Vim
 
-I recommend using neovim on Windows because it has working mouse
-support and is almost 100% compatible with vim.
+I recommend using Neovim on Windows because it has working mouse
+support and is almost 100% compatible with vim. It also works
+correctly with transparency in Windows Terminal with a black
+background unlike the port of regular vim.
+
+If you want to use the regular vim, the winget id is `vim.vim`.
 
 If you are using neovim only, you can copy your `~/.config/nvim`
-over directly, the [install
-script](#installing-visual-studio-some-packages-and-scoop) makes
-`~/.config` a symlink to `~/AppData/Local` which serves a similar
-purpose on Windows.
+over directly, to `~/AppData/Local/nvim`. 
 
-If you would like to use both Neovim and regular vim, or to keep
-your vim files in `~/.vim`, do something like the following:
+You can edit your powershell profile with `vim $profile`, and reload
+it with `.  $profile`.
 
-```powershell
-$erroractionpreference = 'stop'
-mkdir ~/.vim -ea ignore
-ni -it sym ~/vimfiles -tar (resolve-path ~/.vim) -ea ignore
-cmd /c rmdir (resolve-path ~/AppData/Local/nvim -ea ignore)
-ni -it sym ~/AppData/Local/nvim -tar (resolve-path ~/.vim)
-if (-not (test-path ~/.vim/init.vim)) {
-    ni ~/.vimrc -ea ignore
-    ni -it sym ~/.vim/init.vim  -tar (resolve-path ~/.vimrc)
-} elseif (-not (test-path ~/.vimrc)) {
-    ni -it sym ~/.vimrc         -tar (resolve-path ~/.vim/init.vim)
-}
-```
+Look at the included [`$profile`](#setting-up-powershell) for how to
+set up a vim alias and set `$env:EDITOR` so that it will work with
+Git.
 
-. You can edit your powershell profile with `vim $profile`, and
-reload it with `. $profile`.
-
-Add the following to your [`$profile`](#setting-up-powershell) if
-you are not using the one from this guide:
-
-```powershell
-if (-not $env:TERM) {
-    $env:TERM = 'xterm-256color'
-}
-elseif ($env:TERM -match '^(xterm|screen|tmux)$') {
-    $env:TERM = $matches[0] + '-256color'
-}
-$env:COLORTERM = 'truecolor'
-
-# Find vim and set $env:EDITOR.
-if ($iswindows) {
-    $vim = ''
-
-    if ($vim = (get-command nvim -ea ignore).source) {
-        set-alias vim -value $vim -scope global
-    }
-    else {
-        $locs =
-            { (get-command vim.exe @args).source },
-            { resolve-path /tools/vim/vim*/vim.exe @args }
-
-        foreach ($loc in $locs) {
-            if ($vim = &$loc -ea ignore) { break }
-        }
-    }
-
-    if ($vim) {
-        $env:EDITOR = $vim -replace '\\','/'
-    }
-}
-else {
-    $env:EDITOR = 'vim'
-}
-```
-
-Alternately, you can configure the editor in Git like so:
-
-```powershell
-git config --global core.editor (get-command nvim).source
-# or for regular vim
-git config --global core.editor `
-    (resolve-path /tools/vim/vim*/vim.exe)
-```
-
-. Some suggestions for your `~/.vimrc`, all of this works in both
+Some suggestions for your `~/.vimrc`, all of this works in both
 vims:
 
 ```vim
@@ -554,7 +495,8 @@ inoremap <C-L> <C-o>:syntax sync fromstart<CR><C-o>:redraw<CR>
 let g:markdown_fenced_languages = ['css', 'javascript', 'js=javascript', 'json=javascript', 'jsonc=javascript', 'xml', 'ps1', 'powershell=ps1', 'sh', 'bash=sh', 'autohotkey', 'vim', 'sshconfig', 'dosbatch', 'gitconfig']
 ```
 
-. I use this color scheme, which is a fork of Apprentice for black backgrounds:
+. I use this color scheme, which is a fork of Apprentice for black
+backgrounds:
 
 https://github.com/rkitover/Apprentice
 
