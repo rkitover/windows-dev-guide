@@ -752,7 +752,7 @@ if ($iswindows) {
     ) -join $path_sep
 
     # Add npm module bin wrappers to PATH.
-    if (resolve-path ~/AppData/Roaming/npm) {
+    if (resolve-path ~/AppData/Roaming/npm -ea ignore) {
         $env:PATH += ';' + (gi ~/AppData/Roaming/npm)
     }
 }
