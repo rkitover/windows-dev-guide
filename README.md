@@ -155,7 +155,8 @@ if (-not (test-path ~/scoop)) {
 import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
 repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
-.
+, if you get an antivirus error for netcat, go into the antivirus
+log, allow the file, and run the script again.
 
 ### winget and scoop notes
 
