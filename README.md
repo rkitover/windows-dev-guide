@@ -662,7 +662,7 @@ elseif (-not $env:LANG) {
 }
 
 # Make help nicer.
-$PSDefaultParameterValues["get-help:Full"] = $true
+$psdefaultparametervalues["get-help:full"] = $true
 $env:PAGER = 'less'
 
 # Turn on these options for less:
@@ -673,6 +673,9 @@ $env:PAGER = 'less'
 #    -K,--quit-on-intr      # Quit on CTRL-C immediately.
 #    --mouse                # Scroll with mouse wheel.
 $env:LESS = '-Q$-r$-X$-F$-K$--mouse'
+
+# Make sls more sane.
+$psdefaultparametervalues['select-string:raw'] = $true
 
 new-module MyProfile -script {
 
