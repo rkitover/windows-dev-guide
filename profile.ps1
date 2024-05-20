@@ -148,6 +148,11 @@ if ($iswindows) {
     if (resolve-path ~/AppData/Roaming/npm -ea ignore) {
         $env:PATH += ';' + (gi ~/AppData/Roaming/npm)
     }
+
+    # Add LLVM/clang to PATH.
+    if (resolve-path '/program files/llvm' -ea ignore) {
+        $env:PATH += ';' + (gi '/program files/llvm/bin')
+    }
 }
 
 $global:profile = $profile | shortpath
