@@ -63,9 +63,6 @@ $env:PAGER = 'less'
 #    --mouse                # Scroll with mouse wheel.
 $env:LESS = '-Q$-r$-X$-F$-K$--mouse'
 
-# Make sls more sane.
-$psdefaultparametervalues['select-string:raw'] = $true
-
 new-module MyProfile -script {
 
 $path_sep = [system.io.path]::pathseparator
