@@ -575,7 +575,7 @@ if ($iswindows) {
     function global:sudo {
         if (-not $args) { $args = $input }
 
-        ssh localhost -- "sl '$(get-location)'; &$(($args | %{ "'$_'" }) -join ' ')"
+        ssh localhost -- "sl '$(get-location)'; &$($args  -join ' ')"
     }
 
     function global:nproc {
