@@ -1186,7 +1186,7 @@ if ($iswindows) {
     function global:sudo {
         if (-not $args) { $args = $input }
 
-        ssh localhost -- "sl '$(get-location)'; $($args -join " ")"
+        ssh localhost -- "sl '$(get-location)'; &$(($args | %{ "'$_'" }) -join ' ')"
     }
 
     function global:nproc {
@@ -2809,12 +2809,16 @@ start some_code.cpp
 
 ### Elevated Access (sudo)
 
-There is currently no good sudo-like utility to get elevated access
-in a terminal session, however a reasonable workaround is connect to
-localhost with ssh, as ssh gives you elevated access (if you are an
-admin user, which is the normal case.) This will not allow you to
-run GUI apps with elevated access, but most console commands should
-work.
+Windows now includes a `sudo` command which can be enabled in
+Settings under `System` -> `Developer Settings`. However, the method
+I describe here is better. In the usual case, the built-in `sudo`
+command has a UAC prompt and only allows running commands in a new
+window.
+
+By connecting to localhost with ssh, you gain elevated access (if
+you are an admin user, which is the normal case.) This will not
+allow you to run GUI apps with elevated access, but most PowerShell
+and console commands should work.
 
 If you use the sudo function defined in the
 [`$profile`](#setting-up-powershell), then your current location
@@ -2836,7 +2840,8 @@ Test connecting to localhost with `ssh localhost` for the first
 time, if everything went well, ssh will prompt you to trust the host
 key, and on subsequent connections you will connect with no prompts.
 
-You can now run console elevated commands using the `sudo` function.
+You can now run PowerShell and console elevated commands using the
+`sudo` function.
 
 ### Using PowerShell Gallery
 
