@@ -1184,9 +1184,10 @@ if ($iswindows) {
     }
 
     function global:sudo {
-        if (-not $args) { $args = $input }
+        $cmd = [management.automation.invocationinfo].getproperty('ScriptPosition',
+            [reflection.bindingflags] 'instance, nonpublic').getvalue($myinvocation).text -replace '^\s*sudo\s*',''
 
-        ssh localhost -- "sl '$(get-location)'; &$($args  -join ' ')"
+        ssh localhost -- "sl '$(get-location)'; $cmd"
     }
 
     function global:nproc {
