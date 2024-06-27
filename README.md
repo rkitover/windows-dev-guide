@@ -1978,21 +1978,14 @@ function capitalize_foo {
 }
 ```
 
-. If you want to test for the presence of pipeline input, you cannot
-test `$input` directly, but coercing it to an array value will work,
-for example:
+. If you want to test for the presence of pipeline input, you can
+use `$myinvocation.expectinginput`, for example:
 
 ```powershell
 function got_pipeline {
-    $input = @($input)
-    if ($input} { 'pipe' } else { 'no pipe' }
+    if ($myinvocation.expectinginput} { 'pipe' } else { 'no pipe' }
 }
 ```
-
-. For a single value from the pipeline use `$($input)` instead.
-
-This is of course much less efficient than using a process block,
-but for small inputs of a couple of values it's fine.
 
 The equivalent of `/dev/null` is `$null`, so a command such as:
 
