@@ -86,6 +86,9 @@ Run this script, which is in the repo, like so:
 , it installs some winget packages, the Visual Studio C++ workload, sets up the
 OpenSSH server and sets some QOL improvement settings.
 
+If you want to use the Chocolatey package manager instead of winget and scoop,
+see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
+
 [//]: # "BEGIN INCLUDED install.ps1"
 
 ```powershell
@@ -117,10 +120,7 @@ set-service ssh-agent -startuptype automatic
 restart-service sshd
 restart-service ssh-agent
 ```
-. if you want to use the Chocolatey package manager instead of winget and scoop,
-see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
-
-If `winget` exits abnormally, update this app from the Windows
+. If `winget` exits abnormally, update this app from the Windows
 Store:
 
 https://apps.microsoft.com/detail/9nblggh4nns1
