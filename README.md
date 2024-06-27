@@ -1088,6 +1088,11 @@ if ($iswindows) {
 
     if ($vim) {
         set-alias vim -value $vim -scope global
+
+        if ($vim -match 'nvim') {
+            set-alias nvim -value $vim -scope global
+        }
+
         # Remove spaces from path if possible, because this breaks UNIX ports.
         $env:EDITOR = realpath $vim `
             | %{ $_ -replace '/Program Files/','/progra~1/' } `
