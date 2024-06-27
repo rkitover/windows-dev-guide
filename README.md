@@ -389,8 +389,9 @@ too.
 
 Make sure `$env:EDITOR` is set to the executable or `.bat` file that
 launches your editor with backslashes replaced with forward slashes
-in your [`$profile`](#setting-up-powershell) so that git can use it
-for commit messages. For example:
+and make sure that it does not contain any spaces. Set it in your
+[`$profile`](#setting-up-powershell) so that git can use it for
+commit messages. For example:
 
 ```powershell
 $private:nano = resolve-path ~/.local/bin/nano.exe
