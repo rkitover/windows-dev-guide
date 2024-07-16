@@ -22,5 +22,5 @@ README.md: .profile-include-stamp .nanosetup-include-stamp \
 	@$(touch) .doctoc-stamp
 
 .link-check-stamp: README.md
-	@node --no-deprecation $(APPDATA)/npm/node_modules/markdown-link-check/markdown-link-check -q README.md
+	@node --no-deprecation $(shell npm root -g)/markdown-link-check/markdown-link-check -q README.md
 	@$(touch) .link-check-stamp
