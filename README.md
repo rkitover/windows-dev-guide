@@ -243,6 +243,14 @@ The Terminal also comes with a nice new Microsoft font called
 "Cascadia Code", if you leave out the `"face": "<name>",` line, it
 will use it instead.
 
+You can get the newest version of Cascadia Code and the version with
+Powerline glyphs called "Cascadia Code PL" from here:
+
+https://github.com/microsoft/cascadia-code/releases?WT.mc_id=-blog-scottha
+
+, you will need it if you decide to use the `oh-my-posh` prompt
+described [here](#setting-up-powershell).
+
 In the profile list section, in the entry that lists:
 
 ```jsonc
@@ -567,6 +575,15 @@ git config --global core.editor (get-command nano).source
 .
 
 ### Setting up PowerShell
+
+To install the pretty oh-my-posh prompt, run this:
+
+```powershell
+winget install jandedobbeleer.ohmyposh
+```
+, the profile below will set it up for you. You will need a font
+with Powerline glyphs, like "Cascadia Code PL", see [setting up the
+terminal](#configure-the-terminal).
 
 If you want to use my
 [posh-git](https://github.com/dahlbyk/posh-git) theme, install the
@@ -1422,15 +1439,24 @@ $env:PATH = (split_env_path | select -unique) -join $path_sep
 } | import-module
 
 # This is my posh-git prompt theme:
-import-module posh-git-theme-bluelotus
+if (get-module -listavailable posh-git-theme-bluelotus) {
+    import-module posh-git-theme-bluelotus
 
 # If you want the posh-git window title, uncomment this:
 #
-#$gitpromptsettings.windowtitle =
-#    $gitprompt_theme_bluelotus.originalwindowtitle;
+#    $gitpromptsettings.windowtitle =
+#        $gitprompt_theme_bluelotus.originalwindowtitle;
+}
+elseif (get-command oh-my-posh -ea ignore) {
+    oh-my-posh --init --shell pwsh `
+        --config 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/paradox.omp.json' | iex
+}
 
-# If you want to use the regular posh-git prompt and do your own customizations:
-#import-module posh-git
+if (-not (get-module posh-git) `
+    -and (get-module -listavailable posh-git)) {
+
+    import-module posh-git
+}
 
 if (-not (get-module psreadline)) {
     import-module psreadline
@@ -3442,7 +3468,7 @@ choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2022community --params '--locale en-US'
 choco install -y visualstudio2022-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
+choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
 ## Only run this on Windows 10 or older, this package is managed by Windows 11.
 #choco install -y microsoft-windows-terminal
 ## If you had previously installed it and are now using Windows 11, run:

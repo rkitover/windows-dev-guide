@@ -811,15 +811,24 @@ $env:PATH = (split_env_path | select -unique) -join $path_sep
 } | import-module
 
 # This is my posh-git prompt theme:
-import-module posh-git-theme-bluelotus
+if (get-module -listavailable posh-git-theme-bluelotus) {
+    import-module posh-git-theme-bluelotus
 
 # If you want the posh-git window title, uncomment this:
 #
-#$gitpromptsettings.windowtitle =
-#    $gitprompt_theme_bluelotus.originalwindowtitle;
+#    $gitpromptsettings.windowtitle =
+#        $gitprompt_theme_bluelotus.originalwindowtitle;
+}
+elseif (get-command oh-my-posh -ea ignore) {
+    oh-my-posh --init --shell pwsh `
+        --config 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/paradox.omp.json' | iex
+}
 
-# If you want to use the regular posh-git prompt and do your own customizations:
-#import-module posh-git
+if (-not (get-module posh-git) `
+    -and (get-module -listavailable posh-git)) {
+
+    import-module posh-git
+}
 
 if (-not (get-module psreadline)) {
     import-module psreadline
