@@ -4,11 +4,12 @@ touch=echo >
 
 all: README.md .doctoc-stamp .link-check-stamp
 
-README.md: .profile-include-stamp .nanosetup-include-stamp \
-	.install-include-stamp .install-user-include-stamp .ports-task-include-stamp \
-	.build-task-include-stamp .choco-install-include-stamp
+README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
+	.install.ps1-include-stamp .install-user.ps1-include-stamp \
+	.ports-task.ps1-include-stamp .build-task.ps1-include-stamp \
+	.choco-install.ps1-include-stamp ..vimrc-include-stamp
 
-.%-include-stamp: %.ps1
+.%-include-stamp: %
 	@echo Inserting updated $<
 	@dos2unix -q $<
 	@awk -v include_file=$< -f insert-file.awk ./README.md > ./README.md.new

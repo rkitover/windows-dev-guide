@@ -439,6 +439,8 @@ Git.
 Some suggestions for your `~/.vimrc`, all of this works in both
 vims:
 
+[//]: # "BEGIN INCLUDED .vimrc"
+
 ```vim
 set encoding=utf8
 set langmenu=en_US.UTF-8
@@ -448,12 +450,13 @@ set ruler bg=dark nohlsearch bs=2 noea ai fo+=n undofile modeline belloff=all mo
 set fileformats=unix,dos
 
 set mouse=a
-if !has('nvim')
-  set ttymouse=xterm2
-endif
 
 " Add vcpkg includes to include search path to get completions for C++.
 let g:home = fnamemodify('~', ':p')
+
+if isdirectory(g:home . 'source/repos/vcpkg/installed/x64-windows/include')
+  let &path .= ',' . g:home . 'source/repos/vcpkg/installed/x64-windows/include'
+endif
 
 if isdirectory(g:home . 'source/repos/vcpkg/installed/x64-windows-static/include')
   let &path .= ',' . g:home . 'source/repos/vcpkg/installed/x64-windows-static/include'
@@ -487,6 +490,7 @@ filetype plugin indent on
 syntax enable
 
 au BufRead COMMIT_EDITMSG,*.md setlocal spell
+au BufRead COMMIT_EDITMSG so $VIMRUNTIME/syntax/gitcommit.vim | set tw=72
 au BufRead *.md  setlocal tw=80
 au FileType json setlocal ft=jsonc sw=4 et
 
@@ -504,12 +508,18 @@ inoremap <C-L> <C-o>:syntax sync fromstart<CR><C-o>:redraw<CR>
 let g:markdown_fenced_languages = ['css', 'javascript', 'js=javascript', 'json=javascript', 'jsonc=javascript', 'xml', 'ps1', 'powershell=ps1', 'sh', 'bash=sh', 'autohotkey', 'vim', 'sshconfig', 'dosbatch', 'gitconfig']
 ```
 
+You can use Plug or pathogen or whatever you prefer to install
+plugins.
+
+I highly recommend subscribing to GitHub Copilot and using the vim
+plugin which you can get here:
+
+https://github.com/github/copilot.vim
+
 . I use this color scheme, which is a fork of Apprentice for black
 backgrounds:
 
 https://github.com/rkitover/Apprentice
-
-You can add it with Plug or pathogen or whatever you prefer.
 
 You'll probably want the PowerShell support for vim including syntax
 highlighting which is here:
