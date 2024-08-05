@@ -2,7 +2,7 @@ BEGIN { begin_include=0; in_include=0 }
 $0 ~ "^\\[\\/\\/\\]: # \"BEGIN INCLUDED " include_file "\"$" {
     begin_include=1
 }
-begin_include && /^```powershell$/{
+begin_include && /^```[[:alnum:]]+$/{
     in_include=1
 }
 in_include && /^```$/{
