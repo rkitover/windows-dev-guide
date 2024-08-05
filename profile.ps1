@@ -617,6 +617,8 @@ if ($iswindows) {
         }
     }
 
+    # Tries to reset the terminal to a sane state, similar to the Linux reset
+    # binary from ncurses-utils.
     function global:reset {
         clear-host
         [char]27 + "[!p"
