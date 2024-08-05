@@ -1254,6 +1254,11 @@ if ($iswindows) {
             "`${{env:{0}}}='{1}'" -f $_.name,$_.value
         }
     }
+
+    function global:reset {
+        clear-host
+        [char]27 + "[!p"
+    }
 }
 elseif ($ismacos) {
     function global:ls {
