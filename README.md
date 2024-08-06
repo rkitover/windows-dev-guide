@@ -1780,34 +1780,35 @@ of the wrappers in the [`$profile`](#setting-up-powershell).
 
 Here are a few:
 
-| PowerShell alias                   | Full Cmdlet + Params                            | POSIX command          |
-|------------------------------------|-------------------------------------------------|------------------------|
-| sl                                 | Set-Location                                    | cd                     |
-| gl                                 | Get-Location                                    | pwd                    |
-| gci -n                             | Get-ChildItem -Name                             | ls                     |
-| gci                                | Get-ChildItem                                   | ls -l                  |
-| gi                                 | Get-Item                                        | ls -ld                 |
-| cpi                                | Copy-Item                                       | cp -r                  |
-| ri                                 | Remove-Item                                     | rm                     |
-| ri -fo                             | Remove-Item -Force                              | rm -f                  |
-| ri -r -fo                          | Remove-Item -Force -Recurse                     | rm -rf                 |
-| gc                                 | Get-Content                                     | cat                    |
-| mi                                 | Move-Item                                       | mv                     |
-| mkdir                              | New-Item -ItemType Directory                    | mkdir                  |
-| which (custom)                     | Get-Command                                     | command -v, which      |
-| gci -r                             | Get-ChildItem -Recurse                          | find                   |
-| ni                                 | New-Item                                        | touch <new-file>       |
-| sls -ca                            | Select-String -CaseSensitive                    | grep                   |
-| sls                                | Select-String                                   | grep -i                |
-| sort                               | Sort-Object                                     | sort                   |
-| sort -u                            | Sort-Object -Unique                             | sort -u                |
-| measure -l                         | Measure-Object -Line                            | wc -l                  |
-| measure -w                         | Measure-Object -Word                            | wc -w                  |
-| measure -c                         | Measure-Object -Character                       | wc -m                  |
-| gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10 | head -n 10 file        |
-| gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10 | tail -n 10 file        |
-| gc -wait -tail 20 some.log         | Get-Content -Wait -Tail 20 some.log             | tail -f -n 20 some.log |
-| iex                                | Invoke-Expression                               | eval                   |
+| PowerShell alias                   | Full Cmdlet + Params                                  | POSIX command          |
+|------------------------------------|-------------------------------------------------------|------------------------|
+| sl                                 | Set-Location                                          | cd                     |
+| gl                                 | Get-Location                                          | pwd                    |
+| gci -n                             | Get-ChildItem -Name                                   | ls                     |
+| gci                                | Get-ChildItem                                         | ls -l                  |
+| gi                                 | Get-Item                                              | ls -ld                 |
+| cpi                                | Copy-Item                                             | cp -r                  |
+| ri                                 | Remove-Item                                           | rm                     |
+| ri -fo                             | Remove-Item -Force                                    | rm -f                  |
+| ri -r -fo                          | Remove-Item -Force -Recurse                           | rm -rf                 |
+| gc                                 | Get-Content                                           | cat                    |
+| mi                                 | Move-Item                                             | mv                     |
+| mkdir                              | New-Item -ItemType Directory                          | mkdir                  |
+| which (custom)                     | Get-Command                                           | command -v, which      |
+| gci -r                             | Get-ChildItem -Recurse                                | find                   |
+| ni                                 | New-Item                                              | touch <new-file>       |
+| sls -ca                            | Select-String -CaseSensitive                          | grep                   |
+| sls                                | Select-String                                         | grep -i                |
+| gci -r | sls -ca                   | Get-ChildItem -Recurse | Select-String -CaseSensitive | grep -r                |
+| sort                               | Sort-Object                                           | sort                   |
+| sort -u                            | Sort-Object -Unique                                   | sort -u                |
+| measure -l                         | Measure-Object -Line                                  | wc -l                  |
+| measure -w                         | Measure-Object -Word                                  | wc -w                  |
+| measure -c                         | Measure-Object -Character                             | wc -m                  |
+| gc file &vert; select -first 10    | Get-Content file &vert; Select-Object -First 10       | head -n 10 file        |
+| gc file &vert; select -last  10    | Get-Content file &vert; Select-Object -Last  10       | tail -n 10 file        |
+| gc -wait -tail 20 some.log         | Get-Content -Wait -Tail 20 some.log                   | tail -f -n 20 some.log |
+| iex                                | Invoke-Expression                                     | eval                   |
 
 . This will get you around and doing stuff, the usage is slightly
 different however.
@@ -2365,7 +2366,22 @@ gci -r .*.un~ | ri
 . Here `remove-item` receives file objects from `get-childitem` and
 deletes them.
 
-If the Cmdlet works on files, they can be strings as well, for example:
+To do the equivalent of a recursive `grep` you could do something
+like:
+
+```powershell
+sls -r *.[ch] | sls -ca void
+```
+
+. I prefer using `ripgrep` for this purpose. To turn off the
+highlighting in `Select-String`, use the `-noe`[`-NoEmphasis`] flag.
+Be aware that `Select-String` will apply an output format to its
+results and there will be extra blank lines at the top and bottom
+among other things, so if you are going to use them as text in a
+pipeline or redirect use the `-raw` flag.
+
+If the Cmdlet works on files, they can be strings as well, for
+example:
 
 ```powershell
 gc file-list | cpi -r -dest e:/backup
