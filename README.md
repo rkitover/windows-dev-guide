@@ -195,7 +195,6 @@ In the global settings, above the `"profiles"` section, add:
 "multiLinePasteWarning": false,
 "windowingBehavior": "useAnyExisting",
 ```
-
 . In the `"profiles"` `"defaults"` section add:
 
 ```jsonc
@@ -222,12 +221,11 @@ In the global settings, above the `"profiles"` section, add:
     "opacity": 77
 },
 ```
-
-The settings `useAcrylic` and `opacity` make the terminal
+. The settings `useAcrylic` and `opacity` make the terminal
 transparent, leave those out or set `opacity` to 100 to turn this
 off.
 
-. I prefer the 'SF Mono' font which you can get here:
+I prefer the 'SF Mono' font which you can get here:
 
 https://github.com/supercomputra/SF-Mono-Font
 
@@ -256,13 +254,11 @@ In the profile list section, in the entry that lists:
 ```jsonc
 "source": "Windows.Terminal.PowershellCore"
 ```
-
 , add this:
 
 ```jsonc
 "commandline": "pwsh -nologp"
 ```
-
 . You can do the same for the "Windows PowerShell" profile if you
 like.
 
@@ -280,7 +276,6 @@ In the `"actions"` section add these keybindings:
 { "command": { "action": "scrollDown", "rowsToScroll": 1 },
   "keys": "ctrl+shift+down" }
 ```
-
 . And **REMOVE** the `CTRL+V` binding, if you want to use `CTRL+V`
 in vim (visual line selection.)
 
@@ -372,8 +367,7 @@ If (TransLevel = 255) {
 }
 return
 ```
-
-This will toggle transparency in a window when you press
+. This will toggle transparency in a window when you press
 `CTRL+WIN+ESC`, you have to press it twice the first time.
 
 Thanks to @munael for this tip.
@@ -405,7 +399,6 @@ commit messages. For example:
 $private:nano = resolve-path ~/.local/bin/nano.exe
 $env:EDITOR = $nano -replace '\\','/'
 ```
-
 . This will also work well with things you use from UNIX-compatible
 environments like Cygwin, MSYS2, etc. if you end up doing that.
 
@@ -507,8 +500,7 @@ inoremap <C-L> <C-o>:syntax sync fromstart<CR><C-o>:redraw<CR>
 " Markdown
 let g:markdown_fenced_languages = ['css', 'javascript', 'js=javascript', 'json=javascript', 'jsonc=javascript', 'xml', 'ps1', 'powershell=ps1', 'sh', 'bash=sh', 'autohotkey', 'vim', 'sshconfig', 'dosbatch', 'gitconfig']
 ```
-
-You can use Plug or pathogen or whatever you prefer to install
+. You can use Plug or pathogen or whatever you prefer to install
 plugins.
 
 I highly recommend subscribing to GitHub Copilot and using the vim
@@ -537,7 +529,6 @@ Run this script, from this repo using:
 ```powershell
 ./nanosetup.ps1
 ```
-
 , this is the script:
 
 [//]: # "BEGIN INCLUDED nanosetup.ps1"
@@ -613,20 +604,17 @@ To edit your `$profile`, you can do:
 ```powershell
 vim $profile
 ```
-
 , or
 
 ```powershell
 notepad $profile
 ```
-
 . If you cloned this repo, you can dot-source mine in yours by
 adding this:
 
 ```powershell
 . ~/source/repos/windows-dev-guide/profile.ps1
 ```
-
 , you can also link or copy this profile to yours and add your own
 things in `~/Documents/PowerShell/private-profile.ps1`, which will
 be automatically read with the path set in `$profile_private`.
@@ -1508,8 +1496,7 @@ if ($private:src = `
 
 # vim:set sw=4 et:
 ```
-
-This profile works for "Windows PowerShell" as well. But the profile
+. This profile works for "Windows PowerShell" as well. But the profile
 is in a different file, so you will need to make a symlink there to
 your PowerShell `$profile`.
 
@@ -1517,9 +1504,7 @@ your PowerShell `$profile`.
 mkdir ~/Documents/WindowsPowerShell
 ni -it sym ~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1 -tar $profile
 ```
-.
-
-Be aware that if your Documents are in OneDrive, OneDrive will
+. Be aware that if your Documents are in OneDrive, OneDrive will
 ignore and not sync symlinks.
 
 This `$profile` also works for PowerShell for Linux and macOS.
@@ -1569,7 +1554,6 @@ quoted, for example:
 git tag -s 'v5.41' -m'v5.41'
 git push origin ':refs/heads/some-branch'
 ```
-
 . The `.git` directory is hidden, to see it use:
 
 ```powershell
@@ -1577,13 +1561,11 @@ gci -fo
 # or
 gi -fo .git
 ```
-
 . **NEVER** run the command:
 
 ```powershell
 ri -r -fo *
 ```
-
 . On Linux, the `*` glob does match dot files like `.git`, but on
 Windows it matches everything.
 
@@ -1592,7 +1574,6 @@ The command:
 ```powershell
 ri -r *
 ```
-
 , is safe because hidden files like `.git` are not affected without `-Force`.
 
 Because `.git` is a hidden directory, this also means that to delete a cloned repository, you must pass `-Force` to `Remove-Item`, e.g.:
@@ -1611,11 +1592,10 @@ edit the files in the project. In this case, it's best to make a
 `.gitattributes` file in the root of your project and commit it,
 containing for example:
 
-```
+```console
 * text=auto
 *.exe binary
 ```
-
 . Make sure to add exclusions for all binary file types you need.
 
 This way, anyone cloning the repo will have the correct line
@@ -1631,7 +1611,6 @@ mkdir .gnupg -ea ignore
 cmd /c rmdir (resolve-path ~/AppData/Roaming/gnupg)
 ni -it sym ~/AppData/Roaming/gnupg -tar (resolve-path ~/.gnupg)
 ```
-
 . Then you can copy your `.gnupg` over, without the socket files.
 
 To configure git to use it, do the following:
@@ -1738,7 +1717,6 @@ containing the word "where":
 ```powershell
 help *where*
 ```
-
 . The conceptual documentation not related to a specific command or
 function takes the form `about_XXXXX` e.g. `about_Operators`,
 modules you install will often also have such a document, to see a
@@ -1747,7 +1725,6 @@ list do:
 ```powershell
 help about_*
 ```
-
 . Run `update-help` once in a while to update all your help files.
 
 You can get documentation for external utilities in this way:
@@ -1755,13 +1732,11 @@ You can get documentation for external utilities in this way:
 ```powershell
 icacls /? | less
 ```
-
 . For documentation for cmd builtins, you can do this:
 
 ```powershell
 cmd /c help for | less
 ```
-
 . For the `git` man pages, use `git help <command>` to open the man
 page in your browser, e.g.:
 
@@ -1821,20 +1796,17 @@ separated by commas. For example, to copy `file1` and `file2` to
 ```powershell
 cpi file1,file2 dest-dir
 ```
-
 . To remove `file1` and `file2` you would do:
 
 ```powershell
 ri file1,file2
 ```
-
 . You can list multiple globs in these lists as well as files and
 directories etc., for example:
 
 ```powershell
 ri .*.un~,.*.sw?
 ```
-
 . Note that globs in PowerShell are case-insensitive.
 
 Also, unlike Linux, the `*` glob will match all files including
@@ -1851,7 +1823,6 @@ annoying, for example:
 ```powershell
 sl /prog<TAB>
 ```
-
 , will show the completion `C:\Program`. If you want to complete
 `C:\Program Files` type `` `<SPACE> `` and it will be completed with
 a starting quote. More on the `` ` `` escape character later.
@@ -1865,7 +1836,6 @@ analogous to `~/.bash_history` on Linux, you can view it with e.g.:
 ```powershell
 less $ps_history
 ```
-
 . Command-line editing and history search works about the same way
 as in bash. I have also defined the `PSReadLine` options to make up
 arrow not only cycle through previous commands, but will also allow
@@ -1883,7 +1853,6 @@ a variable you can just input it directly, for example:
 $profile
 $env:PAGER
 ```
-
 . As you can see here, there is a difference between normal
 variables and environment variables, which are prefixed with `env:`,
 which is a `PSDrive`, more on that later.
@@ -1899,7 +1868,6 @@ The Cmdlet `Get-Command` will tell you the type of a command, like
 ```powershell
 (get-command git).source
 ```
-
 . The [`$profile`](#setting-up-powershell) `which`,`type` and
 `command` wrappers do this automatically.
 
@@ -1922,7 +1890,6 @@ $val | %{ $_.toupper() } # A STRING
 $repos = gci ~/source/repos
 $repos.count # 29
 ```
-
 . You usually do not have to do anything to work with an array value
 as opposed to a single value, but sometimes it is very useful to
 enclose values or commands in `@(...)` to coerce the result to an
@@ -1938,7 +1905,6 @@ variable, you can use `set-variable` which has the standard alias
 gci /windows/system32/*.dll | % fullname | sv dlls
 $dlls.count # 3652
 ```
-
 . Hashes can be defined and used like so:
 
 ```powershell
@@ -1996,7 +1962,6 @@ PowerShell has many other streams, see:
 ```powershell
 help about_output_streams
 ```
-
 . There is no analogue to the `STDIN` stream. This gets quite
 complex because the pipeline paradigm is central in PowerShell.
 
@@ -2010,7 +1975,6 @@ get-content try.ps1 | invoke-expression
 get-content try.ps1 | out-string | invoke-expression
 # Works correctly.
 ```
-
 , there are many ways to handle pipeline input, the simplest and
 least reliable is the automatic variable `$input`, I have used it in
 the [`$profile`](#setting-up-powershell) for many things. Here is a
@@ -2021,7 +1985,6 @@ function capitalize_foo {
     $input | %{ $_ -replace 'foo','FOO' }
 }
 ```
-
 . If you want to test for the presence of pipeline input, you can
 use `$myinvocation.expectinginput`, for example:
 
@@ -2030,19 +1993,16 @@ function got_pipeline {
     if ($myinvocation.expectinginput} { 'pipe' } else { 'no pipe' }
 }
 ```
-
-The equivalent of `/dev/null` is `$null`, so a command such as:
+. The equivalent of `/dev/null` is `$null`, so a command such as:
 
 ```bash
 cmd 2>/dev/null
 ```
-
 , would be:
 
 ```powershell
 cmd 2>$null
 ```
-
 . While a command such as:
 
 ```bash
@@ -2050,13 +2010,11 @@ cmd >/dev/null 2>&1
 # Or, using a non-POSIX bash feature:
 cmd &>/dev/null
 ```
-
 , would generally be written as:
 
 ```powershell
 cmd *> $null
 ```
-
 , to silence all streams, including extra streams PowerShell has
 such as Verbose. If you just want to suppress the output
 (`SUCCESS`) stream, you would generally use:
@@ -2064,11 +2022,13 @@ such as Verbose. If you just want to suppress the output
 ```powershell
 cmd | out-null
 ```
-
 . The `ERROR` stream also behaves quite differently from POSIX
 shells.
 
-Both external commands and PowerShell functions and cmdlets indicate success or failure via `$?`, which is `$true` or `$false`. For external commands the actual exit code is available via `$LastExitCode`.
+Both external commands and PowerShell functions and cmdlets indicate
+success or failure via `$?`, which is `$true` or `$false`. For
+external commands the actual exit code is available via
+`$LastExitCode`.
 
 However, PowerShell commands use a different mechanism to indicate
 an error status. They throw an exception or write an error to the
@@ -2093,10 +2053,11 @@ PSMessageDetails      :
 Exception             : Microsoft.PowerShell.Commands.WriteErrorException: Something bad happened.
 ...
 ```
-
 . As a consequence of both external commands and PowerShell
 functions/cmdlets setting `$?`, when you wrap an external command
-with a function, `$?` from the command execution will be reset by the function return. The best workaround I found for this so far, is to throw a short error like this:
+with a function, `$?` from the command execution will be reset by
+the function return. The best workaround I found for this so far, is
+to throw a short error like this:
 
 ```powershell
 function cmd_wrapper {
@@ -2104,19 +2065,16 @@ function cmd_wrapper {
     if (-not $?) { write-error "exited: $LastExitCode" -ea stop }
 }
 ```
-
 . Now I must admit to lying to you previously, that is:
 
 ```powershell
 pwsh-cmd 2> $null
 ```
-
 , is not the same thing as suppressing `STDERR` in sh, for example:
 
 ```powershell
 write-error '' *> $null
 ```
-
 , will still set error status, even though you see no output, and
 `$error[0]` will contain an empty error.
 
@@ -2125,7 +2083,6 @@ Even worse, this means that if you have:
 ```powershell
 $erroractionpreference  = 'stop'
 ```
-
 , your script will terminate.
 
 For native commands, it does in effect suppress `STDERR`, because
@@ -2136,7 +2093,6 @@ For PowerShell commands what you want to do instead is this:
 ```powershell
 mkdir existing-dir -ea ignore
 ```
-
 , this sets `ErrorAction` to `Ignore`, and does not trigger an error
 condition, and does not write an error object to `ERROR`.
 
@@ -2162,29 +2118,26 @@ example:
 # This will work:
 $(cmd1; 'foo'; cmd2)
 ```
-
-The `&&` and `||` operators are only available in PSCore, and their
+. The `&&` and `||` operators are only available in PSCore, and their
 semantics are different from what you would expect in sh and other
 languages.
 
 The do not work on `$true`/`$false` values, but on the `$?` variable
-I described [previously](#redirection-streams-input-and-exit-codes). This variable is
-`$true` or `$false` based on whether the exit code of an external
-command is zero or if a PowerShell function or cmdlet executed
-successfully.
+I described [previously](#redirection-streams-input-and-exit-codes).
+This variable is `$true` or `$false` based on whether the exit code
+of an external command is zero or if a PowerShell function or cmdlet
+executed successfully.
 
 That is, this will not work:
 
 ```powershell
 $false || some-cmd
 ```
-
 , but things like this will work fine:
 
 ```powershell
 cmake && ninja || write-error 'build failed'
 ```
-
 . As I mentioned previously, since this is a PSCore feature, I do
 not recommend using it in scripts or modules intended to be
 distributed by themselves.
@@ -2200,13 +2153,11 @@ gci | sort lastwritetime
 # Or my alias:
 gci | ltr
 ```
-
 . The command analogous to `ls -1` would be:
 
 ```powershell
 gci -n
 ```
-
 , aka `-Name`, it will list only file/directory/object names as
 strings, which can be useful for long names or to pipe name strings
 only to another command.
@@ -2220,7 +2171,6 @@ example, you can operate on registry values like a filesystem, e.g.:
 gi  HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion
 gci HKLM:/SOFTWARE/Microsoft/Windows/CurrentVersion | less
 ```
-
 , here `HKLM` stands for the `HKEY_LOCAL_MACHINE` section of the
 registry. `HKCU` stands for `HKEY_CURRENT_USER`.
 
@@ -2229,12 +2179,12 @@ with them similar to a filesystem. The properties displayed and
 their contents will depend on the types of objects you are working
 with.
 
-You can get a list of "drive" type devices including actual drive letters with:
+You can get a list of "drive" type devices including actual drive
+letters with:
 
 ```powershell
 get-psdrive
 ```
-
 . These also include variables, environment variables, functions and
 aliases, and you can operate on them with `Remove-Item`, `Set-Item`,
 etc..
@@ -2252,13 +2202,12 @@ The positions of the letters will vary, but here is their meaning:
 | h           | Hidden                  |
 | s           | System                  |
 
-To see hidden files, pass `-Force` to `gci` or `gi`:
+. To see hidden files, pass `-Force` to `gci` or `gi`:
 
 ```powershell
 gci -fo
 gi -fo hidden-file
 ```
-
 . The best way to manipulate these attributes is with the `attrib`
 utility, for example, to make a file or directory hidden do:
 
@@ -2266,7 +2215,6 @@ utility, for example, to make a file or directory hidden do:
 attrib +h file
 gi -fo file
 ```
-
 , `-Force` is required for `gci` and `gi` to access hidden
 filesystem objects.
 
@@ -2276,13 +2224,11 @@ To make this file visible again, do:
 attrib -h file
 gi file
 ```
-
 . To make a symbolic link, do:
 
 ```powershell
 ni -it sym name-of-link -tar (resolve-path path-to-source)
 ```
-
 . The alias `ni` is for `New-Item`. Make sure the `path-to-source`
 is a valid absolute or relative path, you can use tab completion or
 `(resolve-path file)` to ensure this. The source paths **CAN NOT**
@@ -2298,7 +2244,6 @@ whether Developer Mode is enabled or not. But you can use:
 ```powershell
 cmd /c mklink <link> <targeT>
 ```
-
 , without elevation if Developer Mode is enabled.
 
 **WARNING**: Do not use `ri` to delete a symbolic link to a
@@ -2307,7 +2252,6 @@ directory in Windows PowerShell, do this instead:
 ```powershell
 cmd /c rmdir symlink-to-directory
 ```
-
 , `ri dirlink` works fine in PowerShell Core.
 
 My [`$profile`](#setting-up-powershell) functions `mklink` and
@@ -2330,7 +2274,6 @@ To search under a specific directory, specify the glob with
 ```powershell
 gci -r /windows -i *.dll
 ```
-
 , for example, to find all DLL files in all levels under
 `C:\Windows`.
 
@@ -2362,7 +2305,6 @@ delete all vim undo files:
 ```powershell
 gci -r .*.un~ | ri
 ```
-
 . Here `remove-item` receives file objects from `get-childitem` and
 deletes them.
 
@@ -2372,7 +2314,6 @@ like:
 ```powershell
 sls -r *.[ch] | sls -ca void
 ```
-
 . I prefer using ripgrep (`rg` command) for this purpose. To turn
 off the highlighting in `Select-String`, use the
 `-noe`(`-NoEmphasis`) flag. Be aware that `Select-String` will apply
@@ -2386,7 +2327,6 @@ example:
 ```powershell
 gc file-list | cpi -r -dest e:/backup
 ```
-
 , copies the files and directories listed in file-list to a
 directory on a USB stick.
 
@@ -2396,7 +2336,6 @@ expect to, for example:
 ```powershell
 split-path -parent $profile | sl
 ```
-
 , will enter your Documents PowerShell directory.
 
 The help documentation for commands will generally state if they
@@ -2413,7 +2352,6 @@ Here is a more typical example of a pipeline:
 ```powershell
 get-process | ?{ $_.name -notmatch 'svchost' } | %{ $_.name } | sort -u
 ```
-
 . Here `?{ ... }` is like filter/grep block while `%{ ... }` is like
 an apply/map block.
 
@@ -2428,7 +2366,6 @@ from an object stream, for example:
 ```powershell
 gci | % name
 ```
-
 , will do the same thing as `gci -n`. The input does not have to be
 a stream of multiple objects, using this on a single object will
 work just fine.
@@ -2438,14 +2375,12 @@ This will get the full paths of the files in a directory:
 ```powershell
 gci ~/source/pwsh/*.ps1 | % fullname
 ```
-
 . This also works with `?` aka `Where-Object`, which has parameters
 mimicking PowerShell operators, allowing you to do things like this:
 
 ```powershell
 gci | ? length -lt 1000
 ```
-
 , which will show all filesystem objects less than `1000` bytes.
 
 Or, for example:
@@ -2453,7 +2388,6 @@ Or, for example:
 ```powershell
 get-process | ? name -match 'win'
 ```
-
 . There are many useful parameters to the `select` aka
 `Select-Object` command for manipulating object streams, including
 `-first` and `-last` as you saw for the `head`/`tail` equivalents,
@@ -2467,7 +2401,6 @@ For a contrived example:
 gci ~/Downloads/*.zip | sort length | select -skiplast 1 `
     | select -last 1 | % fullname
 ```
-
 , will give me the name of the second biggest `.zip` file in my
 `~/Downloads` folder.
 
@@ -2490,7 +2423,6 @@ The equivalent of `wc -l file` to count lines is:
 ```powershell
 gc file | measure -l
 ```
-
 , while `-w` will count words and `-c` will count characters. You
 can combine any of the three in one command, the output is a table.
 
@@ -2499,7 +2431,6 @@ To get just the number of lines, you can do this:
 ```powershell
 gc file | measure -l | % lines
 ```
-
 . Note that if you are working with objects and not lines of text,
 `meaure -l` will still do what you expect, but it's better to do
 something like:
@@ -2509,7 +2440,6 @@ gci | measure | % count
 # Or with my $profile function:
 gci | count
 ```
-
 . This is essentially the same thing, because lines of text in
 PowerShell pipelines are actually string objects, as I already
 mentioned at least 3 times.
@@ -2522,7 +2452,6 @@ an expression in a string or in some other contexts, for example:
 ```powershell
 "This file contains $(gc README.md | measure -l | % lines) lines."
 ```
-
 . Executing an external command is also an expression, that returns
 string objects for the lines outputted, which gives you essentially
 the same thing as POSIX command substitution.
@@ -2538,15 +2467,13 @@ assigning to variables you need nothing at all, for example:
 $date = get-date
 vim (gci -r *.ps1)
 ```
-
-For string values, it can be nicer to use formats, e.g.:
+. For string values, it can be nicer to use formats, e.g.:
 
 ```powershell
 "This shade of {0} is the hex code #{1:X6}." -f 'Blue',13883343
 "Today is: {0}." -f (get-date)
 ```
-
-See
+. See
 [here](https://social.technet.microsoft.com/wiki/contents/articles/7855.powershell-using-the-f-format-operator.aspx)
 for more about the `-f` format operator.
 
@@ -2558,8 +2485,7 @@ $greeting = 'Hello'
 $name     = 'Fred'
 "${greeting}, $name"
 ```
-
-In PowerShell, the backtick `` ` `` is the escape character, and you
+. In PowerShell, the backtick `` ` `` is the escape character, and you
 can use it at the end of a line, escaping the line end as a line
 continuation character. In regular expressions, the backslash `\` is
 the escape character, like everywhere else.
@@ -2578,8 +2504,7 @@ two consecutive quote characters, for example:
 "this ""is"" a test"
 'this ''is'' a test'
 ```
-
-The backtick is also used for special character sequences, here are
+. The backtick is also used for special character sequences, here are
 some useful ones:
 
 | Sequence     | Character                                      |
@@ -2594,7 +2519,6 @@ some useful ones:
 | `a           | Alert (bell)                                   |
 
 .
-
 
 For example, this will print an emoji between two blank lines,
 indented by a tab:
@@ -2628,7 +2552,6 @@ new-module SomeName -script {
   ...
 } | import-module
 ```
-
 , the way this works is that the module scope is its own independent
 script scope, and any exported or global functions can access
 variables and non-exported functions in that scope without them
@@ -2643,7 +2566,6 @@ Script Block or one in a variable:
 $script = { "this is another Script Block" }
 &$script
 ```
-
 , this can be useful for defining a new scope, somewhat but not
 really analogous to a `( ...)` subshell in POSIX shells.
 
@@ -2655,13 +2577,11 @@ file, and you can run them directly:
 ```powershell
 ./script.ps1
 ```
-
 . The equivalent of `set -e` in POSIX shells is:
 
 ```powershell
 $erroractionpreference = 'stop'
 ```
-
 . I highly recommend it adding it to the top of your scripts.
 
 The bash commands `pushd` and `popd` are also available for use in
@@ -2704,7 +2624,6 @@ $array -join ','
 # will yield:
 # val1,val: 42,50,90
 ```
-
 . Since arrays are in PowerShell are fixed size, it is more
 computationally expensive to manipulate them via adding and removing
 elements. To build an array it is better to assign the result of a
@@ -2715,7 +2634,6 @@ $arr1 = gci /windows
 
 $arr2 = foreach ($file in gci /windows) { $file }
 ```
-
 , and to remove elements of an array it's better to assign the
 source elements you want to a new array by filtering or index, for
 example:
@@ -2727,21 +2645,18 @@ $arr2 = $arr1 | ?{ (split-path -extension $_) -ne '.exe' }
 
 $arr3 = $arr2[20..29]
 ```
-
 . Reading a PowerShell script into your current session and scope
 works the same way as "dot-source" in POSIX shells, e.g.:
 
 ```powershell
 . ~/source/PowerShell/some_functions.ps1
 ```
-
 , this will also work to reload your
 [`$profile`](#setting-up-powershell) after making changes to it:
 
 ```powershell
 . $profile
 ```
-
 . Function parameter specifications get extremely complex in
 PowerShell, but for simple functions this is all you need to know:
 
@@ -2798,7 +2713,7 @@ set-alias thingy -value OpenMyThingy
 # Here you specify what is actually visible.
 export-modulemember -function OpenMyThingy -alias thingy
 ```
-You can then load the module with:
+. You can then load the module with:
 
 ```powershell
 import-module ~/source/pwsh/modules/open-thingy.psm1
@@ -2843,7 +2758,6 @@ gcb > clipboard-contents.txt
 gc somefile.txt | scb
 gc $profile | scb
 ```
-
 . To open the explorer file manager for the current or any folder
 you can just run `explorer`, e.g.:
 
@@ -2852,7 +2766,6 @@ explorer .
 explorer (resolve-path /prog*s)
 explorer shell:startup
 ```
-
 . To open a file in its associated program, similarly to `xdg-open`
 on Linux, you can use the `start` command or invoke the file like a
 script, e.g.:
@@ -3049,7 +2962,6 @@ flag, e.g.:
 ```powershell
 pip install --user conan
 ```
-
 , you will also need to add the user directory in your `$env:PATH`,
 this is done for you in the [`$profile`](#setting-up-powershell).
 The path depends on the Python version and looks something like
@@ -3058,7 +2970,6 @@ this:
 ```console
 ~/AppData/Roaming/Python/Python310/Scripts
 ```
-
 , `pip` will give you a warning with the path if it's not in your
 `$env:PATH`.
 
@@ -3077,7 +2988,8 @@ recommend Conan because it has binary packages. More on all that
 later when I expand this guide. Be sure to pass `-G Ninja` to
 `cmake`.
 
-The Visual Studio C and C++ compiler command is `cl`. Here is a simple example:
+The Visual Studio C and C++ compiler command is `cl`. Here is a
+simple example:
 
 ```powershell
 cl hello.c /o hello
@@ -3098,7 +3010,6 @@ can do this:
 ```powershell
 devenv /debugexe file.exe arg1 arg2 ...
 ```
-
 . The tool `make` is a native port of GNU Make from scoop. It
 will generally not run regular Linux Makefiles because it expects
 `cmd.exe` shell commands. However, it is possible to write Makefiles
@@ -3190,7 +3101,6 @@ register-scheduledtask -force `
 
 "Task '$taskname' successfully registered to run daily at $runat."
 ```
-
 . With the `-force` parameter to `register-scheduledtask`, you can
 update your task settings and re-run the script and the task will be
 updated.
@@ -3239,7 +3149,6 @@ For example, for my Windows build VM I have:
   <listen type='address' address='127.0.0.1'/>
 </graphics>
 ```
-
 , while my macOS VM uses port 5900.
 
 Edit your sshd config and make sure the following is enabled:
@@ -3247,7 +3156,6 @@ Edit your sshd config and make sure the following is enabled:
 ```
 GatewayPorts yes
 ```
-
 . Then restart sshd.
 
 Forward the spice ports for the VMs you are interested in working
@@ -3260,7 +3168,6 @@ Host your-server
   LocalForward 5901 localhost:5901
   LocalForward 5902 localhost:5902
 ```
-
 , then if you have a tab open in the terminal with an ssh connection
 to your server, the ports will be forwarded.
 
@@ -3361,13 +3268,11 @@ command in an admin terminal:
 ```powershell
 [environment]::setenvironmentvariable('__COMPAT_LAYER', 'HighDpiAware /M', 'machine')
 ```
-
 . Open the app folder:
 
 ```powershell
 explorer (resolve-path /progr*s/vcxsrv)
 ```
-
 , open the properties for `vcxsrv.exe` and go to `Compatibility ->
 Change High DPI settings`, at the bottom under `High DPI scaling
 override` check the checkbox for `Override high DPI scaling
@@ -3381,13 +3286,11 @@ Open your startup shortcuts:
 ```powershell
 explorer shell:startup
 ```
-
 , and create a shortcut to `vcxsrv.exe` with the target set to:
 
 ```powershell
 "C:\Program Files\VcXsrv\vcxsrv.exe" -multiwindow -clipboard -wgl
 ```
-
 . Launch the shortcut.
 
 Make sure that `C:\Program Files\VcXsrv` is in your `$env:PATH` and
@@ -3396,7 +3299,6 @@ that you generate an `~/.Xauthority` file, the sample [`$profile`](#setting-up-p
 ```powershell
 xauth add ':0' . ((1..4 | %{ "{0:x8}" -f (get-random) }) -join '') | out-null
 ```
-
 . On your remote computer, add this function to your `~/.bashrc`:
 
 ```bash
@@ -3416,14 +3318,12 @@ x() {
     ) >/dev/null 2>&1
 }
 ```
-
 . Edit your remote computer sshd config and make sure the following
 is enabled:
 
 ```
 X11Forwarding yes
 ```
-
 , then restart sshd.
 
 On the local computer, edit `~/.ssh/config` and set the
@@ -3434,7 +3334,6 @@ Host remote-computer
   ForwardX11 yes
   ForwardX11Trusted yes
 ```
-
 . Make sure `$env:DISPLAY` is set in your
 [`$profile`](#setting-up-powershell) as follows:
 
@@ -3443,7 +3342,6 @@ if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
 }
 ```
-
 . Open a new ssh session to the remote computer.
 
 You can now open X11 apps with the `x` function you added to your
@@ -3452,9 +3350,8 @@ You can now open X11 apps with the `x` function you added to your
 ```bash
 x gedit ~/.bashrc
 ```
-
-Set your desired scale in the `~/.bashrc` function and configure the
-appearance for your Qt apps with qt5ct.
+. Set your desired scale in the `~/.bashrc` function and configure
+the appearance for your Qt apps with qt5ct.
 
 One huge benefit of this setup is that you can use `xclip` on your
 remote computer to put things into your local clipboard.
@@ -3469,7 +3366,6 @@ For example, to mount a share on an SMB file server:
 sl ~
 ni -it sym work-documents -tar //corporate-server/documents
 ```
-
 . To mount my NAS over SSHFS I can do this, assuming the winget
 `sshfs` package (id `SSHFS-Win.SSHFS-Win`) is installed:
 
@@ -3477,7 +3373,6 @@ ni -it sym work-documents -tar //corporate-server/documents
 sl ~
 ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 ```
-
 . Here `2223` is the port for ssh. Use `sshfs.k` instead of
 `sshfs.kr` to specify a path relative to your home directory.
 
@@ -3636,4 +3531,4 @@ Many packages simply run an installer and do not install to any
 specific location, however various package metadata will still be
 available under `/ProgramData/chocolatey/lib/<package>`.
 
-<!--- vim:set et sw=4 tw=68: --->
+<!--- vim:set et sw=4 tw=80: --->
