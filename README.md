@@ -2373,12 +2373,12 @@ like:
 sls -r *.[ch] | sls -ca void
 ```
 
-. I prefer using `ripgrep` for this purpose. To turn off the
-highlighting in `Select-String`, use the `-noe`[`-NoEmphasis`] flag.
-Be aware that `Select-String` will apply an output format to its
-results and there will be extra blank lines at the top and bottom
-among other things, so if you are going to use them as text in a
-pipeline or redirect use the `-raw` flag.
+. I prefer using ripgrep (`rg` command) for this purpose. To turn
+off the highlighting in `Select-String`, use the
+`-noe`(`-NoEmphasis`) flag. Be aware that `Select-String` will apply
+an output format to its results and there will be extra blank lines
+at the top and bottom among other things, so if you are going to use
+them as text in a pipeline or redirect use the `-raw` flag.
 
 If the Cmdlet works on files, they can be strings as well, for
 example:
@@ -3030,6 +3030,11 @@ of the Tasks event log, which you must first enable as described
 
 The `patch` command comes with Git for Windows, the
 [`$profile`](#setting-up-powershell) adds an alias to it.
+
+The [install script](#installing-visual-studio-some-packages-and-scoop) in this
+guide installs ripgrep, which is a very powerful and fast recursive text search
+tool and is extremely useful for exploring codebases you are not familiar with.
+The command for it is `rg`.
 
 You get `node` and `npm` from the nodejs package. You can install
 any NodeJS utilities you need with `npm install -g <utility>`, and
