@@ -3057,14 +3057,19 @@ sources of course, at varying degrees of functionality.
 
 It is possible to use tmux from WSL with PowerShell.
 
+This section is based on the guide by [superuser.com](https://superuser.com/)
+member NotTheDr01ds [here](https://superuser.com/a/1643117/226829).
+
 First set up WSL with your distribution of choice, I won't cover this here as
-there are many excellent guides available.
+there are many excellent guides available. If for some reason you are not able
+to use virtual machines with Hyper-V, you can use WSL version 1 which is not a
+virtual machine.
 
 Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
 configuration of choice including this statement:
 
 ```tmux
-set -g default-command "cd \$(wslpath \$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')); '/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo"
+set -g default-command "cd \"\$(wslpath \"\$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')\")\"; '/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo"
 ```
 . If you want to use a configuration that behaves like screen I have one
 [here](https://github.com/rkitover/tmux-screen-compat). You can load a
@@ -3076,7 +3081,8 @@ To run tmux, run:
 ```powershell
 wsl tmux -f '~/.tmux-pwsh.conf'
 ```
-. The included [profile](#setting-up-powershell) function `tmux` will do this.
+. The included [profile](#setting-up-powershell) function `tmux` will do this,
+and also run tmux commands for your current session.
 
 ### Creating Scheduled Tasks (cron)
 
