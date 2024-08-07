@@ -39,6 +39,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Using tmux/screen with PowerShell](#using-tmuxscreen-with-powershell)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
@@ -1248,6 +1249,10 @@ if ($iswindows) {
     function global:reset {
         [char]27 + "[!p"
         clear-host
+    }
+
+    function global:tmux {
+        wsl tmux -f '~/.tmux-pwsh.conf' @args
     }
 }
 elseif ($ismacos) {
@@ -3047,6 +3052,31 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 
 Many more things are available from winget, scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
+
+### Using tmux/screen with PowerShell
+
+It is possible to use tmux from WSL with PowerShell.
+
+First set up WSL with your distribution of choice, I won't cover this here as
+there are many excellent guides available.
+
+Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
+configuration of choice including this statement:
+
+```tmux
+set -g default-command "cd \$(wslpath \$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')); '/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo"
+```
+. If you want to use a configuration that behaves like screen I have one
+[here](https://github.com/rkitover/tmux-screen-compat). You can load a
+configuration file before the preceding statement with the `source` statement in
+the tmux config.
+
+To run tmux, run:
+
+```powershell
+wsl tmux -f '~/.tmux-pwsh.conf'
+```
+. The included [profile](#setting-up-powershell) function `tmux` will do this.
 
 ### Creating Scheduled Tasks (cron)
 

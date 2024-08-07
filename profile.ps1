@@ -623,6 +623,10 @@ if ($iswindows) {
         [char]27 + "[!p"
         clear-host
     }
+
+    function global:tmux {
+        wsl tmux -f '~/.tmux-pwsh.conf' @args
+    }
 }
 elseif ($ismacos) {
     function global:ls {
