@@ -2993,11 +2993,12 @@ recommend Conan because it has binary packages. More on all that
 later when I expand this guide. Be sure to pass `-G Ninja` to
 `cmake`.
 
-The Visual Studio C and C++ compiler command is `cl`. Here is a
-simple example:
+The Visual Studio C and C++ compiler command is `cl`. Here are a couple of
+examples:
 
 ```powershell
-cl hello.c /o hello
+cl /std:clatest hello.c /Fe:hello.exe
+cl /std:c++latest hello.cpp /Fe:hello.exe ole32.lib
 ```
 
 . To start the Visual Studio IDE you can use the `devenv` command.
