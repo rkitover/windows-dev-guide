@@ -23,5 +23,5 @@ new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Prog
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic
 
-restart-service sshd
-restart-service ssh-agent
+restart-service -force sshd
+restart-service -force ssh-agent
