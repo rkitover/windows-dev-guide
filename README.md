@@ -3039,7 +3039,11 @@ dumpbin /exports some.dll
 ```powershell
 dumpbin /symbols foo.lib
 ```
+. To get the disassembly of any binary you can use:
 
+```powershell
+dumpbin /disasm foo.exe
+```
 . The commands `curl` and `tar` are now standard Windows commands.
 The implementation of `tar` is not particularly wonderful, it
 currently does not handle symbolic links correctly and will not save
