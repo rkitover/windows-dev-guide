@@ -148,7 +148,7 @@ if (-not (test-path ~/scoop)) {
     iwr get.scoop.sh | iex
 }
 
-~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make perl ripgrep sed zip unzip
+~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make mingw perl ripgrep sed zip unzip
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
 ~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
 
@@ -3040,10 +3040,15 @@ dumpbin /symbols foo.lib
 ```powershell
 dumpbin /disasm foo.exe
 ```
-. The commands `curl` and `tar` are now standard Windows commands.
-The implementation of `tar` is not particularly wonderful, it
-currently does not handle symbolic links correctly and will not save
-your ACLs. You can save your ACLs with `icacls`.
+. The [install scripts](#installing-visual-studio-some-packages-and-scoop)
+install the Scoop "mingw" package for MinGW GCC and Binutils, which will not
+conflict with native build tools and include some useful utilities like
+`strings`. See `gci (split-path -parent (gcm gcc))` for the full list.
+
+The commands `curl` and `tar` are now standard Windows commands. The
+implementation of `tar` is not particularly wonderful, it currently does not
+handle symbolic links correctly and will not save your ACLs. You can save your
+ACLs with `icacls`.
 
 For an `htop` replacement, use `ntop`, installed
 [here](#installing-visual-studio-some-packages-and-scoop), with the
