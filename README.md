@@ -12,6 +12,7 @@
     - [Transparency (Old Method)](#transparency-old-method)
   - [Setting up an Editor](#setting-up-an-editor)
     - [Setting up Vim](#setting-up-vim)
+      - [Neovim Terminal](#neovim-terminal)
     - [Setting up nano](#setting-up-nano)
   - [Setting up PowerShell](#setting-up-powershell)
   - [Setting up ssh](#setting-up-ssh)
@@ -439,22 +440,21 @@ vims:
 ```vim
 set encoding=utf8
 set langmenu=en_US.UTF-8
+language en
 let g:is_bash=1
 set formatlistpat=^\\s*\\%([-*][\ \\t]\\\|\\d+[\\]:.)}\\t\ ]\\)\\s*
-set ruler bg=dark nohlsearch bs=2 noea ai fo+=n undofile modeline belloff=all modeline modelines=5
+set ruler bg=dark nohlsearch bs=2 noea ai fo+=n undofile belloff=all modeline modelines=5
 set fileformats=unix,dos
-
 set mouse=a
+set clipboard=unnamedplus
 
 " Add vcpkg includes to include search path to get completions for C++.
-let g:home = fnamemodify('~', ':p')
-
-if isdirectory(g:home . 'source/repos/vcpkg/installed/x64-windows/include')
-  let &path .= ',' . g:home . 'source/repos/vcpkg/installed/x64-windows/include'
+if isdirectory($HOME . 'source/repos/vcpkg/installed/x64-windows/include')
+  let &path .= ',' . $HOME . 'source/repos/vcpkg/installed/x64-windows/include'
 endif
 
-if isdirectory(g:home . 'source/repos/vcpkg/installed/x64-windows-static/include')
-  let &path .= ',' . g:home . 'source/repos/vcpkg/installed/x64-windows-static/include'
+if isdirectory($HOME . 'source/repos/vcpkg/installed/x64-windows-static/include')
+  let &path .= ',' . $HOME . 'source/repos/vcpkg/installed/x64-windows-static/include'
 endif
 
 if !has('gui_running') && match($TERM, "screen") == -1
@@ -466,7 +466,7 @@ if has('gui_running')
   au ColorScheme * hi Normal guibg=#000000
 
   if has('win32')
-    set guifont=Hack:h11:cANSI
+    set guifont=Cascadia\ Code:h11:cANSI
   endif
 endif
 
@@ -485,9 +485,12 @@ filetype plugin indent on
 syntax enable
 
 au BufRead COMMIT_EDITMSG,*.md setlocal spell
-au BufRead COMMIT_EDITMSG so $VIMRUNTIME/syntax/gitcommit.vim | set tw=72
-au BufRead *.md  setlocal tw=80
+au BufRead *.md setlocal tw=80
 au FileType json setlocal ft=jsonc sw=4 et
+
+if has('nvim')
+  au TermOpen,TermEnter * startinsert
+endif
 
 " Return to last edit position when opening files.
 autocmd BufReadPost *
@@ -523,6 +526,25 @@ https://github.com/PProvost/vim-ps1
 . I also use vim-sleuth to detect indent settings and vim-markdown
 for better markdown support including syntax highlighting in code
 blocks.
+
+##### Neovim Terminal
+
+Neovim has a built-in terminal that works perfectly on Windows, when running in
+tmux too. You can open a terminal window on the bottom with `:botright
+terminal`. Enter insert mode to use the terminal and press `C-\ C-n` to return
+to normal mode.
+
+You can make a mapping to make this more convenient, for example:
+
+```vim
+noremap <leader>t :botright terminal<CR>
+```
+, which would make the mapping `\t` by default or whatever you set `mapleader`
+to. When the terminal process exists, press Enter to close the window. See
+`:help terminal` for more information.
+
+Neovim will refuse to quit if a terminal process is running, in which case, save
+your files and use `:qa!` to force quit.
 
 #### Setting up nano
 
