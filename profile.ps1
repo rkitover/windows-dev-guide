@@ -595,15 +595,15 @@ if ($iswindows) {
         $args | %{ $_ } |
             %{ get-command $_ -commandtype application `
                 -ea ignore } | %{ $_.source } | `
-                # winget symlinks
+                # WinGet symlinks
             %{ if ($link_target = (gi $_).target) {
                     $link_target | shortpath
                 }
-                # scoop shims
+                # Scoop shims
                 elseif (test-path ($shim = $_ -replace '\.exe$','.shim')) {
                     gc $shim | %{ $_ -replace '^path = "([^"]+)"$','$1' } | shortpath
                 }
-                # chocolatey shims
+                # Chocolatey shims
                 elseif (&$_ --shimgen-help) {
                     $_ | ?{ $_ -match "^ Target: '(.*)'$" } `
                        | %{ $matches[1] } | shortpath

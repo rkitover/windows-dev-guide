@@ -5,7 +5,7 @@
 - [Windows Native Development Environment Setup Guide for Linux Users](#windows-native-development-environment-setup-guide-for-linux-users)
   - [Introduction](#introduction)
   - [Installing Visual Studio, Some Packages and Scoop](#installing-visual-studio-some-packages-and-scoop)
-  - [winget and scoop notes](#winget-and-scoop-notes)
+  - [WinGet and Scoop notes](#winget-and-scoop-notes)
   - [Configure the Terminal](#configure-the-terminal)
     - [Terminal Usage](#terminal-usage)
     - [Scrolling and Searching in the Terminal](#scrolling-and-searching-in-the-terminal)
@@ -84,10 +84,10 @@ Run this script, which is in the repo, like so:
 ```powershell
 ./install.ps1
 ```
-, it installs some winget packages, the Visual Studio C++ workload, sets up the
+, it installs some WinGet packages, the Visual Studio C++ workload, sets up the
 OpenSSH server and sets some QOL improvement settings.
 
-If you want to use the Chocolatey package manager instead of winget and scoop,
+If you want to use the Chocolatey package manager instead of WinGet and Scoop,
 see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
 [//]: # "BEGIN INCLUDED install.ps1"
@@ -118,8 +118,8 @@ new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Prog
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic
 
-restart-service sshd
-restart-service ssh-agent
+restart-service -force sshd
+restart-service -force ssh-agent
 ```
 . If `winget` exits abnormally, update this app from the Windows
 Store:
@@ -135,7 +135,7 @@ Now run the user-mode install script:
 ```powershell
 ./install-user.ps1
 ```
-, which installs scoop and some scoop packages of UNIX ports, and fixes your
+, which installs Scoop and some Scoop packages of UNIX ports, and fixes your
 `~/.ssh` files permissions, copy it over first, but you can do this
 [later](#setting-up-ssh) as well.
 
@@ -148,7 +148,7 @@ if (-not (test-path ~/scoop)) {
     iwr get.scoop.sh | iex
 }
 
-~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make ripgrep sed zip unzip
+~/scoop/shims/scoop.cmd install bzip2 diffutils dos2unix file gawk grep gzip less make perl ripgrep sed zip unzip
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
 ~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
 
@@ -158,20 +158,20 @@ repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 ```
 .
 
-### winget and scoop notes
+### WinGet and Scoop notes
 
-To update your winget packages, run this in either a user or admin PowerShell:
+To update your WinGet packages, run this in either a user or admin PowerShell:
 
 ```powershell
 winget upgrade --all
 ```
-, to update your scoop packages, run this in a normal user
+, to update your Scoop packages, run this in a normal user
 PowerShell:
 
 ```powershell
 scoop update *
 ```
-. Never run scoop in an elevated shell, only as the user.
+. Never run `scoop` in an elevated shell, only as the user.
 
 Use `winget search` and `scoop search` to look for packages, and `install` to
 install them, and `list` to see locally installed packages.
@@ -349,7 +349,7 @@ The transparency configuration in the terminal described
 [above](#configure-the-terminal) works correctly with neovim but not
 regular vim. For older versions of Terminal or to get transparency
 in regular vim, use the autohotkey method described here. You can
-install autohotkey from winget using the id `AutoHotkey.AutoHotkey`.
+install autohotkey from WinGet using the id `AutoHotkey.AutoHotkey`.
 
 This is the autohotkey script:
 
@@ -418,7 +418,7 @@ support and is almost 100% compatible with vim. It also works
 correctly with transparency in Windows Terminal with a black
 background unlike the port of regular vim.
 
-If you want to use the regular vim, the winget id is `vim.vim`.
+If you want to use the regular vim, the WinGet id is `vim.vim`.
 
 If you are using neovim only, you can copy your `~/.config/nvim`
 over directly, to `~/AppData/Local/nvim`. 
@@ -561,14 +561,12 @@ ri -r -fo ~/nano-installer
 
 gi ~/.nanorc,~/.nano,~/.local/bin/nano.exe
 ```
-
 . Make sure `~/.local/bin` is in your `$env:PATH` and set
 `$env:EDITOR` in your [`$profile`](#setting-up-powershell) as follows:
 
 ```powershell
 $env:EDITOR = (get-command nano).source -replace '\\','/'
 ```
-
 , or configure Git like so:
 
 ```powershell
@@ -1222,15 +1220,15 @@ if ($iswindows) {
         $args | %{ $_ } |
             %{ get-command $_ -commandtype application `
                 -ea ignore } | %{ $_.source } | `
-                # winget symlinks
+                # WinGet symlinks
             %{ if ($link_target = (gi $_).target) {
                     $link_target | shortpath
                 }
-                # scoop shims
+                # Scoop shims
                 elseif (test-path ($shim = $_ -replace '\.exe$','.shim')) {
                     gc $shim | %{ $_ -replace '^path = "([^"]+)"$','$1' } | shortpath
                 }
-                # chocolatey shims
+                # Chocolatey shims
                 elseif (&$_ --shimgen-help) {
                     $_ | ?{ $_ -match "^ Target: '(.*)'$" } `
                        | %{ $matches[1] } | shortpath
@@ -1928,7 +1926,6 @@ $hash.getenumerator() | %{ "{0} = '{1}'" -f $_.key,$_.value }
 # foo = 'bar'
 # bar = 'baz'
 ```
-
 . To make an ordered hash do:
 
 ```powershell
@@ -2501,7 +2498,6 @@ not single quotes, for example:
 ```powershell
 "this `"is`" a test"
 ```
-
 , PowerShell also allows escaping double and single quotes by using
 two consecutive quote characters, for example:
 
@@ -2892,7 +2888,7 @@ generally work.
 ### Available Command-Line Tools and Utilities
 
 The commands installed in the list of packages [installed from
-scoop](#installing-visual-studio-some-packages-and-scoop) are
+Scoop](#installing-visual-studio-some-packages-and-scoop) are
 pretty much the same as in Linux.
 
 There are a few very simplistic wrappers for similar functions as
@@ -2927,8 +2923,8 @@ For example, I also define `ltr` to add `sort lastwritetime` and
 `count` to add `measure | % count` to the end of a pipeline, and
 alias `select-object` to `s`.
 
-The `readshim` function will give you the installed target of winget symlinks,
-scoop shims and Chocolatey shims for executables you have installed.
+The `readshim` function will give you the installed target of WinGet symlinks,
+Scoop shims and Chocolatey shims for executables you have installed.
 
 The `shortpath` function will convert a raw path to a nicer form
 with the sysdrive removed, it can take args or pipeline input. The
@@ -2960,7 +2956,7 @@ it will be available in your `$env:PATH`. For example, I use
 `doctoc` and `markdown-link-check` to maintain this and other
 markdown documents.
 
-The `python` and `pip` tools (version 3) come from the winget
+The `python` and `pip` tools (version 3) come from the WinGet
 `python` package. To install utilities from `pip` use the `--user`
 flag, e.g.:
 
@@ -2978,13 +2974,16 @@ this:
 , `pip` will give you a warning with the path if it's not in your
 `$env:PATH`.
 
-The `perl` command comes from `StrawberryPerl.StrawberryPerl` from
-winget, it is mostly fully functional and allows you to install many
-modules from CPAN without issues. See the `$env:PATH` override for
-it in the [`$profile`](#setting-up-powershell) to remove the MinGW
-stuff it comes with. I would recommend removing it from your system
-PATH entirely and only adding it when you need to install CPAN
-modules that need a compiler.
+The `perl` command comes from the `perl` package from Scoop, which is Strawberry
+Perl portable, and is mostly fully functional, but does not allow installing
+CPAN modules that require building with a C/C++ compiler.
+
+If you need to install CPAN modules that require building with a compiler,
+remove the `perl` Scoop package and install the WinGet
+`StrawberryPerl.StrawberryPerl` package, which includes a MinGW toolchain. My
+[`$profile`](#setting-up-powershell) removes the MinGW toolchain from
+`$env:PATH` because it breaks other build tools, you can re-add the path when
+you need to build CPAN modules or disable the override.
 
 The tools `cmake` and `ninja` come with Visual Studio, the
 [`$profile`](#setting-up-powershell) sets up the Visual Studio
@@ -3000,7 +2999,6 @@ examples:
 cl /std:clatest hello.c /Fe:hello.exe
 cl /std:c++latest hello.cpp /Fe:hello.exe ole32.lib
 ```
-
 . To start the Visual Studio IDE you can use the `devenv` command.
 
 To open a cmake project, go into the directory containing
@@ -3009,14 +3007,13 @@ To open a cmake project, go into the directory containing
 ```powershell
 devenv .
 ```
-
 . To debug an executable built with `-DCMAKE_BUILD_TYPE=Debug`, you
 can do this:
 
 ```powershell
 devenv /debugexe file.exe arg1 arg2 ...
 ```
-. The tool `make` is a native port of GNU Make from scoop. It
+. The tool `make` is a native port of GNU Make from Scoop. It
 will generally not run regular Linux Makefiles because it expects
 `cmd.exe` shell commands. However, it is possible to write Makefiles
 that work in both environments if the commands are the same, for
@@ -3028,7 +3025,6 @@ For an `ldd` replacement, you can do this:
 dumpbin /dependents prog.exe
 dumpbin /dependents somelib.dll
 ```
-
 . To see the functions a `.dll` exports, you can do:
 
 ```powershell
@@ -3055,7 +3051,7 @@ wrapper function in the [`$profile`](#setting-up-powershell).
 
 You can run any `cmd.exe` commands with `cmd /c <command>`.
 
-Many more things are available from winget, scoop and Chcolatey and other
+Many more things are available from WinGet, Scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
 
 ### Using tmux/screen with PowerShell
@@ -3176,7 +3172,7 @@ example of a task that runs at logon.
 Unfortunately `virt-manager` is unavailable as a native utility, if
 you like you can run it using WSL or even Cygwin.
 
-However, `virt-viewer` is available from winget using the id `RedHat.VirtViewer`
+However, `virt-viewer` is available from WinGet using the id `RedHat.VirtViewer`
 and with a bit of setup can allow you to work with your remote `virt-manager`
 VMs conveniently.
 
@@ -3272,7 +3268,7 @@ the shortcut and set the target to something like:
 ```
 . Make sure `Run:` is changed from `Normal window` to `Minimized`.
 
-Once that is done, the last step is to install `virt-viewer` from winget using
+Once that is done, the last step is to install `virt-viewer` from WinGet using
 the id `RedHat.VirtViewer` and add the functions to your
 [`$profile`](#setting-up-powershell) for launching it for your VMs.
 
@@ -3301,7 +3297,7 @@ release input.
 
 ### Using X11 Forwarding Over SSH
 
-Install `vcxsrv` from winget using the id `marha.VcXsrv`.
+Install `vcxsrv` from WinGet using the id `marha.VcXsrv`.
 
 It is necessary to disable DPI scaling for this app. First, run this
 command in an admin terminal:
@@ -3407,7 +3403,7 @@ For example, to mount a share on an SMB file server:
 sl ~
 ni -it sym work-documents -tar //corporate-server/documents
 ```
-. To mount my NAS over SSHFS I can do this, assuming the winget
+. To mount my NAS over SSHFS I can do this, assuming the WinGet
 `sshfs` package (id `SSHFS-Win.SSHFS-Win`) is installed:
 
 ```powershell
@@ -3419,7 +3415,7 @@ ni -it sym nas -tar //sshfs.kr/remoteuser@remote.host!2223/mnt/HD/HD_a2/username
 
 ### Appendix A: Chocolatey Usage Notes
 
-I have switched this guide to winget and scoop because that's what people want
+I have switched this guide to WinGet and Scoop because that's what people want
 to use these days, however Chocolatey is still a very useful source of software
 that you may want to use, I will describe it here.
 
@@ -3431,7 +3427,7 @@ iwr 'https://chocolatey.org/install.ps1' | % content | iex
 , then relaunch your terminal session.
 
 This is the old install script for this guide using Chocolatey if
-you would prefer to use it instead of winget and scoop:
+you would prefer to use it instead of WinGet and Scoop:
 
 [//]: # "BEGIN INCLUDED choco-install.ps1"
 
