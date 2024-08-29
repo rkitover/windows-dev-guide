@@ -39,6 +39,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Using GNU Make](#using-gnu-make)
   - [Using tmux/screen with PowerShell](#using-tmuxscreen-with-powershell)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
@@ -3013,11 +3014,9 @@ can do this:
 ```powershell
 devenv /debugexe file.exe arg1 arg2 ...
 ```
-. The tool `make` is a native port of GNU Make from Scoop. It
-will generally not run regular Linux Makefiles because it expects
-`cmd.exe` shell commands. However, it is possible to write Makefiles
-that work in both environments if the commands are the same, for
-example the one in this repository.
+. The tool `make` is a native port of GNU Make, available in the "make" and
+"mingw" packages from Scoop. See the [section](#using-gnu-make) on setting it
+up.
 
 For an `ldd` replacement, you can do this:
 
@@ -3058,6 +3057,34 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 
 Many more things are available from WinGet, Scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
+
+### Using GNU Make
+
+GNU Make is available from the "make" Scoop package and also comes with the
+"mingw" Scoop package, both of which are installed by the [install
+scripts](#installing-visual-studio-some-packages-and-scoop) here.
+
+It will however use `cmd.exe` to execute shell commands by default and will not
+run any normal Makefiles for Linux/POSIX.
+
+To fix this, create the file `~/.local/bin/make.cmd` with the following contents:
+
+[//]: # "BEGIN INCLUDED make.cmd"
+
+```batch
+@make.exe PATH="%PATH%;C:\progra~1\Git\usr\bin" SHELL=/progra~1/Git/usr/bin/bash %*
+```
+, and make sure `~/.local/bin` is in your `$env:PATH`, which the
+[profile](#setting-up-powershell) does for you if it exists.
+
+This will use Git Bash as the shell to execute shell commands, and allow you to
+write Makefiles that use POSIX shell commands.
+
+If you run Linux/POSIX Makefiles, you may run into issues with unquoted
+substitutions returning paths, quoting them will generally fix the problem. And
+of course you may have other issues in this environment, see the
+[Makefile](https://github.com/rkitover/windows-dev-guide/blob/master/Makefile)
+in this repository for a stupid example of how to deal with such an issue.
 
 ### Using tmux/screen with PowerShell
 
