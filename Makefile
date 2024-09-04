@@ -4,15 +4,15 @@ README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
 	.install.ps1-include-stamp .install-user.ps1-include-stamp \
 	.ports-task.ps1-include-stamp .build-task.ps1-include-stamp \
 	.choco-install.ps1-include-stamp ..vimrc-include-stamp \
-	.make.cmd-include-stamp
+	.make-busybox.cmd-include-stamp .make-git-bash.cmd-include-stamp
 
 .%-include-stamp: %
 	@echo Inserting updated $<
-	@dos2unix -q $<
+	@dos2unix $< 2>/dev/null
 	@awk -v include_file=$< -f insert-file.awk ./README.md > ./README.md.new
 	@cp README.md.new README.md
 	@rm README.md.new
-	@dos2unix -q ./README.md
+	@dos2unix ./README.md 2>/dev/null
 	@touch $@
 
 .doctoc-stamp: README.md
@@ -26,7 +26,7 @@ else
 endif
 
 .link-check-stamp: README.md
-	@node --no-deprecation "$(shell $(NPM) root -g)"/markdown-link-check/markdown-link-check -q README.md
+	@node --no-deprecation '$(shell $(NPM) root -g)'/markdown-link-check/markdown-link-check -q README.md
 	@touch .link-check-stamp
 
 .PHONY: clean

@@ -3088,24 +3088,47 @@ GNU Make is available from the "make" Scoop package and also comes with the
 scripts](#installing-visual-studio-some-packages-and-scoop) here.
 
 It will however use `cmd.exe` to execute shell commands by default and will not
-run any normal Makefiles for Linux/POSIX.
+run any normal Makefiles for POSIX/Linux.
 
-To fix this, create the file `~/.local/bin/make.cmd` with the following contents:
+There are two ways to fix this, one is to use busybox as the shell for Make,
+which will run POSIX shell commands, which should be sufficient for most
+Makefiles. If, however, you need to run GNU shell commands from your Makefiles,
+you can use Git Bash as the shell, which will run GNU shell commands that come
+with the Git for Windows distribution (which is based on MSYS2) and any others
+in your `$env:PATH`.
 
-[//]: # "BEGIN INCLUDED make.cmd"
+If you have not installed busybox using the [install
+scripts](#installing-visual-studio-some-packages-and-scoop), you can install it
+from Scoop. Be aware however that it will overwrite the shims for GNU programs
+and other programs with its own more limited POSIX versions. You can fix them
+with the `scoop reset <program>` command. I recommend installing busybox first
+before any other packages for this reason.
+
+To use busybox as your Make shell, create the file `~/.local/bin/make.cmd` with
+the following contents:
+
+[//]: # "BEGIN INCLUDED make-busybox.cmd"
 
 ```batch
-@make.exe PATH="%PATH%;C:\progra~1\Git\usr\bin" SHELL=/progra~1/Git/usr/bin/bash %*
+@make.exe SHELL=sh %*
 ```
 , and make sure `~/.local/bin` is in your `$env:PATH`, which the
 [profile](#setting-up-powershell) does for you if it exists.
 
-This will use Git Bash as the shell to execute shell commands, and allow you to
-write Makefiles that use POSIX shell commands.
+To use Git Bash as your Make shell, create the file `~/.local/bin/make.cmd` with
+the following contents:
 
-If you run Linux/POSIX Makefiles, you may run into issues with unquoted
-substitutions returning paths, quoting them will generally fix the problem. And
-of course you may have other issues in this environment, see the
+[//]: # "BEGIN INCLUDED make-git-bash.cmd"
+
+```batch
+@make.exe PATH="%PATH%;C:\progra~1\Git\usr\bin" SHELL=/progra~1/Git/usr/bin/bash %*
+```
+.
+
+If you run POSIX/Linux Makefiles, you may run into issues with unquoted
+substitutions returning paths, quoting them in single quotes will generally fix
+the problem. And of course you may have other issues in this environment, see
+the
 [Makefile](https://github.com/rkitover/windows-dev-guide/blob/master/Makefile)
 in this repository for a stupid example of how to deal with such an issue.
 
