@@ -845,6 +845,10 @@ if (-not $env:COLORTERM) {
     $env:COLORTERM = 'truecolor'
 }
 
+if (-not $env:ENV) {
+    $env:ENV = shortpath ~/.shrc
+}
+
 if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
