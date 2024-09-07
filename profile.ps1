@@ -204,7 +204,17 @@ if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
 
-$global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
+if (test-path $env:VCPKG_ROOT) {
+    $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
+
+    if ($iswindows) {
+        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/x64-windows-static) `
+            { 'x64-windows-static' } else { 'x64-windows' }
+
+        $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
+        $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
+    }
+}
 
 if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'

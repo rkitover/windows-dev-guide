@@ -40,6 +40,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Using BusyBox](#using-busybox)
   - [Using GNU Make](#using-gnu-make)
   - [Using tmux/screen with PowerShell](#using-tmuxscreen-with-powershell)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
@@ -150,7 +151,7 @@ if (-not (test-path ~/scoop)) {
     iwr get.scoop.sh | iex
 }
 
-# busybox must be first in the installation order.
+# BusyBox must be first in the installation order.
 ~/scoop/shims/scoop.cmd install busybox bzip2 diffutils dos2unix file gawk grep gzip less make mingw perl ripgrep sed zip unzip
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
 ~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
@@ -853,7 +854,17 @@ if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
 
-$global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
+if (test-path $env:VCPKG_ROOT) {
+    $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
+
+    if ($iswindows) {
+        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/x64-windows-static) `
+            { 'x64-windows-static' } else { 'x64-windows' }
+
+        $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
+        $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
+    }
+}
 
 if (-not $env:DISPLAY) {
     $env:DISPLAY = '127.0.0.1:0.0'
@@ -3085,6 +3096,51 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 Many more things are available from WinGet, Scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
 
+### Using BusyBox
+
+If you have not installed BusyBox using the [install
+scripts](#installing-visual-studio-some-packages-and-scoop), you can install it
+from Scoop. Be aware however that it will overwrite the shims for GNU programs
+and other programs with its own more limited POSIX versions. You can fix them
+with the `scoop reset <program>` command. I recommend installing BusyBox first
+before any other packages for this reason, which the install scripts here do.
+
+If you do need to reset your GNU programs and other programs you can use
+something like this:
+
+```powershell
+'gawk','bzip2','diffutils','dos2unix',`
+'grep','gzip','less','sed','unzip' `
+    | %{ scoop reset $_ }
+```
+. The shim to start the BusyBox ash shell is `sh`. Or you can invoke it with
+`busybox sh`, which is also a way to start any other BusyBox built-ins.
+
+The BusyBox ash shell does not have a default initialization file like a
+`.bashrc`. However, you can set it to something like:
+
+```powershell
+$env:ENV = (convert-path ~/.shrc)
+```
+, to point to one, which the [profile](#setting-up-powershell) does for you if
+you create one.
+
+You may like my Git prompt which works with BusyBox ash, you can find it
+[here](https://github.com/rkitover/sh-prompt-simple).
+
+To make a Windows Terminal profile for BusyBox, you can use something like this:
+
+```json
+{
+    "commandline": "cmd /k set ENV=%USERPROFILE%/.shrc && %USERPROFILE%/scoop/shims/busybox.exe sh && exit",
+    "guid": "{0e1f141b-f220-488d-a5e8-8e06a1cc1ff5}",
+    "icon": "C:/Windows/System32/cmd.exe",
+    "hidden": false,
+    "name": "BusyBox ash",
+    "startingDirectory": "%USERPROFILE%"
+}
+```
+
 ### Using GNU Make
 
 GNU Make is available from the "make" Scoop package and also comes with the
@@ -3094,22 +3150,15 @@ scripts](#installing-visual-studio-some-packages-and-scoop) here.
 It will however use `cmd.exe` to execute shell commands by default and will not
 run any normal Makefiles for POSIX/Linux.
 
-There are two ways to fix this, one is to use busybox as the shell for Make,
-which will run POSIX shell commands, which should be sufficient for most
-Makefiles. If, however, you need to run GNU shell commands from your Makefiles,
-you can use Git Bash as the shell, which will run GNU shell commands that come
-with the Git for Windows distribution (which is based on MSYS2) and any others
-in your `$env:PATH`.
+There are two ways to fix this, one is to use [BusyBox](#using-busybox) ash as
+the shell for Make, which will run POSIX shell commands, which should be
+sufficient for most Makefiles. If, however, you need to run GNU shell commands
+from your Makefiles, you can use Git Bash as the shell, which will run GNU shell
+commands that come with the Git for Windows distribution (which is based on
+MSYS2) and any others in your `$env:PATH`.
 
-If you have not installed busybox using the [install
-scripts](#installing-visual-studio-some-packages-and-scoop), you can install it
-from Scoop. Be aware however that it will overwrite the shims for GNU programs
-and other programs with its own more limited POSIX versions. You can fix them
-with the `scoop reset <program>` command. I recommend installing busybox first
-before any other packages for this reason.
-
-To use busybox as your Make shell, create the file `~/.local/bin/make.cmd` with
-the following contents:
+To use [BusyBox](#using-busybox) ash as your Make shell, create the file
+`~/.local/bin/make.cmd` with the following contents:
 
 [//]: # "BEGIN INCLUDED make-busybox.cmd"
 
@@ -3135,6 +3184,11 @@ the problem. And of course you may have other issues in this environment, see
 the
 [Makefile](https://github.com/rkitover/windows-dev-guide/blob/master/Makefile)
 in this repository for a stupid example of how to deal with such an issue.
+
+When writing Makefiles, be aware that you cannot use literal Windows paths with
+backslashes as that is an escape character in POSIX shells, you can enclose them
+in single quotes or use forward slashes, which work for the vast majority of
+Windows programs.
 
 ### Using tmux/screen with PowerShell
 
