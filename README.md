@@ -153,6 +153,7 @@ if (-not (test-path ~/scoop)) {
 
 # BusyBox must be first in the installation order.
 ~/scoop/shims/scoop.cmd install busybox bzip2 diffutils dos2unix file gawk grep gzip less make mingw perl ripgrep sed zip unzip
+~/scoop/shims/scoop.cmd shim rm bash # Installed by busybox
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
 ~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
 
@@ -3105,6 +3106,9 @@ and other programs with its own more limited POSIX versions. You can fix them
 with the `scoop reset <program>` command. I recommend installing BusyBox first
 before any other packages for this reason, which the install scripts here do.
 
+It also installs a `bash` shim, which you most likely don't want, you can remove
+it with `scoop shim rm bash`.
+
 If you do need to reset your GNU programs and other programs you can use
 something like this:
 
@@ -3112,6 +3116,7 @@ something like this:
 'gawk','bzip2','diffutils','dos2unix',`
 'grep','gzip','less','sed','unzip' `
     | %{ scoop reset $_ }
+scoop shim rm bash
 ```
 . The shim to start the BusyBox ash shell is `sh`. Or you can invoke it with
 `busybox sh`, which is also a way to start any other BusyBox built-ins.
@@ -3373,17 +3378,14 @@ $taskname = 'Forward Server Ports'
 $trigger = new-scheduledtasktrigger -atlogon
 
 $action  = new-scheduledtaskaction `
-    -execute 'ssh' `
-    -argument '-NT server-ports'
-
-$settings = new-scheduledtasksettingsset -restartcount:1000 -restartinterval (new-timespan -minutes 1)
+    -execute (get-command powershell).source `
+    -argument '-noprofile -executionpolicy remotesigned -command "while ($true) { ssh -NT server-ports }"'
 
 $password = (get-credential $env:username).getnetworkcredential().password
 
 register-scheduledtask -force `
     -taskname $taskname `
     -trigger $trigger -action $action `
-    -settings $settings `
     -user $env:username `
     -password $password `
     -ea stop | out-null
