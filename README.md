@@ -855,12 +855,47 @@ if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
 
+if ($iswindows) {
+    # Load VS env only once.
+    :OUTER foreach ($vs_year in '2022','2019','2017') {
+        foreach ($vs_type in 'preview','buildtools','community') {
+            foreach ($x86 in '',' (x86)') {
+                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/vc/auxiliary/build"
+
+                if (test-path $vs_path) {
+                    break OUTER
+                }
+                else {
+                    $vs_path=$null
+                }
+            }
+        }
+    }
+
+    if ($vs_path) {
+        $saved_vcpkg_root = $env:VCPKG_ROOT
+
+        pushd $vs_path
+#        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
+#        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
+        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
+            $var,$val = $_.split('=')
+            set-item -force "env:\$var" -val $val
+        }
+        popd
+
+        if ($saved_vcpkg_root) {
+            $env:VCPKG_ROOT = $saved_vcpkg_root
+        }
+    }
+}
+
 if (test-path $env:VCPKG_ROOT) {
     $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
 
     if ($iswindows) {
-        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/x64-windows-static) `
-            { 'x64-windows-static' } else { 'x64-windows' }
+        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/${env:Platform}-windows-static) `
+            { "${env:Platform}-windows-static" } else { "${env:Platform}-windows" }
 
         $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
         $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
@@ -1445,41 +1480,6 @@ if (-not $cmds.tac) {
 
 # Aliases to pwsh Cmdlets/functions.
 set-alias s -value select-object -scope global
-
-if ($iswindows) {
-    # Load VS env only once.
-    :OUTER foreach ($vs_year in '2022','2019','2017') {
-        foreach ($vs_type in 'preview','buildtools','community') {
-            foreach ($x86 in '',' (x86)') {
-                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/vc/auxiliary/build"
-
-                if (test-path $vs_path) {
-                    break OUTER
-                }
-                else {
-                    $vs_path=$null
-                }
-            }
-        }
-    }
-
-    if ($vs_path) {
-        $saved_vcpkg_root = $env:VCPKG_ROOT
-
-        pushd $vs_path
-        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
-#        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
-#        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
-            $var,$val = $_.split('=')
-            set-item -force "env:\$var" -val $val
-        }
-        popd
-
-        if ($saved_vcpkg_root) {
-            $env:VCPKG_ROOT = $saved_vcpkg_root
-        }
-    }
-}
 
 # Remove duplicates from $env:PATH.
 $env:PATH = (split_env_path | select -unique) -join $path_sep
