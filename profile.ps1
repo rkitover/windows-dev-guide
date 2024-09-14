@@ -225,12 +225,25 @@ if ($iswindows) {
         $saved_vcpkg_root = $env:VCPKG_ROOT
 
         pushd $vs_path
-#        cmd /c 'vcvars64.bat & set' | ?{ $_ -match '=' } | %{
-#        cmd /c 'vcvars32.bat & set' | ?{ $_ -match '=' } | %{
-        cmd /c 'vcvarsamd64_arm64.bat & set' | ?{ $_ -match '=' } | %{
+
+        $vs_script = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
+            'vcvars64.bat'
+        }
+        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
+            'vcvarsarm64.bat'
+        }
+        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'X86') {
+            'vcvars32.bat'
+        }
+
+        # For ARM64 cross builds.
+#        $vs_script = 'vcvarsamd64_arm64.bat'
+
+        cmd /c "$vs_script & set" } | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
             set-item -force "env:\$var" -val $val
         }
+
         popd
 
         if ($saved_vcpkg_root) {
