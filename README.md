@@ -890,7 +890,7 @@ if ($iswindows) {
         # For ARM64 cross builds.
 #        $vs_script = 'vcvarsamd64_arm64.bat'
 
-        cmd /c "$vs_script & set" } | ?{ $_ -match '=' } | %{
+        cmd /c "$vs_script & set" | ?{ $_ -match '=' } | %{
             $var,$val = $_.split('=')
             set-item -force "env:\$var" -val $val
         }
