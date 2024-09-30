@@ -152,8 +152,15 @@ if (-not (test-path ~/scoop)) {
 }
 
 # BusyBox must be first in the installation order.
-~/scoop/shims/scoop.cmd install busybox bzip2 diffutils dos2unix file gawk grep gzip less make mingw perl ripgrep sed zip unzip
-~/scoop/shims/scoop.cmd shim rm bash # Installed by busybox
+~/scoop/shims/scoop.cmd install busybox-lean base64 bc bind bzip2 dd diffutils dos2unix file gawk gettext grep gzip ipcalc less make mingw openssl perl ripgrep sed tar zip unzip wget
+
+'arch ash basename cal cksum clear comm cp cpio cut date df dirname dpkg dpkg-deb du echo ed env expand expr factor false find fold fsync ftpget ftpput getopt hd head hexdump httpd ln logname lzcat lzma lzop lzopcat md5sum mktemp mv nc nl od paste pgrep pidof pipe_progress printenv printf ps pwd readlink realpath reset rev rm rmdir rpm rpm2cpio seq sh sha1sum sha256sum sha3sum sha512sum shred shuf sleep sort split ssl_client stat sum tac tail tee test time timeout touch tr true truncate ts ttysize uname uncompress unexpand uniq unlink unlzma unlzop unxz usleep uudecode uuencode vi watch wc which xargs xxd xz xzcat yes zcat'.split(' ') | %{
+    ~/scoop/shims/scoop.cmd shim add $_ busybox $_
+}
+
+~/scoop/shims/scoop.cmd bucket add extras
+~/scoop/shims/scoop.cmd install mpv
+
 ~/scoop/shims/scoop.cmd bucket add nerd-fonts
 ~/scoop/shims/scoop.cmd install DejaVuSansMono-NF
 
@@ -180,6 +187,12 @@ scoop update *
 
 Use `winget search` and `scoop search` to look for packages, and `install` to
 install them, and `list` to see locally installed packages.
+
+To completely uninstall Scoop, run `start (gi ~)`, select the `scoop` directory
+in your profile directory in the Explorer window and press `SHIFT+DEL` to wipe
+it. You may want to do this if you screw up your installation or want to run a
+newer version of the [user install
+script](#installing-visual-studio-some-packages-and-scoop).
 
 ### Configure the Terminal
 
@@ -3114,24 +3127,15 @@ sources of course, at varying degrees of functionality.
 
 If you have not installed BusyBox using the [install
 scripts](#installing-visual-studio-some-packages-and-scoop), you can install it
-from Scoop. Be aware however that it will overwrite the shims for GNU programs
-and other programs with its own more limited POSIX versions. You can fix them
-with the `scoop reset <program>` command. I recommend installing BusyBox first
-before any other packages for this reason, which the install scripts here do.
+from Scoop from the `busybox-lean` package. Do **NOT** install the `busybox`
+package, because it installs a bunch of shims that will overwrite the better
+programs for those purposes.
 
-It also installs a `bash` shim, which you most likely don't want, you can remove
-it with `scoop shim rm bash`.
+The [user install script](#installing-visual-studio-some-packages-and-scoop)
+creates shims for the useful and correctly working BusyBox utilities, and
+installs some of the better versions for others.
 
-If you do need to reset your GNU programs and other programs you can use
-something like this:
-
-```powershell
-'gawk','bzip2','diffutils','dos2unix',`
-'grep','gzip','less','sed','unzip' `
-    | %{ scoop reset $_ }
-scoop shim rm bash
-```
-. The shim to start the BusyBox ash shell is `sh`. Or you can invoke it with
+The shim to start the BusyBox ash shell is `sh`. Or you can invoke it with
 `busybox sh`, which is also a way to start any other BusyBox built-ins.
 
 The BusyBox ash shell does not have a default initialization file like a
@@ -3158,6 +3162,7 @@ To make a Windows Terminal profile for BusyBox, you can use something like this:
     "startingDirectory": "%USERPROFILE%"
 }
 ```
+.
 
 ### Using GNU Make
 
