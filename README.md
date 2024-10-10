@@ -918,7 +918,7 @@ if ($iswindows) {
     }
 }
 
-if (test-path $env:VCPKG_ROOT) {
+if ($env:VCPKG_ROOT -and (test-path $env:VCPKG_ROOT)) {
     $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
 
     if ($iswindows) {
