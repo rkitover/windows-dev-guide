@@ -2,10 +2,10 @@
 
 set-service beep -startuptype disabled
 
-'Microsoft.VisualStudio.2022.Community','7zip.7zip','gsass1.NTop','Git.Git',`
-'GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS',`
-'Notepad++.Notepad++','Microsoft.Powershell','Python.Python.3.13',`
-'SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
+echo Microsoft.VisualStudio.2022.Community 7zip.7zip gsass1.NTop Git.Git `
+    GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS `
+    Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 `
+    SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta Microsoft.WindowsTerminal | %{
 	winget install $_
 }
 
@@ -18,7 +18,9 @@ start-process powershell '-noprofile', '-windowstyle', 'hidden', `
 
 new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Program Files/PowerShell/7/pwsh.exe' -propertytype string -force > $null
 
-(gc /programdata/ssh/sshd_config) | %{ $_ -replace '^([^#].*administrators.*)','#$1' } | set-content /programdata/ssh/sshd_config
+$sshd_conf = '/programdata/ssh/sshd_config'
+$conf = gc $sshd_conf | %{ $_ -replace '^([^#].*administrators.*)','#$1' }
+$conf | set-content $sshd_conf
 
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic

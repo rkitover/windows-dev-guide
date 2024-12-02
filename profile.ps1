@@ -686,8 +686,15 @@ if ($iswindows) {
         clear-host
     }
 
-    function global:tmux {
-        wsl tmux -f '~/.tmux-pwsh.conf' @args
+    if ((test-path ~/.tmux-pwsh.conf) -and (test-path /msys64/usr/bin/tmux.exe)) {
+        function global:tmux {
+            /msys64/usr/bin/tmux -f ~/.tmux-pwsh.conf @args
+        }
+    }
+    elseif ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+        function global:tmux {
+            wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+        }
     }
 }
 elseif ($ismacos) {
@@ -775,6 +782,34 @@ if ($iswindows) {
         ssh     = '/prog*s/OpenSSH-*/ssh.exe'
         '7zfm'  = '/prog*s/7-zip/7zfm.exe'
     } | map_alias
+}
+
+# Alias the MSYS2 environments if MSYS2 is installed.
+if ($iswindows -and (test-path /msys64)) {
+    function global:msys2 {
+        $env:MSYSTEM = 'MSYS'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:clang64 {
+        $env:MSYSTEM = 'CLANG64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:ucrt64 {
+        $env:MSYSTEM = 'UCRT64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:mingw64 {
+        $env:MSYSTEM = 'MINGW64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:mingw32 {
+        $env:MSYSTEM = 'MINGW32'
+        /msys64/usr/bin/bash -l
+    }
 }
 
 $cmds = @{}

@@ -41,14 +41,16 @@
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
   - [Using BusyBox](#using-busybox)
+  - [Using MSYS2](#using-msys2)
   - [Using GNU Make](#using-gnu-make)
-  - [Using tmux/screen with PowerShell](#using-tmuxscreen-with-powershell)
+  - [Using tmux with PowerShell](#using-tmux-with-powershell)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes)
     - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
+  - [Appendix B: Using tmux with PowerShell from WSL](#appendix-b-using-tmux-with-powershell-from-wsl)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -100,10 +102,10 @@ see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
 set-service beep -startuptype disabled
 
-'Microsoft.VisualStudio.2022.Community','7zip.7zip','gsass1.NTop','Git.Git',`
-'GnuPG.GnuPG','SourceFoundry.HackFonts','Neovim.Neovim','OpenJS.NodeJS',`
-'Notepad++.Notepad++','Microsoft.Powershell','Python.Python.3.13',`
-'SSHFS-Win.SSHFS-Win','Microsoft.OpenSSH.Beta','Microsoft.WindowsTerminal' | %{
+echo Microsoft.VisualStudio.2022.Community 7zip.7zip gsass1.NTop Git.Git `
+    GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS `
+    Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 `
+    SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta Microsoft.WindowsTerminal | %{
 	winget install $_
 }
 
@@ -116,7 +118,9 @@ start-process powershell '-noprofile', '-windowstyle', 'hidden', `
 
 new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Program Files/PowerShell/7/pwsh.exe' -propertytype string -force > $null
 
-(gc /programdata/ssh/sshd_config) | %{ $_ -replace '^([^#].*administrators.*)','#$1' } | set-content /programdata/ssh/sshd_config
+$sshd_conf = '/programdata/ssh/sshd_config'
+$conf = gc $sshd_conf | %{ $_ -replace '^([^#].*administrators.*)','#$1' }
+$conf | set-content $sshd_conf
 
 set-service sshd -startuptype automatic
 set-service ssh-agent -startuptype automatic
@@ -1352,8 +1356,15 @@ if ($iswindows) {
         clear-host
     }
 
-    function global:tmux {
-        wsl tmux -f '~/.tmux-pwsh.conf' @args
+    if ((test-path ~/.tmux-pwsh.conf) -and (test-path /msys64/usr/bin/tmux.exe)) {
+        function global:tmux {
+            /msys64/usr/bin/tmux -f ~/.tmux-pwsh.conf @args
+        }
+    }
+    elseif ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+        function global:tmux {
+            wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+        }
     }
 }
 elseif ($ismacos) {
@@ -1441,6 +1452,34 @@ if ($iswindows) {
         ssh     = '/prog*s/OpenSSH-*/ssh.exe'
         '7zfm'  = '/prog*s/7-zip/7zfm.exe'
     } | map_alias
+}
+
+# Alias the MSYS2 environments if MSYS2 is installed.
+if ($iswindows -and (test-path /msys64)) {
+    function global:msys2 {
+        $env:MSYSTEM = 'MSYS'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:clang64 {
+        $env:MSYSTEM = 'CLANG64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:ucrt64 {
+        $env:MSYSTEM = 'UCRT64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:mingw64 {
+        $env:MSYSTEM = 'MINGW64'
+        /msys64/usr/bin/bash -l
+    }
+
+    function global:mingw32 {
+        $env:MSYSTEM = 'MINGW32'
+        /msys64/usr/bin/bash -l
+    }
 }
 
 $cmds = @{}
@@ -3149,7 +3188,24 @@ $env:ENV = (convert-path ~/.shrc)
 , to point to one, which the [profile](#setting-up-powershell) does for you if
 you create one.
 
-You may like my Git prompt which works with BusyBox ash, you can find it
+Here is a basic `.shrc` file you can use (it is in this repository):
+
+[//]: # "BEGIN INCLUDED .shrc"
+
+```sh
+export LC_ALL=en_DE.UTF-8
+export PAGER=less
+
+stty -ixon 2>/dev/null
+
+set -o notify
+set -o ignoreeof
+
+alias ls='ls -h --color=auto'
+
+# vim:ft=bash sw=4 et sts=4:
+```
+. You may like my Git prompt which works with BusyBox ash, you can find it
 [here](https://github.com/rkitover/sh-prompt-simple).
 
 To make a Windows Terminal profile for BusyBox, you can use something like this:
@@ -3162,6 +3218,227 @@ To make a Windows Terminal profile for BusyBox, you can use something like this:
     "hidden": false,
     "name": "BusyBox ash",
     "startingDirectory": "%USERPROFILE%"
+}
+```
+.
+
+### Using MSYS2
+
+[MSYS2](https://msys2.org/) is a [Cygwin](https://cygwin.com/) runtime system
+for Windows with some patches for basic paths translations, which make it more
+convenient than Cygwin to use as a Windows shell.
+
+Run this script from a local admin terminal, which is in this repository as
+`install-msys2.ps1`, to install MSYS2:
+
+[///]: # "BEGIN INCLUDED install-msys2.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+if (-not (test-path /msys64)) {
+    winget install --force msys2.msys2
+}
+
+$nsswitch_conf = '/msys64/etc/nsswitch.conf'
+$conf = gc $nsswitch_conf | %{ $_ -replace '^db_home:.*','db_home: windows' }
+$conf | set-content $nsswitch_conf
+
+$env:MSYSTEM = 'MSYS'
+
+1..5 | %{ /msys64/usr/bin/bash -l -c 'pacman -Syu --noconfirm' }
+
+/msys64/usr/bin/bash -l -c 'pacman -S --noconfirm --needed man-db vim git openssh tmux tree mingw-w64-clang-x86_64-ripgrep'
+
+if (-not (test-path ~/.bash_profile)) {
+    "source ~/.bashrc`n" | set-content ~/.bash_profile
+}
+
+if (-not (test-path ~/.bashrc)) {
+    # SET BACK TO MASTER ON FINAL COMMIT
+    iwr 'https://raw.githubusercontent.com/rkitover/windows-dev-guide/refs/heads/master/.bashrc' -out ~/.bashrc
+}
+```
+. The script installs a basic `.bashrc` if you do not have one, this is the
+file:
+
+[//]: # "BEGIN INCLUDED .bashrc"
+
+```bash
+export LC_ALL=en_DE.UTF-8
+export PAGER=less
+
+stty -ixon 2>/dev/null
+
+ulimit -c unlimited
+
+set -o notify
+set -o ignoreeof
+
+# Remove background colors from `dircolors`.
+eval "$(f=$(mktemp); dircolors -p | \
+    sed 's/ 4[0-9];/ 01;/; s/;4[0-9];/;01;/g; s/;4[0-9] /;01 /' > "$f"; \
+    dircolors "$f"; rm "$f")"
+
+alias ls="ls -h --color=auto --hide='ntuser*' --hide='NTUSER*'"
+alias grep="grep --color=auto"
+alias egrep="egrep --color=auto"
+alias fgrep="fgrep --color=auto"
+
+if [ -n "$MSYSTEM" ]; then
+    [ -x /clang64/bin/rg ]  && alias rg=/clang64/bin/rg
+    [ -x /clang64/bin/rga ] && alias rga=/clang64/bin/rga
+fi
+
+shopt -s histappend
+shopt -s globstar
+shopt -s checkwinsize
+
+PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+
+COMP_CONFIGURE_HINTS=1
+COMP_TAR_INTERNAL_PATHS=1
+
+source /usr/share/bash-completion/bash_completion 2>/dev/null
+
+export HISTSIZE=30000
+export HISTCONTROL=$HISTCONTROL${HISTCONTROL+,}ignoredups:erasedups
+export HISTIGNORE=$'[ \t]*:&:[fb]g:exit:ls' # Ignore the ls command as well
+```
+. The example [profile](#setting-up-powershell) adds some functions for launching
+the MSYS2 [environments](https://www.msys2.org/docs/environments/), for example
+`msys2` will launch an `MSYS` environment shell, while `clang64` will launch a
+shell for building with `CLANG64` etc..
+
+If you would like to use my prompt with MSYS2, you can find it
+[here](https://github.com/rkitover/sh-prompt-simple), it allows turning off Git
+status when more speed is needed.
+
+If you would like history completions in bash, try
+[this](https://gist.github.com/rkitover/970543715c23976ca86a6c3390f2cbf2).
+
+To add MSYS2 environments to your Terminal menu, add this to your
+`settings.json`:
+
+```json
+            {
+                "commandline": "C:\\msys64\\msys2_shell.cmd -defterm -here -no-start -msys2 -shell bash",
+                "guid": "{656f4496-bff3-4876-acc4-8c5cd3c7c91c}",
+                "hidden": false,
+                "icon": "C:\\msys64\\msys2.ico",
+                "name": "MSYS2: MSYS",
+                "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "commandline": "C:\\msys64\\msys2_shell.cmd -defterm -here -no-start -clang64 -shell bash",
+                "guid": "{a6af7f5b-1a50-4f7e-828d-26c3977be4ef}",
+                "hidden": false,
+                "icon": "C:\\msys64\\clang64.ico",
+                "name": "MSYS2: CLANG64",
+                "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "commandline": "C:\\msys64\\msys2_shell.cmd -defterm -here -no-start -ucrt64 -shell bash",
+                "guid": "{b973b9fa-fa61-4487-bdc1-4716f91aad00}",
+                "hidden": false,
+                "icon": "C:\\msys64\\ucrt64.ico",
+                "name": "MSYS2: UCRT64",
+                "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "commandline": "C:\\msys64\\msys2_shell.cmd -defterm -here -no-start -mingw64 -shell bash",
+                "guid": "{ac1f6f05-bc9d-4617-9554-6f783e9afef5}",
+                "hidden": false,
+                "icon": "C:\\msys64\\mingw64.ico",
+                "name": "MSYS2: MINGW64",
+                "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "commandline": "C:\\msys64\\msys2_shell.cmd -defterm -here -no-start -mingw32 -shell bash",
+                "guid": "{f2f8f3b2-52b2-42a9-84b2-a3c6826353e2}",
+                "hidden": false,
+                "icon": "C:\\msys64\\mingw32.ico",
+                "name": "MSYS2: MINGW32",
+                "startingDirectory": "%USERPROFILE%"
+            }
+```
+.
+
+
+To install the basic set of build programs for an MSYS2 environment, use the
+script `install-msys2-buildenv.ps1` from this repo with the build environment
+you want as the argument, the default is `CLANG64`. This script does not have to
+be run as an admin. Here it is:
+
+[//]: # "BEGIN INCLUDED install-msys2-buildenv.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+$env:PATH = "C:\msys64\usr\bin;$env:PATH"
+
+if (-not $args) {
+    $args = 'clang64'
+}
+
+foreach ($env in $args) {
+    $env = $env.tolower()
+
+    if ($env -eq 'msys') {
+	$arch = ''
+    }
+    elseif ($env -eq 'clang64') {
+	$arch = 'mingw-w64-clang-x86_64'
+    }
+    elseif ($env -eq 'clangarm64') {
+	$arch = 'mingw-w64-clang-aarch64'
+    }
+    elseif ($env -eq 'mingw32') {
+	$arch = 'mingw-w64-i686'
+    }
+    elseif ($env -eq 'ucrt64') {
+	$arch = 'mingw-w64-ucrt-x86_64'
+    }
+    elseif ($env -eq 'mingw64') {
+	$arch = 'mingw-w64-x86_64'
+    }
+    else {
+	write-error -ea stop "Unknown MSYS2 build environment: $env"
+    }
+
+    if ($env -eq 'msys') {
+	$pkgs = echo isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime 
+    }
+    else {
+	$pkgs = echo crt-git headers-git tools-git libmangle-git
+    }
+
+    if ($env -match '64$') {
+	$pkgs += 'extra-cmake-modules'
+    }
+
+    if ($env -eq 'clang64') {
+	$pkgs += echo lldb clang
+    }
+    else {
+	$pkgs += echo gcc gcc-libs
+
+	if ($env -ne 'msys') {
+	    $pkgs += 'gcc-libgfortran'
+	}
+    }
+
+    $pkgs += echo binutils cmake make pkgconf `
+	windows-default-manifest ninja gdb ccache
+
+    if ($arch) {
+	$pkgs = $pkgs | %{ "${arch}-$_" }
+    }
+
+    $pkgs += echo git make
+
+    /msys64/usr/bin/pacman -Sy --noconfirm
+    /msys64/usr/bin/pacman -S --noconfirm --needed $pkgs
 }
 ```
 .
@@ -3215,23 +3492,25 @@ backslashes as that is an escape character in POSIX shells, you can enclose them
 in single quotes or use forward slashes, which work for the vast majority of
 Windows programs.
 
-### Using tmux/screen with PowerShell
+### Using tmux with PowerShell
 
-It is possible to use tmux from WSL with PowerShell.
+Recent changes in the Cygwin runtime allow for using a Cygwin runtime-based tmux
+like the one in MSYS2.
 
-This section is based on the guide by [superuser.com](https://superuser.com/)
-member NotTheDr01ds [here](https://superuser.com/a/1643117/226829).
+First follow the instructions in the [Using MSYS2](#using-msys2) section to
+install MSYS2, which also install its tmux package.
 
-First set up WSL with your distribution of choice, I won't cover this here as
-there are many excellent guides available. If for some reason you are not able
-to use virtual machines with Hyper-V, you can use WSL version 1 which is not a
-virtual machine.
+If you would prefer to use tmux from WSL, see [Appendix B: Using tmux with
+PowerShell from WSL](#appendix-b-using-tmux-with-powershell-from-wsl).
 
-Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
-configuration of choice including this statement:
+Then, create a `~/.tmux-pwsh.conf` with your tmux configuration of choice, with
+the following at the very end:
 
+[//]: # "BEGIN INCLUDED .tmux-pwsh.conf"
 ```tmux
-set -g default-command "cd \"\$(wslpath \"\$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')\")\"; '/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo"
+orig_path="$PATH"
+set-environment -g PATH "/c/msys64/usr/bin:$PATH"
+set -g default-command "PATH='$orig_path' /c/progra~1/PowerShell/7/pwsh -nologo"
 ```
 . If you want to use a configuration that behaves like screen I have one
 [here](https://github.com/rkitover/tmux-screen-compat). You can load a
@@ -3241,7 +3520,7 @@ the tmux config.
 To run tmux, run:
 
 ```powershell
-wsl tmux -f '~/.tmux-pwsh.conf'
+/msys64/usr/bin/tmux -f '~/.tmux-pwsh.conf'
 ```
 . The included [profile](#setting-up-powershell) function `tmux` will do this,
 and also run tmux commands for your current session.
@@ -3725,5 +4004,36 @@ move any files there to the new location.
 Many packages simply run an installer and do not install to any
 specific location, however various package metadata will still be
 available under `/ProgramData/chocolatey/lib/<package>`.
+
+### Appendix B: Using tmux with PowerShell from WSL
+
+It is possible to use tmux from WSL with PowerShell.
+
+This section is based on the guide by [superuser.com](https://superuser.com/)
+member NotTheDr01ds [here](https://superuser.com/a/1643117/226829).
+
+First set up WSL with your distribution of choice, I won't cover this here as
+there are many excellent guides available. If for some reason you are not able
+to use virtual machines with Hyper-V, you can use WSL version 1 which is not a
+virtual machine.
+
+Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
+configuration of choice including this statement:
+
+```tmux
+set -g default-command "'/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo -noexit -c sl"
+```
+. If you want to use a configuration that behaves like screen I have one
+[here](https://github.com/rkitover/tmux-screen-compat). You can load a
+configuration file before the preceding statement with the `source` statement in
+the tmux config.
+
+To run tmux, run:
+
+```powershell
+wsl -- tmux -f '~/.tmux-pwsh.conf'
+```
+. The included [profile](#setting-up-powershell) function `tmux` will do this,
+and also run tmux commands for your current session.
 
 <!--- vim:set et sw=4 tw=80: --->

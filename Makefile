@@ -4,7 +4,10 @@ README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
 	.install.ps1-include-stamp .install-user.ps1-include-stamp \
 	.ports-task.ps1-include-stamp .build-task.ps1-include-stamp \
 	.choco-install.ps1-include-stamp ..vimrc-include-stamp \
-	.make-busybox.cmd-include-stamp .make-git-bash.cmd-include-stamp
+	.make-busybox.cmd-include-stamp .make-git-bash.cmd-include-stamp \
+	..shrc-include-stamp ..tmux-pwsh.conf-include-stamp \
+	.install-msys2.ps1-include-stamp ..bashrc-include-stamp \
+	.install-msys2-buildenv.ps1-include-stamp
 
 .%-include-stamp: %
 	@echo Inserting updated $<
@@ -26,7 +29,7 @@ else
 endif
 
 .link-check-stamp: README.md
-	@node --no-deprecation '$(shell $(NPM) root -g)'/markdown-link-check/markdown-link-check -q README.md
+	@markdown-link-check -q README.md
 	@touch .link-check-stamp
 
 .PHONY: clean

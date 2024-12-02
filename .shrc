@@ -1,0 +1,11 @@
+export LC_ALL=en_DE.UTF-8
+export PAGER=less
+
+stty -ixon 2>/dev/null
+
+set -o notify
+set -o ignoreeof
+
+alias ls='ls -h --color=auto'
+
+# vim:ft=bash sw=4 et sts=4:
