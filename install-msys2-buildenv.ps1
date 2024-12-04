@@ -1,6 +1,7 @@
 $erroractionpreference = 'stop'
 
-$env:PATH = "C:\msys64\usr\bin;$env:PATH"
+$orig_path = $env:PATH
+$env:PATH  = "C:\msys64\usr\bin;$env:PATH"
 
 if (-not $args) {
     $args = 'clang64'
@@ -65,3 +66,5 @@ foreach ($env in $args) {
     /msys64/usr/bin/pacman -Sy --noconfirm
     /msys64/usr/bin/pacman -S --noconfirm --needed $pkgs
 }
+
+$env:PATH = $orig_path

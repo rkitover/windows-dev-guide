@@ -1459,26 +1459,31 @@ if ($iswindows -and (test-path /msys64)) {
     function global:msys2 {
         $env:MSYSTEM = 'MSYS'
         /msys64/usr/bin/bash -l
+        ri env:MSYSTEM
     }
 
     function global:clang64 {
         $env:MSYSTEM = 'CLANG64'
         /msys64/usr/bin/bash -l
+        ri env:MSYSTEM
     }
 
     function global:ucrt64 {
         $env:MSYSTEM = 'UCRT64'
         /msys64/usr/bin/bash -l
+        ri env:MSYSTEM
     }
 
     function global:mingw64 {
         $env:MSYSTEM = 'MINGW64'
         /msys64/usr/bin/bash -l
+        ri env:MSYSTEM
     }
 
     function global:mingw32 {
         $env:MSYSTEM = 'MINGW32'
         /msys64/usr/bin/bash -l
+        ri env:MSYSTEM
     }
 }
 
@@ -3375,7 +3380,8 @@ be run as an admin. Here it is:
 ```powershell
 $erroractionpreference = 'stop'
 
-$env:PATH = "C:\msys64\usr\bin;$env:PATH"
+$orig_path = $env:PATH
+$env:PATH  = "C:\msys64\usr\bin;$env:PATH"
 
 if (-not $args) {
     $args = 'clang64'
@@ -3440,6 +3446,8 @@ foreach ($env in $args) {
     /msys64/usr/bin/pacman -Sy --noconfirm
     /msys64/usr/bin/pacman -S --noconfirm --needed $pkgs
 }
+
+$env:PATH = $orig_path
 ```
 .
 
@@ -3452,12 +3460,12 @@ scripts](#installing-visual-studio-some-packages-and-scoop) here.
 It will however use `cmd.exe` to execute shell commands by default and will not
 run any normal Makefiles for POSIX/Linux.
 
-There are two ways to fix this, one is to use [BusyBox](#using-busybox) ash as
+There are three ways to fix this, one is to use [BusyBox](#using-busybox) ash as
 the shell for Make, which will run POSIX shell commands, which should be
 sufficient for most Makefiles. If, however, you need to run GNU shell commands
-from your Makefiles, you can use Git Bash as the shell, which will run GNU shell
-commands that come with the Git for Windows distribution (which is based on
-MSYS2) and any others in your `$env:PATH`.
+from your Makefiles, you can use MSYS2 or Git Bash as the shell, which will run
+GNU shell commands that come with MSYS2 or the Git for Windows distribution
+(which is based on MSYS2) and any others in your `$env:PATH`.
 
 To use [BusyBox](#using-busybox) ash as your Make shell, create the file
 `~/.local/bin/make.cmd` with the following contents:
@@ -3470,8 +3478,17 @@ To use [BusyBox](#using-busybox) ash as your Make shell, create the file
 , and make sure `~/.local/bin` is in your `$env:PATH`, which the
 [profile](#setting-up-powershell) does for you if it exists.
 
-To use Git Bash as your Make shell, create the file `~/.local/bin/make.cmd` with
-the following contents:
+To use MSYS2 as your Make shell, create the file `~/.local/bin/make.cmd` with the
+following contents:
+
+[//]: # "BEGIN INCLUDED make-msys2.cmd"
+
+```batch
+@make.exe PATH="%PATH%;C:\msys64\usr\bin" SHELL=/msys64/usr/bin/bash %*
+```
+
+. To use Git Bash as your Make shell, create the file `~/.local/bin/make.cmd`
+with the following contents:
 
 [//]: # "BEGIN INCLUDED make-git-bash.cmd"
 
