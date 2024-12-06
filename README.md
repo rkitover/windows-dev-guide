@@ -702,13 +702,6 @@ if ($iswindows) {
         import-module $chocolatey_profile
     }
 
-    # Update environment in case the terminal session environment
-    # is not up to date, but first clear VS env so it does not
-    # accumulate duplicates.
-    gci env: | % name `
-        | ?{ $_ -match '^(__VSCMD|INCLUDE$|LIB$|LIBPATH$)' } `
-        | %{ ri env:\$_ }
-
     if (get-command -ea ignore update-sessionenvironment) {
         update-sessionenvironment
     }
@@ -879,7 +872,7 @@ if ($iswindows) {
     :OUTER foreach ($vs_year in '2022','2019','2017') {
         foreach ($vs_type in 'preview','buildtools','community') {
             foreach ($x86 in '',' (x86)') {
-                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/vc/auxiliary/build"
+                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
 
                 if (test-path $vs_path) {
                     break OUTER
@@ -894,27 +887,24 @@ if ($iswindows) {
     if ($vs_path) {
         $saved_vcpkg_root = $env:VCPKG_ROOT
 
-        pushd $vs_path
-
-        $vs_script = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
-            'vcvars64.bat'
+        $default_host_arch,$default_arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
+            'amd64','amd64'
         }
         elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
-            'vcvarsarm64.bat'
+            'arm64','arm64'
         }
         elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'X86') {
-            'vcvars32.bat'
+            'x86','x86'
         }
 
-        # For ARM64 cross builds.
-#        $vs_script = 'vcvarsamd64_arm64.bat'
+        function global:vsenv($arch, $hostarch) {
+            if (-not $arch)     { $arch     = $default_arch }
+            if (-not $hostarch) { $hostarch = $default_host_arch }
 
-        cmd /c "$vs_script & set" | ?{ $_ -match '=' } | %{
-            $var,$val = $_.split('=')
-            set-item -force "env:\$var" -val $val
+            & $vs_path/Launch-VsDevShell.ps1 -hostarch $hostarch -arch $arch -skipautomaticlocation
         }
 
-        popd
+        vsenv $default_arch $default_host_arch
 
         if ($saved_vcpkg_root) {
             $env:VCPKG_ROOT = $saved_vcpkg_root
@@ -3008,6 +2998,12 @@ the namesake Linux commands in the
 [`$profile`](#setting-up-powershell), including: `pwd`, `which`,
 `type`, `command`, `pgrep`, `pkill`, `head`, `tail`, `tac`, `touch`,
 `sudo`, `env`, and `nproc`.
+
+The [`$profile`](#setting-up-powershell) function `vsenv` will set up the Visual
+Studio environment for the specified architecture, for example `vsenv x64`,
+`vsenv arm64` or `vsenv x86`. By default, the profile loads the environment for
+the host architecture. This can be run to change the environment as many times
+as necessary.
 
 See [here](#elevated-access-sudo) about the `sudo` wrapper.
 
