@@ -274,6 +274,18 @@ https://github.com/microsoft/cascadia-code/releases?WT.mc_id=-blog-scottha
 , you will need it if you decide to use the `oh-my-posh` prompt
 described [here](#setting-up-powershell).
 
+If you want a font that is very legible at very small sizes for more screen
+real estate, try:
+
+https://github.com/koemaeda/gohufont-ttf
+
+, install just the `uni-11.ttf` file.
+
+This font looks terrible with the default ClearType settings, so you will want
+to run the ClearType Tuner and choose the faintest least-sharp variants. Another
+option is to use [MacType](https://www.mactype.net/) which makes fonts use
+greyscale antialiasing.
+
 In the profile list section, in the entry that lists:
 
 ```jsonc
