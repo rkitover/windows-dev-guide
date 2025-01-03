@@ -103,11 +103,43 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
+function global:remove_path_spaces($path) {
+    if (-not $path) { $path = $($input) }
+
+    if (-not $iswindows) { return $path }
+
+    if (-not $path) { return $path }
+
+    $parts = while ($path -notmatch '^\w+:[\\/]$') {
+        $leaf = split-path -leaf   $path
+        $path = split-path -parent $path
+
+        $fs = new-object -comobject scripting.filesystemobject
+
+        if ($leaf -match ' ') {
+            $leaf = if ((gi "${path}/$leaf").psiscontainer) {
+                split-path -leaf $fs.getfolder("${path}/$leaf").shortname
+            }
+            else {
+                split-path -leaf $fs.getfile("${path}/$leaf").shortname
+            }
+        }
+        
+        $leaf.tolower()
+    }
+
+    if ($parts) { [array]::reverse($parts) }
+
+    $path = $path -replace '[\\/]+', ''
+
+    $path + '/' + ($parts -join '/')
+}
+
 function global:shortpath($str) {
     if (-not $str) { $str = $($input) }
 
     $str | resolve-path -ea ignore | % path `
-        | trim_curdrive | backslashes_to_forward
+        | remove_path_spaces | trim_curdrive | backslashes_to_forward
 }
 
 function global:realpath($str) {
@@ -537,10 +569,7 @@ if ($iswindows) {
             set-alias nvim -value $vim -scope global
         }
 
-        # Remove spaces from path if possible, because this breaks UNIX ports.
-        $env:EDITOR = realpath $vim `
-            | %{ $_ -replace '/Program Files/','/progra~1/' } `
-            | %{ $_ -replace '/Program Files (x86)/','/progra~2/' } `
+        $env:EDITOR = shortpath $vim
     }
 }
 else {

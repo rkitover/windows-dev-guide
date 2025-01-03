@@ -439,6 +439,8 @@ $env:EDITOR = $nano -replace '\\','/'
 . This will also work well with things you use from UNIX-compatible
 environments like Cygwin, MSYS2, etc. if you end up doing that.
 
+The [profile](#setting-up-powershell) function `shortpath` will do this for you.
+
 Another option is to set it in Git config, which will override the
 environment variables, for example:
 
@@ -756,16 +758,16 @@ function split_env_path {
     } | ? length
 }
 
-function sysdrive {
-    if ($iswindows) { $env:SystemDrive }
+function curdrive {
+    if ($iswindows) { $pwd.drive.name + ':' }
 }
 
-function trim_sysdrive($str) {
+function trim_curdrive($str) {
     if (-not $str) { $str = $input }
 
     if (-not $iswindows) { return $str }
 
-    $str -replace ('^'+[regex]::escape((sysdrive))),''
+    $str -replace ('^'+[regex]::escape((curdrive))),''
 }
 
 function home_to_tilde($str) {
@@ -785,11 +787,43 @@ function backslashes_to_forward($str) {
     $str -replace '\\','/'
 }
 
+function global:remove_path_spaces($path) {
+    if (-not $path) { $path = $($input) }
+
+    if (-not $iswindows) { return $path }
+
+    if (-not $path) { return $path }
+
+    $parts = while ($path -notmatch '^\w+:[\\/]$') {
+        $leaf = split-path -leaf   $path
+        $path = split-path -parent $path
+
+        $fs = new-object -comobject scripting.filesystemobject
+
+        if ($leaf -match ' ') {
+            $leaf = if ((gi "${path}/$leaf").psiscontainer) {
+                split-path -leaf $fs.getfolder("${path}/$leaf").shortname
+            }
+            else {
+                split-path -leaf $fs.getfile("${path}/$leaf").shortname
+            }
+        }
+        
+        $leaf.tolower()
+    }
+
+    if ($parts) { [array]::reverse($parts) }
+
+    $path = $path -replace '[\\/]+', ''
+
+    $path + '/' + ($parts -join '/')
+}
+
 function global:shortpath($str) {
     if (-not $str) { $str = $($input) }
 
     $str | resolve-path -ea ignore | % path `
-        | trim_sysdrive | backslashes_to_forward
+        | remove_path_spaces | trim_curdrive | backslashes_to_forward
 }
 
 function global:realpath($str) {
@@ -909,6 +943,8 @@ if ($iswindows) {
             'x86','x86'
         }
 
+        # For ARM64 cross builds.
+#        $arch = 'arm64'
         function global:vsenv($arch, $hostarch) {
             if (-not $arch)     { $arch     = $default_arch }
             if (-not $hostarch) { $hostarch = $default_host_arch }
@@ -1217,10 +1253,7 @@ if ($iswindows) {
             set-alias nvim -value $vim -scope global
         }
 
-        # Remove spaces from path if possible, because this breaks UNIX ports.
-        $env:EDITOR = realpath $vim `
-            | %{ $_ -replace '/Program Files/','/progra~1/' } `
-            | %{ $_ -replace '/Program Files (x86)/','/progra~2/' } `
+        $env:EDITOR = shortpath $vim
     }
 }
 else {
@@ -3046,11 +3079,13 @@ alias `select-object` to `s`.
 The `readshim` function will give you the installed target of WinGet symlinks,
 Scoop shims and Chocolatey shims for executables you have installed.
 
-The `shortpath` function will convert a raw path to a nicer form
-with the sysdrive removed, it can take args or pipeline input. The
-`realpath` function will give the canonical path with sysdrive using
-forward slashes, while `sysppath` will give you the standard Windows
-path with backslashes for e.g. passing to `cmd /c` commands.
+The `shortpath` function will convert a raw path to a nicer form with the
+current drive removed and path parts with spaces replaced with short DOS paths,
+it can take args or pipeline input.
+
+The `realpath` function will give the canonical path with sysdrive using forward
+slashes, while `sysppath` will give you the standard Windows path with
+backslashes for e.g. passing to `cmd /c` commands.
 
 The `megs` function will show you the size of a file in mebibytes,
 this is not really the right way to do this, the right way would be
