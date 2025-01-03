@@ -74,16 +74,16 @@ function split_env_path {
     } | ? length
 }
 
-function sysdrive {
-    if ($iswindows) { $env:SystemDrive }
+function curdrive {
+    if ($iswindows) { $pwd.drive.name + ':' }
 }
 
-function trim_sysdrive($str) {
+function trim_curdrive($str) {
     if (-not $str) { $str = $input }
 
     if (-not $iswindows) { return $str }
 
-    $str -replace ('^'+[regex]::escape((sysdrive))),''
+    $str -replace ('^'+[regex]::escape((curdrive))),''
 }
 
 function home_to_tilde($str) {
@@ -107,7 +107,7 @@ function global:shortpath($str) {
     if (-not $str) { $str = $($input) }
 
     $str | resolve-path -ea ignore | % path `
-        | trim_sysdrive | backslashes_to_forward
+        | trim_curdrive | backslashes_to_forward
 }
 
 function global:realpath($str) {
@@ -227,6 +227,8 @@ if ($iswindows) {
             'x86','x86'
         }
 
+        # For ARM64 cross builds.
+#        $arch = 'arm64'
         function global:vsenv($arch, $hostarch) {
             if (-not $arch)     { $arch     = $default_arch }
             if (-not $hostarch) { $hostarch = $default_host_arch }
