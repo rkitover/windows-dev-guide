@@ -3083,8 +3083,8 @@ The `shortpath` function will convert a raw path to a nicer form with the
 current drive removed and path parts with spaces replaced with short DOS paths,
 it can take args or pipeline input.
 
-The `realpath` function will give the canonical path with sysdrive using forward
-slashes, while `sysppath` will give you the standard Windows path with
+The `realpath` function is the same as `shortpath` but does not remove the
+current drive, while `sysppath` will give you the standard Windows path with
 backslashes for e.g. passing to `cmd /c` commands.
 
 The `megs` function will show you the size of a file in mebibytes,

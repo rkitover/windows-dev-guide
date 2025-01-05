@@ -145,7 +145,8 @@ function global:shortpath($str) {
 function global:realpath($str) {
     if (-not $str) { $str = $($input) }
 
-    $str | resolve-path -ea ignore | % path | backslashes_to_forward
+    $str | resolve-path -ea ignore | % path `
+        | remove_path_spaces | backslashes_to_forward
 }
 
 function global:syspath($str) {
@@ -569,7 +570,7 @@ if ($iswindows) {
             set-alias nvim -value $vim -scope global
         }
 
-        $env:EDITOR = shortpath $vim
+        $env:EDITOR = realpath $vim
     }
 }
 else {
