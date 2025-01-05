@@ -1921,6 +1921,7 @@ Here are a few:
 | mkdir                              | New-Item -ItemType Directory                          | mkdir                  |
 | which (custom)                     | Get-Command                                           | command -v, which      |
 | gci -r                             | Get-ChildItem -Recurse                                | find                   |
+| gci -dir                           | Get-ChildItem -Directory                              | find -type d           |
 | ni                                 | New-Item                                              | touch <new-file>       |
 | sls -ca                            | Select-String -CaseSensitive                          | grep                   |
 | sls                                | Select-String                                         | grep -i                |
