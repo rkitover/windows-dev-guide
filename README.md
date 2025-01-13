@@ -219,6 +219,7 @@ In the global settings, above the `"profiles"` section, add:
 "largePasteWarning": false,
 "multiLinePasteWarning": false,
 "windowingBehavior": "useAnyExisting",
+"defaultProfile": "PowerShell"
 ```
 . In the `"profiles"` `"defaults"` section add:
 
