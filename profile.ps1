@@ -810,37 +810,37 @@ if ($iswindows) {
 if ($iswindows -and (test-path /msys64)) {
     function global:msys2 {
         $env:MSYSTEM = 'MSYS'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:msys {
         $env:MSYSTEM = 'MSYS'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:clang64 {
         $env:MSYSTEM = 'CLANG64'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:ucrt64 {
         $env:MSYSTEM = 'UCRT64'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:mingw64 {
         $env:MSYSTEM = 'MINGW64'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:mingw32 {
         $env:MSYSTEM = 'MINGW32'
-        /msys64/usr/bin/bash -l
+        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 }
