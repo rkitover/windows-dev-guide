@@ -158,7 +158,7 @@ if (-not (test-path ~/scoop)) {
 function scoop { & ~/scoop/apps/scoop/current/bin/scoop.ps1 @args }
 
 # BusyBox must be first in the installation order.
-scoop install busybox-lean base64 bc bind bzip2 dd diffutils dos2unix file gawk gettext grep gzip ipcalc less make mingw openssl perl ripgrep sed tar zip unzip wget
+scoop install busybox-lean base64 bc bind bzip2 dd diffutils dos2unix file gawk gettext grep gzip ipcalc less make openssl perl ripgrep sed tar zip unzip wget
 
 'arch ash basename cal cksum clear comm cp cpio cut date df dirname dpkg dpkg-deb du echo ed env expand expr factor false find fold fsync ftpget ftpput getopt hd head hexdump httpd ln logname lzcat lzma lzop lzopcat md5sum mktemp mv nc nl od paste pgrep pidof pipe_progress printenv printf ps pwd readlink realpath reset rev rm rmdir rpm rpm2cpio seq sh sha1sum sha256sum sha3sum sha512sum shred shuf sleep sort split ssl_client stat sum tac tail tee test time timeout touch tr true truncate ts ttysize uname uncompress unexpand uniq unlink unlzma unlzop unxz usleep uudecode uuencode vi watch wc which xargs xxd xz xzcat yes zcat'.split(' ') | %{
     scoop shim add $_ busybox $_
@@ -3202,10 +3202,12 @@ dumpbin /symbols foo.lib
 ```powershell
 dumpbin /disasm foo.exe
 ```
-. The [install scripts](#installing-visual-studio-some-packages-and-scoop)
-install the Scoop "mingw" package for MinGW GCC and Binutils, which will not
-conflict with native build tools and include some useful utilities like
+. If you like, you can  install the Scoop "mingw" package for MinGW GCC and Binutils, but be aware that 
+it will conflict with native build tools. It includes some useful utilities like
 `strings`. See `gci (split-path -parent (gcm gcc))` for the full list.
+
+To force `cmake` to use MSVC when the Scoop "mingw" package is installed, pass
+the following to `cmake`: `-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl` .
 
 The commands `curl` and `tar` are now standard Windows commands. The
 implementation of `tar` is not particularly wonderful, it currently does not
@@ -3506,7 +3508,7 @@ $env:PATH = $orig_path
 ### Using GNU Make
 
 GNU Make is available from the "make" Scoop package and also comes with the
-"mingw" Scoop package, both of which are installed by the [install
+"mingw" Scoop package, the "make" package is installed by the [install
 scripts](#installing-visual-studio-some-packages-and-scoop) here.
 
 It will however use `cmd.exe` to execute shell commands by default and will not
