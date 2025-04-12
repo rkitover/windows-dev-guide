@@ -933,8 +933,6 @@ if ($iswindows) {
     }
 
     if ($vs_path) {
-        $saved_vcpkg_root = $env:VCPKG_ROOT
-
         $default_host_arch,$default_arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
             'amd64','amd64'
         }
@@ -945,20 +943,20 @@ if ($iswindows) {
             'x86','x86'
         }
 
-        # For ARM64 cross builds.
-#        $arch = 'arm64'
         function global:vsenv($arch, $hostarch) {
             if (-not $arch)     { $arch     = $default_arch }
             if (-not $hostarch) { $hostarch = $default_host_arch }
 
+            $saved_vcpkg_root = $env:VCPKG_ROOT
+
             & $vs_path/Launch-VsDevShell.ps1 -hostarch $hostarch -arch $arch -skipautomaticlocation
+
+            if ($saved_vcpkg_root) {
+                $env:VCPKG_ROOT = $saved_vcpkg_root
+            }
         }
 
         vsenv $default_arch $default_host_arch
-
-        if ($saved_vcpkg_root) {
-            $env:VCPKG_ROOT = $saved_vcpkg_root
-        }
     }
 }
 
