@@ -5,8 +5,8 @@ $taskname = 'Forward Server Ports'
 $trigger = new-scheduledtasktrigger -atlogon
 
 $action  = new-scheduledtaskaction `
-    -execute (get-command powershell).source `
-    -argument '-noprofile -executionpolicy remotesigned -command "while ($true) { ssh -NT server-ports }"'
+    -execute (get-command ssh).source `
+    -argument '-NT server-ports'
 
 $password = (get-credential $env:username).getnetworkcredential().password
 
