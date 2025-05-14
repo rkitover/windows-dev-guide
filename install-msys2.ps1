@@ -5,8 +5,10 @@ if (-not (test-path /msys64)) {
 }
 
 $nsswitch_conf = '/msys64/etc/nsswitch.conf'
-$conf = gc $nsswitch_conf | %{ $_ -replace '^db_home:.*','db_home: windows' }
-$conf | set-content $nsswitch_conf
+$pacman_conf   = '/msys64/etc/pacman.conf'
+
+@(gc $nsswitch_conf) | %{ $_ -replace '^db_home:.*','db_home: windows' } | set-content $nsswitch_con
+@(gc $pacman_conf)   | %{ $_ -replace '^CheckSpace','#CheckSpace'      } | set-content $pacman_conf
 
 $env:MSYSTEM = 'MSYS'
 
