@@ -33,7 +33,7 @@ foreach ($env in $args) {
     }
 
     if ($env -eq 'msys') {
-	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool
+	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool zlib
     }
     else {
 	$pkgs = write crt-git headers-git tools-git libmangle-git
