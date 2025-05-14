@@ -33,10 +33,10 @@ foreach ($env in $args) {
     }
 
     if ($env -eq 'msys') {
-	$pkgs = echo isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime 
+	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool
     }
     else {
-	$pkgs = echo crt-git headers-git tools-git libmangle-git
+	$pkgs = write crt-git headers-git tools-git libmangle-git
     }
 
     if ($env -match '64$') {
@@ -44,24 +44,24 @@ foreach ($env in $args) {
     }
 
     if ($env -eq 'clang64') {
-	$pkgs += echo lldb clang
+	$pkgs += write lldb clang
     }
     else {
-	$pkgs += echo gcc gcc-libs
+	$pkgs += write gcc gcc-libs
 
 	if ($env -ne 'msys') {
 	    $pkgs += 'gcc-libgfortran'
 	}
     }
 
-    $pkgs += echo binutils cmake make pkgconf `
+    $pkgs += write binutils cmake make pkgconf `
 	windows-default-manifest ninja gdb ccache
 
     if ($arch) {
 	$pkgs = $pkgs | %{ "${arch}-$_" }
     }
 
-    $pkgs += echo git make
+    $pkgs += write git make
 
     /msys64/usr/bin/pacman -Sy --noconfirm
     /msys64/usr/bin/pacman -S --noconfirm --needed $pkgs
