@@ -54,8 +54,7 @@ foreach ($env in $args) {
 	}
     }
 
-    $pkgs += write binutils cmake make pkgconf `
-	windows-default-manifest ninja gdb ccache
+    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja gdb ccache
 
     if ($arch) {
 	$pkgs = $pkgs | %{ "${arch}-$_" }

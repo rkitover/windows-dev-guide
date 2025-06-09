@@ -40,6 +40,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
+  - [Using vcpkg Ports for Dependencies to Build Projects](#using-vcpkg-ports-for-dependencies-to-build-projects)
   - [Using BusyBox](#using-busybox)
   - [Using MSYS2](#using-msys2)
   - [Using GNU Make](#using-gnu-make)
@@ -102,10 +103,10 @@ see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
 set-service beep -startuptype disabled
 
-echo Microsoft.VisualStudio.2022.Community 7zip.7zip gsass1.NTop Git.Git `
+write Microsoft.VisualStudio.2022.Community 7zip.7zip gsass1.NTop Git.Git `
     GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS `
     Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 `
-    SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Beta Microsoft.WindowsTerminal | %{
+    SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Preview Microsoft.WindowsTerminal | %{
 	winget install $_
 }
 
@@ -3221,6 +3222,96 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 Many more things are available from WinGet, Scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
 
+### Using vcpkg Ports for Dependencies to Build Projects
+
+[vcpkg](https://github.com/microsoft/vcpkg) is a cross-platform port system for
+Open Source libraries and tools developed by Microsoft in CMake and C++.
+
+Here I will describe its basic usage to provide dependencies for a CMake
+project.
+
+The first step is to clone the vcpkg repository and bootstrap it:
+
+```powershell
+ni -it dir ~/source/repos -ea ignore
+sl ~/source/repos
+git clone https://github.com/microsoft/vcpkg
+sl vcpkg
+./bootstrap-vcpkg.bat
+```
+. If you are using my [$profile](#setting-up-powershell), then restart your
+PowerShell session for some environment variable and global variables to be
+initialized, if not follow along here.
+
+In your `$profile` add the following (the one here already does this:)
+
+```powershell
+$env:VCPKG_ROOT            = $env:USERPROFILE + '\source\repos\vcpkg'
+$global:vcpkg_toolchain    = $env:VCPKG_ROOT  + '\scripts\buildsystems\vcpkg.cmake'
+$env:VCPKG_DEFAULT_TRIPLET = "${env:Platform}-windows-static"
+set-alias vcpkg ($env:USERPROFILE + '\source\repos\vcpkg\vcpkg.exe')
+```
+. Here `${env:Platform}` will be either `x64` for Intel/AMD computers or `arm64`
+for ARM64-based ones. Reload your profile.
+
+As an example, I will demonstrate how to build the
+[ccache](https://github.com/ccache/ccache) project with vcpkg ports for most of
+the dependencies.
+
+First, clone the project:
+
+```powershell
+sl ~/source/repos
+git clone https://github.com/ccache/ccache
+```
+. Next, build the vcpkg ports for the dependencies:
+
+```powershell
+vcpkg --triplet x64-windows-static install zstd hiredis blake3 cpp-httplib doctest fmt tl-expected xxhash
+```
+. Next, configure ccache:
+
+```powershell
+sl ~/source/repos/ccache
+ni -it dir build-msvc64
+sl build-msvc64
+ri -r -fo ~/source/repos/ccache/build-msvc64/*; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$vcpkg_toolchain" -DVCPKG_TARGET_TRIPLET=x64-windows-target -G Ninja
+```
+. You will see output such as:
+
+```console
+--   Dependencies:
+--     Blake3     /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/lib/blake3.lib)            SYSTEM
+--     CppHttplib /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/include/httplib.h)         SYSTEM
+--     Doctest    /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/include/doctest/doctest.h) SYSTEM
+--     Fmt        /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/lib/fmt.lib)               SYSTEM
+--     Hiredis    /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/lib/hiredis.lib)           SYSTEM
+--     NonstdSpan 0.11.0                                                                                  BUNDLED
+--     TlExpected /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/include/tl/expected.hpp)   SYSTEM
+--     Xxhash     /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/lib/xxhash.lib)            SYSTEM
+--     Zstd       /Users/rkito/source/repos/vcpkg/installed/x64-windows-static/lib/zstd.lib)              SYSTEM
+```
+, which indicates that the vcpkg-built ports are being used. Next, build the
+project:
+
+```powershell
+ninja
+```
+. You can verify that the built executable is statically linked by doing:
+
+```powershell
+dumpbin /dependents ccache.exe
+```
+. vcpkg is not necessary for building this particular project, but I am just
+using it as an example of basic usage of vcpkg.
+
+To upgrade your installed ports, do something like:
+
+```powershell
+vcpkg --triplet x64-windows-static upgrade --no-dry-run
+```
+.
+
 ### Using BusyBox
 
 If you have not installed BusyBox using the [install
@@ -3465,10 +3556,10 @@ foreach ($env in $args) {
     }
 
     if ($env -eq 'msys') {
-	$pkgs = echo isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime 
+	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool zlib-devel
     }
     else {
-	$pkgs = echo crt-git headers-git tools-git libmangle-git
+	$pkgs = write crt-git headers-git tools-git libmangle-git
     }
 
     if ($env -match '64$') {
@@ -3476,24 +3567,23 @@ foreach ($env in $args) {
     }
 
     if ($env -eq 'clang64') {
-	$pkgs += echo lldb clang
+	$pkgs += write lldb clang
     }
     else {
-	$pkgs += echo gcc gcc-libs
+	$pkgs += write gcc gcc-libs
 
 	if ($env -ne 'msys') {
 	    $pkgs += 'gcc-libgfortran'
 	}
     }
 
-    $pkgs += echo binutils cmake make pkgconf `
-	windows-default-manifest ninja gdb ccache
+    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja gdb ccache
 
     if ($arch) {
 	$pkgs = $pkgs | %{ "${arch}-$_" }
     }
 
-    $pkgs += echo git make
+    $pkgs += write git make
 
     /msys64/usr/bin/pacman -Sy --noconfirm
     /msys64/usr/bin/pacman -S --noconfirm --needed $pkgs
