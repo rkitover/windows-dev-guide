@@ -7,10 +7,18 @@ if (-not $args) {
     $args = 'clang64'
 }
 
+if ($args[0].tolower() -eq 'all') {
+    $args = write msys clang64 mingw32 ucrt64 mingw64
+
+    if ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
+	$args += 'clangarm64'
+    }
+}
+
 foreach ($env in $args) {
     $env = $env.tolower()
 
-    if ($env -eq 'msys') {
+    if ($env -match '^msys2?$') {
 	$arch = ''
     }
     elseif ($env -eq 'clang64') {
@@ -32,7 +40,7 @@ foreach ($env in $args) {
 	write-error -ea stop "Unknown MSYS2 build environment: $env"
     }
 
-    if ($env -eq 'msys') {
+    if ($env -match '^msys2?') {
 	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool zlib-devel
     }
     else {
@@ -43,18 +51,18 @@ foreach ($env in $args) {
 	$pkgs += 'extra-cmake-modules'
     }
 
-    if ($env -eq 'clang64') {
+    if ($env -match '^clang') {
 	$pkgs += write lldb clang
     }
     else {
-	$pkgs += write gcc gcc-libs
+	$pkgs += write gcc gcc-libs gdb
 
-	if ($env -ne 'msys') {
+	if ($env -notmatch '^(msys|clang)') {
 	    $pkgs += 'gcc-libgfortran'
 	}
     }
 
-    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja gdb ccache
+    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja ccache
 
     if ($arch) {
 	$pkgs = $pkgs | %{ "${arch}-$_" }

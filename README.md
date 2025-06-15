@@ -40,7 +40,7 @@
   - [Elevated Access (sudo)](#elevated-access-sudo)
   - [Using PowerShell Gallery](#using-powershell-gallery)
   - [Available Command-Line Tools and Utilities](#available-command-line-tools-and-utilities)
-  - [Using vcpkg Ports for Dependencies to Build Projects](#using-vcpkg-ports-for-dependencies-to-build-projects)
+  - [Using vcpkg Ports for Dependencies to Build CMake Projects](#using-vcpkg-ports-for-dependencies-to-build-cmake-projects)
   - [Using BusyBox](#using-busybox)
   - [Using MSYS2](#using-msys2)
   - [Using GNU Make](#using-gnu-make)
@@ -935,14 +935,9 @@ if ($iswindows) {
 
     if ($vs_path) {
         $default_host_arch,$default_arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
-            'amd64','amd64'
+            @('amd64') * 2
         }
-        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
-            'arm64','arm64'
-        }
-        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'X86') {
-            'x86','x86'
-        }
+        else { @($env:PROCESSOR_ARCHITECTURE.tolower()) * 2 }
 
         function global:vsenv($arch, $hostarch) {
             if (-not $arch)     { $arch     = $default_arch }
@@ -965,8 +960,10 @@ if ($env:VCPKG_ROOT -and (test-path $env:VCPKG_ROOT)) {
     $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
 
     if ($iswindows) {
-        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/${env:Platform}-windows-static) `
-            { "${env:Platform}-windows-static" } else { "${env:Platform}-windows" }
+        $arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') { 'x64' }
+            else { $env:PROCESSOR_ARCHITECTURE.tolower() }
+
+        $env:VCPKG_DEFAULT_TRIPLET = "${arch}-windows-static"
 
         $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
         $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
@@ -3222,7 +3219,7 @@ You can run any `cmd.exe` commands with `cmd /c <command>`.
 Many more things are available from WinGet, Scoop and Chcolatey and other
 sources of course, at varying degrees of functionality.
 
-### Using vcpkg Ports for Dependencies to Build Projects
+### Using vcpkg Ports for Dependencies to Build CMake Projects
 
 [vcpkg](https://github.com/microsoft/vcpkg) is a cross-platform port system for
 Open Source libraries and tools developed by Microsoft in CMake and C++.
@@ -3248,10 +3245,12 @@ In your `$profile` add the following (the one here already does this:)
 ```powershell
 $env:VCPKG_ROOT            = $env:USERPROFILE + '\source\repos\vcpkg'
 $global:vcpkg_toolchain    = $env:VCPKG_ROOT  + '\scripts\buildsystems\vcpkg.cmake'
-$env:VCPKG_DEFAULT_TRIPLET = "${env:Platform}-windows-static"
+$arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') { 'x64' }
+    else { $env:PROCESSOR_ARCHITECTURE.tolower() }
+$env:VCPKG_DEFAULT_TRIPLET = "${arch}-windows-static"
 set-alias vcpkg ($env:USERPROFILE + '\source\repos\vcpkg\vcpkg.exe')
 ```
-. Here `${env:Platform}` will be either `x64` for Intel/AMD computers or `arm64`
+. Here `$arch` will be either `x64` for Intel/AMD computers or `arm64`
 for ARM64-based ones. Reload your profile.
 
 As an example, I will demonstrate how to build the
@@ -3515,8 +3514,9 @@ To add MSYS2 environments to your Terminal menu, add this to your
 
 To install the basic set of build programs for an MSYS2 environment, use the
 script `install-msys2-buildenv.ps1` from this repo with the build environment
-you want as the argument, the default is `CLANG64`. This script does not have to
-be run as an admin. Here it is:
+you want as the argument, the default is `CLANG64`. To install all of them, pass
+`ALL` as the parameter to the script. This script does not have to be run as an
+admin. Here it is:
 
 [//]: # "BEGIN INCLUDED install-msys2-buildenv.ps1"
 
@@ -3530,10 +3530,14 @@ if (-not $args) {
     $args = 'clang64'
 }
 
+if ($args[0].tolower() -eq 'all') {
+    $args = write msys clang64 clangarm64 mingw32 ucrt64 mingw64
+}
+
 foreach ($env in $args) {
     $env = $env.tolower()
 
-    if ($env -eq 'msys') {
+    if ($env -match '^msys2?$') {
 	$arch = ''
     }
     elseif ($env -eq 'clang64') {
@@ -3555,7 +3559,7 @@ foreach ($env in $args) {
 	write-error -ea stop "Unknown MSYS2 build environment: $env"
     }
 
-    if ($env -eq 'msys') {
+    if ($env -match '^msys2?') {
 	$pkgs = write isl mpc msys2-runtime-devel msys2-w32api-headers msys2-w32api-runtime autoconf automake libtool zlib-devel
     }
     else {
@@ -3566,18 +3570,18 @@ foreach ($env in $args) {
 	$pkgs += 'extra-cmake-modules'
     }
 
-    if ($env -eq 'clang64') {
+    if ($env -match '^clang') {
 	$pkgs += write lldb clang
     }
     else {
-	$pkgs += write gcc gcc-libs
+	$pkgs += write gcc gcc-libs gdb
 
-	if ($env -ne 'msys') {
+	if ($env -notmatch '^(msys|clang)') {
 	    $pkgs += 'gcc-libgfortran'
 	}
     }
 
-    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja gdb ccache
+    $pkgs += write binutils cmake make pkgconf windows-default-manifest ninja ccache
 
     if ($arch) {
 	$pkgs = $pkgs | %{ "${arch}-$_" }

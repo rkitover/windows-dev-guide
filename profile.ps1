@@ -249,14 +249,9 @@ if ($iswindows) {
 
     if ($vs_path) {
         $default_host_arch,$default_arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') {
-            'amd64','amd64'
+            @('amd64') * 2
         }
-        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
-            'arm64','arm64'
-        }
-        elseif ($env:PROCESSOR_ARCHITECTURE -ieq 'X86') {
-            'x86','x86'
-        }
+        else { @($env:PROCESSOR_ARCHITECTURE.tolower()) * 2 }
 
         function global:vsenv($arch, $hostarch) {
             if (-not $arch)     { $arch     = $default_arch }
@@ -279,8 +274,10 @@ if ($env:VCPKG_ROOT -and (test-path $env:VCPKG_ROOT)) {
     $global:vcpkg_toolchain = $env:VCPKG_ROOT + '/scripts/buildsystems/vcpkg.cmake'
 
     if ($iswindows) {
-        $env:VCPKG_DEFAULT_TRIPLET = if (test-path $env:VCPKG_ROOT/installed/${env:Platform}-windows-static) `
-            { "${env:Platform}-windows-static" } else { "${env:Platform}-windows" }
+        $arch = if ($env:PROCESSOR_ARCHITECTURE -ieq 'AMD64') { 'x64' }
+            else { $env:PROCESSOR_ARCHITECTURE.tolower() }
+
+        $env:VCPKG_DEFAULT_TRIPLET = "${arch}-windows-static"
 
         $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
         $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
