@@ -243,7 +243,6 @@ In the global settings, above the `"profiles"` section, add:
     "scrollbarState": "hidden",
     "closeOnExit": "always",
     "bellStyle": "none",
-    "intenseTextStyle": "bold",
     "useAcrylic": false,
     "opacity": 77
 },
@@ -305,6 +304,8 @@ In the `"actions"` section add these keybindings:
 
 ```jsonc
 { "command": null, "keys": "alt+enter" },
+{ "command": null, "keys": "shift+tab" },
+{ "command": null, "keys": "ctrl+tab" },
 { "command": { "action": "newTab"  }, "keys": "ctrl+shift+t" },
 { "command": { "action": "nextTab" }, "keys": "ctrl+shift+right" },
 { "command": { "action": "prevTab" }, "keys": "ctrl+shift+left" },
@@ -315,16 +316,16 @@ In the `"actions"` section add these keybindings:
 { "command": { "action": "scrollDown", "rowsToScroll": 1 },
   "keys": "ctrl+shift+down" }
 ```
-. And **REMOVE** the `CTRL+V` binding, if you want to use `CTRL+V`
-in vim (visual line selection.)
-
-This gives you a sort of "tmux" for PowerShell using tabs, and binds
+. This gives you a sort of "tmux" for PowerShell using tabs, and binds
 keys to find next/previous match.
 
 Note that `CTRL+SHIFT+N` is bound by default to opening a new window
 and `CTRL+SHIFT+P` is bound by default to opening the command
 palette, if you need these, rebind them or the original actions to
 something else.
+
+In the `keybindings` section below, remove the `CTRL+C` binding and remove the
+`CTRL+V` binding if you want to use `CTRL+V` in vim (visual line selection.)
 
 Restart the terminal.
 
@@ -3531,7 +3532,11 @@ if (-not $args) {
 }
 
 if ($args[0].tolower() -eq 'all') {
-    $args = write msys clang64 clangarm64 mingw32 ucrt64 mingw64
+    $args = write msys clang64 mingw32 ucrt64 mingw64
+
+    if ($env:PROCESSOR_ARCHITECTURE -ieq 'ARM64') {
+	$args += 'clangarm64'
+    }
 }
 
 foreach ($env in $args) {
