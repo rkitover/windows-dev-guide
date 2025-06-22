@@ -52,6 +52,25 @@
   - [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes)
     - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
   - [Appendix B: Using tmux with PowerShell from WSL](#appendix-b-using-tmux-with-powershell-from-wsl)
+  - [Appendix C: Windows Installation and Post-Installation](#appendix-c-windows-installation-and-post-installation)
+    - [Installing Windows](#installing-windows)
+    - [Post-Installation](#post-installation)
+      - [Hostname](#hostname)
+      - [Sign-In Options](#sign-in-options)
+      - [Windows Update](#windows-update)
+      - [Dark Theme and Clean Desktop](#dark-theme-and-clean-desktop)
+      - [Primary Keyboard Layout](#primary-keyboard-layout)
+      - [Taskbar](#taskbar)
+      - [Unprivileged Symlinks (Developer Mode)](#unprivileged-symlinks-developer-mode)
+      - [Turn Off Snap Suggestions](#turn-off-snap-suggestions)
+      - [Set Browser to Handle Media Types](#set-browser-to-handle-media-types)
+      - [Set Browser Scale](#set-browser-scale)
+      - [Set Power Settings](#set-power-settings)
+    - [Optional Post-Install Steps](#optional-post-install-steps)
+      - [Autologon](#autologon)
+      - [Uninstall Bloatware](#uninstall-bloatware)
+      - [Map CapsLock to Another Control](#map-capslock-to-another-control)
+      - [Background Image Switcher](#background-image-switcher)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -78,6 +97,11 @@ things like using `cmake` with `vcpkg` or `Conan` etc..
 Your feedback via issues or pull requests on Github is appreciated.
 
 ### Installing Visual Studio, Some Packages and Scoop
+
+If you just have or are going to install Windows on a device, you may find
+[Appendix C: Windows Installation and
+Post-Installation](#appendix-c-windows-installation-and-post-installation)
+helpful.
 
 Make sure developer mode is turned on in Windows settings, this is necessary for
 making unprivileged symlinks. Also in developer settings, change powershell
@@ -4203,5 +4227,142 @@ wsl -- tmux -f '~/.tmux-pwsh.conf'
 ```
 . The included [profile](#setting-up-powershell) function `tmux` will do this,
 and also run tmux commands for your current session.
+
+### Appendix C: Windows Installation and Post-Installation
+
+#### Installing Windows
+
+The best way to install Windows is with an installation ISO image written to a
+USB flash drive.
+
+The best program to do that with is [Rufus](https://rufus.ie/) on
+another Windows device.
+
+I recommend using a beta from the Windows Insider ISO downloads page and set
+your system to beta channel.
+
+When you click the `Start` button in Rufus, it will offer some options to
+automate your installation, including removing limits for older hardware.
+
+#### Post-Installation
+
+##### Hostname
+
+Under `Settings -> System` in the top panel you will find the `Rename` option to
+change the hostname of your device.
+
+##### Sign-In Options
+
+Under `Settings -> Accounts -> Sign-in options`, set up a PIN, the fingerprint
+reader on your laptop if you have one, and face recognition if you don't.
+
+Enable automatically restarting apps and use sign in to finish setting up and
+anything else you prefer.
+
+##### Windows Update
+
+Under `Settings -> Windows Update`, enable get latest updates, check for updates
+and fully update your device.
+
+Here you will also find the Windows Insider program, which you can join with a
+Microsoft account. I recommend the beta channel.
+
+##### Dark Theme and Clean Desktop
+
+Under `Settings -> Personalization -> Themes`, set the theme to `Glow` or `Windows
+Dark` to enable a dark theme.
+
+Here you should also find a link to `Desktop Icon Settings`, follow it and
+uncheck `Recycle Bin` and click `Apply`.
+
+##### Primary Keyboard Layout
+
+If you have multiple languages installed, go to `Settings -> Time & Language ->
+Typing -> Advanced keyboard settings` and set the primary keyboard layout to the
+one you prefer. It will be enabled on boot.
+
+##### Taskbar
+
+Under `Settings -> Personalization -> Taskbar`, you can configure how you want
+your taskbar to look and behave, I recommend the following settings:
+
+- `search -> hide`.
+- `Other system tray icons -> safely remove hardware`.
+- `Taskbar behaviors -> automatically hide`.
+
+##### Unprivileged Symlinks (Developer Mode)
+
+Under `Settings -> System -> For Developers` enable `Developer Mode`, to allow
+you to make symlinks unelevated. Also make the following changes:
+
+- `end task`.
+- Under Explorer, select everything.
+- Under Terminal select Windows Terminal.
+- Under Powershell, select change execution policy.
+
+##### Turn Off Snap Suggestions
+
+Under `Settings -> System -> Multitasking -> Snap`, turn off `suggest what I can
+snap near`. Also set the number of tabs to show to `None` if you like.
+
+##### Set Browser to Handle Media Types
+
+Under `Settings -> Apps -> Default Apps`, click on your preferred browser and
+set any media types it is currently not set to handle to it or something else as
+you prefer.
+
+##### Set Browser Scale
+
+In your browser settings, under `Appearance`, there should be a global scale
+factor setting. You may or may not want to use it depending on the configuration
+of your device and display.
+
+##### Set Power Settings
+
+Under `Settings -> System -> Power & battery`, set your preferred settings for
+everything. If the section concerning power buttons is not there, search for it
+in Control Panel.
+
+#### Optional Post-Install Steps
+
+##### Autologon
+
+If you would like your device to boot and reboot directly to your desktop, set
+up
+[Autologon](https://learn.microsoft.com/en-us/sysinternals/downloads/autologon)
+from Sysinternals. The security implication of this is that if someone steals
+your device, they will be able to boot to your desktop. However, you can still
+lock your device after you reboot at e.g. a cafe. So this is your choice
+regarding your wanted balance of security and convenience.
+
+##### Uninstall Bloatware
+
+Under `Settings -> Apps -> Instal Apps`, you can uninstall any software that
+came pre-installed with your device that you do not want, like extra security
+software etc..
+
+##### Map CapsLock to Another Control
+
+To map the CapsLock key to another Control key, run the following in an admin
+PowerShell (this is taken from
+[here](https://zachrussell.net/blog/map-caps-lock-to-control-windows/):)
+
+```powershell
+$hexified = "00,00,00,00,00,00,00,00,02,00,00,00,1d,00,3a,00,00,00,00,00".Split(',') | % { "0x$_"};
+$kbLayout = 'HKLM:\System\CurrentControlSet\Control\Keyboard Layout';
+New-ItemProperty -Path $kbLayout -Name "Scancode Map" -PropertyType Binary -Value ([byte[]]$hexified);
+```
+. Logging out should be sufficient for the change to take effect.
+
+##### Background Image Switcher
+
+To install a program to switch your desktop images, run the following In an
+admin PowerShell:
+
+```powershell
+winget install johnsadventures.johnsbackgroundswitcher
+```
+. On running the program for the first time, you can configure your sources for
+images.
 
 <!--- vim:set et sw=4 tw=80: --->
