@@ -968,6 +968,9 @@ if ($iswindows) {
             if (-not $arch)     { $arch     = $default_arch }
             if (-not $hostarch) { $hostarch = $default_host_arch }
 
+            if ($arch     -eq 'x64') { $arch     = 'amd64' }
+            if ($hostarch -eq 'x64') { $hostarch = 'amd64' }
+
             $saved_vcpkg_root = $env:VCPKG_ROOT
 
             & $vs_path/Launch-VsDevShell.ps1 -hostarch $hostarch -arch $arch -skipautomaticlocation
