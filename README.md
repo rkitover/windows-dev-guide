@@ -66,6 +66,7 @@
       - [Set Browser to Handle Media Types](#set-browser-to-handle-media-types)
       - [Set Browser Scale](#set-browser-scale)
       - [Set Power Settings](#set-power-settings)
+      - [Turn Off Keyboard Accessibility](#turn-off-keyboard-accessibility)
     - [Optional Post-Install Steps](#optional-post-install-steps)
       - [Autologon](#autologon)
       - [Uninstall Bloatware](#uninstall-bloatware)
@@ -4325,6 +4326,11 @@ of your device and display.
 Under `Settings -> System -> Power & battery`, set your preferred settings for
 everything. If the section concerning power buttons is not there, search for it
 in Control Panel.
+
+##### Turn Off Keyboard Accessibility
+
+Under `Settings -> Accessibility -> Keyboard`, turn off all of the toggles under
+`Sticky keys`, `Filter keys` and `Toggle keys`.
 
 #### Optional Post-Install Steps
 
