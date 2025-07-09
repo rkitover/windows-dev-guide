@@ -3303,7 +3303,7 @@ vcpkg --triplet x64-windows-static install zstd hiredis blake3 cpp-httplib docte
 sl ~/source/repos/ccache
 ni -it dir build-msvc64
 sl build-msvc64
-ri -r -fo ~/source/repos/ccache/build-msvc64/*; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$vcpkg_toolchain" -DVCPKG_TARGET_TRIPLET=x64-windows-target -G Ninja
+ri -r -fo ~/source/repos/ccache/build-msvc64/*; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$vcpkg_toolchain" -G Ninja
 ```
 . You will see output such as:
 
