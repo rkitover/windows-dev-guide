@@ -2766,6 +2766,14 @@ $erroractionpreference = 'stop'
 ```
 . I highly recommend it adding it to the top of your scripts.
 
+Another line you should put at the top of your scripts is:
+
+```powershell
+$progresspreference = 'silentlycontinue'
+```
+. This will suppress the progress bar that some commands display, such as `ri
+-r`.
+
 The bash commands `pushd` and `popd` are also available for use in
 your scripts.
 
