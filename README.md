@@ -162,6 +162,9 @@ https://apps.microsoft.com/detail/9nblggh4nns1
 . If something fails in the script, run it again until everything
 succeeds.
 
+Make sure your network adapter is marked as a private network, or ssh
+connections will not pass through the firewall.
+
 - Press Win+X and open PowerShell (**NOT** Administrator)
 
 Now run the user-mode install script:
