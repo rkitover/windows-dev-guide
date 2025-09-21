@@ -54,7 +54,7 @@ $env:PAGER = 'less'
 #    -F,--quit-if-one-screen
 #    -K,--quit-on-intr      # Quit on CTRL-C immediately.
 #    --mouse                # Scroll with mouse wheel.
-$env:LESS = '-Q$-r$-X$-F$-K$--mouse'
+$env:LESS = '-Q$-r$-X$-F$-K'
 
 new-module MyProfile -script {
 
