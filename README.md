@@ -128,14 +128,14 @@ see [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes).
 
 set-service beep -startuptype disabled
 
-write Microsoft.VisualStudio.2022.Community 7zip.7zip gsass1.NTop Git.Git `
+write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
     GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS `
     Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.13 `
     SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Preview Microsoft.WindowsTerminal | %{
 	winget install $_
 }
 
-iwr https://aka.ms/vs/17/release/vs_community.exe -outfile vs_community.exe
+iwr https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
 
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
 
@@ -769,7 +769,7 @@ $env:PAGER = 'less'
 #    -F,--quit-if-one-screen
 #    -K,--quit-on-intr      # Quit on CTRL-C immediately.
 #    --mouse                # Scroll with mouse wheel.
-$env:LESS = '-Q$-r$-X$-F$-K$--mouse'
+$env:LESS = '-Q$-r$-X$-F$-K'
 
 new-module MyProfile -script {
 
@@ -947,7 +947,7 @@ if (-not $env:VCPKG_ROOT) {
 
 if ($iswindows) {
     # Load VS env only once.
-    :OUTER foreach ($vs_year in '2022','2019','2017') {
+    :OUTER foreach ($vs_year in '18','2022','2019','2017') {
         foreach ($vs_type in 'preview','buildtools','community') {
             foreach ($x86 in '',' (x86)') {
                 $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
