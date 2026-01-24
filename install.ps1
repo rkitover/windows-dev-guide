@@ -5,6 +5,7 @@ set-service beep -startuptype disabled
 write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
     GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS NASM.NASM `
     Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.14 Ccache.Ccache `
+    Kitware.CMake `
     SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Preview Microsoft.WindowsTerminal | %{
 	winget install $_ --source winget
 }
