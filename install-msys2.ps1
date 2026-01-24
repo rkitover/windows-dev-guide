@@ -1,7 +1,7 @@
 $erroractionpreference = 'stop'
 
 if (-not (test-path /msys64)) {
-    winget install --force msys2.msys2
+    winget install --force msys2.msys2 --source winget
 }
 
 $nsswitch_conf = '/msys64/etc/nsswitch.conf'
