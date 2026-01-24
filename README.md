@@ -131,8 +131,9 @@ set-service beep -startuptype disabled
 write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
     GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS NASM.NASM `
     Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.14 Ccache.Ccache `
+    Kitware.CMake `
     SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Preview Microsoft.WindowsTerminal | %{
-	winget install $_
+	winget install $_ --source winget
 }
 
 iwr https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
@@ -3412,18 +3413,20 @@ convenient than Cygwin to use as a Windows shell.
 Run this script from a local admin terminal, which is in this repository as
 `install-msys2.ps1`, to install MSYS2:
 
-[///]: # "BEGIN INCLUDED install-msys2.ps1"
+[//]: # "BEGIN INCLUDED install-msys2.ps1"
 
 ```powershell
 $erroractionpreference = 'stop'
 
 if (-not (test-path /msys64)) {
-    winget install --force msys2.msys2
+    winget install --force msys2.msys2 --source winget
 }
 
 $nsswitch_conf = '/msys64/etc/nsswitch.conf'
-$conf = gc $nsswitch_conf | %{ $_ -replace '^db_home:.*','db_home: windows' }
-$conf | set-content $nsswitch_conf
+$pacman_conf   = '/msys64/etc/pacman.conf'
+
+@(gc $nsswitch_conf) | %{ $_ -replace '^db_home:.*','db_home: windows' } | set-content $nsswitch_conf
+@(gc $pacman_conf)   | %{ $_ -replace '^CheckSpace','#CheckSpace'      } | set-content $pacman_conf
 
 $env:MSYSTEM = 'MSYS'
 
