@@ -258,18 +258,89 @@ if ($iswindows) {
 
     if ($vs_path) {
         $default_arch = $env:PROCESSOR_ARCHITECTURE.tolower()
+        $vcvarsall = resolve-path "$vs_path/../../VC/Auxiliary/Build/vcvarsall.bat"
 
-        function global:vsenv($arch) {
-            if (-not $arch)      { $arch = $default_arch }
-            if ($arch -eq 'x64') { $arch = 'amd64' }
+        $script:vsenv_state = $null
 
+        function global:vsenv {
+            param($arch, $toolkit, [switch]$unload)
+
+            # Unload previous vsenv state.
+            if ($script:vsenv_state) {
+                # Remove previously added PATH entries.
+                $env:PATH = (
+                    $env:PATH -split $path_sep | ?{
+                        $entry = $_
+                        -not ($script:vsenv_state.path_entries | ?{ $_ -ieq $entry })
+                    }
+                ) -join $path_sep
+
+                # Restore previous env var values.
+                $script:vsenv_state.vars.getenumerator() | %{
+                    [environment]::setenvironmentvariable(
+                        $_.key, $_.value, 'Process'
+                    )
+                }
+
+                $script:vsenv_state = $null
+            }
+
+            if ($unload) { return }
+
+            if (-not $arch) { $arch = $default_arch }
+
+            $vcvars_args = @($arch)
+
+            if ($toolkit) {
+                # Convert e.g. v143 -> 14.3, v145 -> 14.5.
+                if ($toolkit -match '^v(\d)(\d+)$') {
+                    $toolkit = "$($matches[1]).$($matches[2])"
+                }
+                $vcvars_args += "-vcvars_ver=$toolkit"
+            }
+
+            $current_path = $env:PATH
             $saved_vcpkg_root = $env:VCPKG_ROOT
 
-            & $vs_path/Launch-VsDevShell.ps1 -arch $arch -skipautomaticlocation
+            $output = cmd /c "`"$vcvarsall`" $($vcvars_args -join ' ') && set" 2>&1
+
+            if ($lastexitcode) {
+                write-error "vcvarsall.bat failed with exit code $lastexitcode" -ea stop
+            }
+
+            $state = @{
+                path_entries = @()
+                vars         = @{}
+            }
+
+            $output | ?{ $_ -match '^([^=]+)=(.*)$' } | %{
+                $name  = $matches[1]
+                $value = $matches[2]
+
+                if ($name -ieq 'PATH') {
+                    $existing = $current_path -split $path_sep
+                    $new_entries = ($value -split $path_sep) | ?{
+                        $entry = $_
+                        -not ($existing | ?{ $_ -ieq $entry })
+                    }
+                    if ($new_entries) {
+                        $state.path_entries = $new_entries
+                        $env:PATH = $current_path + $path_sep + ($new_entries -join $path_sep)
+                    }
+                }
+                else {
+                    $state.vars[$name] = [environment]::getenvironmentvariable(
+                        $name, 'Process'
+                    )
+                    [environment]::setenvironmentvariable($name, $value, 'Process')
+                }
+            }
 
             if ($saved_vcpkg_root) {
                 $env:VCPKG_ROOT = $saved_vcpkg_root
             }
+
+            $script:vsenv_state = $state
         }
 
         vsenv $default_arch
