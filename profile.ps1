@@ -230,6 +230,15 @@ if (-not $env:VCPKG_ROOT) {
     $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
 }
 
+if ((test-path ~/.local/bin) -and (-not $env:PATH -match '\.local[/\\]bin')) {
+    $env:PATH += if ($iswindows) {
+        ';' + (shortpath ~/.local/bin)
+    }
+    else {
+        ":$env:HOME/.local/bin"
+    }
+}
+
 if ($iswindows) {
     # Load VS env only once.
     :OUTER foreach ($vs_year in '18','2022','2019','2017') {
