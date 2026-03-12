@@ -265,21 +265,38 @@ if ($iswindows) {
         function global:vsenv {
             param($arch, $toolkit, [switch]$unload)
 
+            # These are semicolon-separated list vars that vcvarsall prepends to.
+            $list_vars = 'PATH','INCLUDE','LIB','LIBPATH','EXTERNAL_INCLUDE'
+
+            # Capture current list var values BEFORE unloading.  For
+            # LIB/INCLUDE/LIBPATH this preserves user additions (e.g. vcpkg)
+            # that were appended after the previous vsenv call.
+            $pre_unload = [hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($lv in $list_vars) {
+                $pre_unload[$lv] = (get-item -literalpath "env:$lv" -ea ignore).value
+            }
+
+            # Grab the record of what vcvarsall added last session before we clear state.
+            $prev_additions = if ($script:vsenv_state) { $script:vsenv_state.vcvarsall_additions } else { $null }
+
             # Unload previous vsenv state.
             if ($script:vsenv_state) {
-                # Remove previously added PATH entries.
-                $env:PATH = (
-                    $env:PATH -split $path_sep | ?{
-                        $entry = $_
-                        -not ($script:vsenv_state.path_entries | ?{ $_ -ieq $entry })
+                # Restore PATH and list vars (INCLUDE, LIB, LIBPATH).
+                $script:vsenv_state.saved_lists.getenumerator() | %{
+                    if ($null -ne $_.value) {
+                        set-item -literalpath "env:$($_.key)" $_.value
+                    } else {
+                        remove-item -literalpath "env:$($_.key)" -ea ignore
                     }
-                ) -join $path_sep
+                }
 
                 # Restore previous env var values.
                 $script:vsenv_state.vars.getenumerator() | %{
-                    [environment]::setenvironmentvariable(
-                        $_.key, $_.value, 'Process'
-                    )
+                    if ($null -ne $_.value) {
+                        set-item -literalpath "env:$($_.key)" $_.value
+                    } else {
+                        remove-item -literalpath "env:$($_.key)" -ea ignore
+                    }
                 }
 
                 $script:vsenv_state = $null
@@ -287,20 +304,67 @@ if ($iswindows) {
 
             if ($unload) { return }
 
+            # Regex matching VS/SDK/WinKits/.NET/.NET-adjacent PATH entries added by
+            # vcvarsall, used to strip the inherited PATH when starting a new shell
+            # that already has a vsenv'd PATH from its parent process.
+            $vs_strip_re = '[/\\]Microsoft Visual Studio[/\\]|[/\\]Microsoft SDKs[/\\]|[/\\]Windows Kits[/\\](?:[^/\\]+[/\\](?:bin|lib|include|UnionMetadata|References)[/\\]|NETFXSDK[/\\])|[/\\]Microsoft\.NET[/\\]|[/\\]HTML Help Workshop'
+
+            # PATH baseline: strip VS-adjacent entries and VCPKG_ROOT (which will be
+            # re-added from new_entries via the \VC\vcpkg replacement).
+            $vcpkg_root_trimmed = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT.trimend('/\') } else { $null }
+            $post_unload_path = ($env:PATH -split $path_sep | ?{
+                $_ -and $_ -inotmatch $vs_strip_re -and
+                (-not $vcpkg_root_trimmed -or $_.trimend('/\') -ine $vcpkg_root_trimmed)
+            }) -join $path_sep
+
             if (-not $arch) { $arch = $default_arch }
 
-            $vcvars_args = @($arch)
+            # Normalize x64/amd64 synonyms before comparing to default_arch.
+            $canon_arch = if ($arch -ieq 'x64') { 'amd64' }
+                          elseif ($arch -ieq 'amd64') { 'x64' }
+                          else { $arch }
+
+            $vcvars_args = @($(if ($canon_arch -ieq $default_arch -or $arch -ieq $default_arch) {
+                $arch
+            } else {
+                "${default_arch}_${arch}"
+            }))
+
+            if (-not $toolkit -and $arch -ieq 'x86') {
+                # Default to v143 toolkit for 32-bit builds for Vista compatibility.
+                $toolkit = 'v143'
+            }
 
             if ($toolkit) {
-                # Convert e.g. v143 -> 14.3, v145 -> 14.5.
-                if ($toolkit -match '^v(\d)(\d+)$') {
-                    $toolkit = "$($matches[1]).$($matches[2])"
+                # Convert vXYZ (e.g. v143, v145) to an exact installed MSVC version.
+                # vcvarsall -vcvars_ver needs a numeric prefix. VS2022 ships v143 as both
+                # MSVC 14.3x and 14.4x, so "14.3" would silently miss 14.4x installs.
+                # We scan VC\Tools\MSVC\ for the latest version in the expected range.
+                if ($toolkit -match '^v(\d{2})(\d+)$') {
+                    $tk_major = [int]$matches[1]  # 14
+                    $tk_gen   = [int]$matches[2]  # 3 for v143
+                    $lower = $tk_gen * 10       # v143 → 30
+                    $upper = $tk_gen * 10 + 20  # v143 → 50 (exclusive)
+                    $msvc_base = (resolve-path (join-path (split-path $vcvarsall.path -parent) '../../Tools/MSVC') -ea ignore).path
+                    $best = if ($msvc_base) {
+                        get-childitem $msvc_base -directory |
+                            ?{ $_.name -match '^(\d+)\.(\d+)\.' -and
+                               [int]$matches[1] -eq $tk_major -and
+                               [int]$matches[2] -ge $lower -and
+                               [int]$matches[2] -lt $upper } |
+                            sort name | select -last 1
+                    }
+                    $toolkit = if ($best) { $best.name } else { "$tk_major.$tk_gen" }
                 }
                 $vcvars_args += "-vcvars_ver=$toolkit"
             }
 
-            $current_path = $env:PATH
             $saved_vcpkg_root = $env:VCPKG_ROOT
+
+            $list_vars | ?{ $_ -ine 'PATH' } | %{ remove-item -literalpath "env:$_" -ea ignore }
+
+            $vcvars_cmd = "$vcvarsall $($vcvars_args -join ' ')"
+            write-verbose "vsenv: $vcvars_cmd"
 
             $output = cmd /c "`"$vcvarsall`" $($vcvars_args -join ' ') && set" 2>&1
 
@@ -308,36 +372,138 @@ if ($iswindows) {
                 write-error "vcvarsall.bat failed with exit code $lastexitcode" -ea stop
             }
 
+            # Print vcvarsall banner/status lines (not VAR=value lines) as verbose.
+            $output | ?{ $_ -and $_ -notmatch '^[A-Za-z_][A-Za-z_0-9]*=' } | %{
+                write-verbose "vcvarsall: $_"
+            }
+
+            # saved_lists is the clean baseline restored on next unload.
+            # PATH: use post-unload (no VS entries).
+            # LIB/INCLUDE/LIBPATH: start from pre-unload (which has user additions
+            # like vcpkg), then subtract what vcvarsall added last time so that
+            # arch-specific VS/WinKits entries don't carry over across arch switches.
+            $saved_lists = [hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $saved_lists['PATH'] = $post_unload_path
+            foreach ($lv in $list_vars | ?{ $_ -ine 'PATH' }) {
+                $val = $pre_unload[$lv]
+                $saved_lists[$lv] = if ($val -and $prev_additions -and $prev_additions[$lv]) {
+                    $added = $prev_additions[$lv]
+                    $clean = $val -split $path_sep | ?{
+                        $_ -and -not $added.contains($_.trim().trimend('\'))
+                    }
+                    if ($clean) { $clean -join $path_sep }
+                } else {
+                    $val
+                }
+            }
+
+            # Rewrite vcpkg LIB/INCLUDE entries to the target architecture.
+            # e.g. .../installed/x64-windows-static/lib -> .../arm64-windows-static/lib
+            if ($env:VCPKG_ROOT) {
+                $vcpkg_arch     = if ($arch -iin @('x64', 'amd64')) { 'x64' } else { $arch }
+                $vcpkg_root_norm = ($env:VCPKG_ROOT -replace '[/\\]+', '\').trimend('\')
+                $vcpkg_root_re   = [regex]::Escape($vcpkg_root_norm)
+                foreach ($lv in @('LIB', 'INCLUDE')) {
+                    $val = $saved_lists[$lv]
+                    if (-not $val) { continue }
+                    $saved_lists[$lv] = ($val -split $path_sep | %{
+                        $e = $_ -replace '[/\\]+', '\'
+                        if ($e -imatch "^${vcpkg_root_re}\\installed\\[^\\]+-windows(-static)?\\(lib|include)$") {
+                            "$env:VCPKG_ROOT/installed/${vcpkg_arch}-windows$($matches[1])/$($matches[2])"
+                        } else { $_ }
+                    }) -join $path_sep
+                }
+            }
+
             $state = @{
-                path_entries = @()
-                vars         = @{}
+                saved_lists         = $saved_lists
+                vars                = @{}
+                vcvarsall_additions = [hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)
             }
 
             $output | ?{ $_ -match '^([^=]+)=(.*)$' } | %{
                 $name  = $matches[1]
                 $value = $matches[2]
 
-                if ($name -ieq 'PATH') {
-                    $existing = $current_path -split $path_sep
-                    $new_entries = ($value -split $path_sep) | ?{
-                        $entry = $_
-                        -not ($existing | ?{ $_ -ieq $entry })
+                if ($list_vars -icontains $name) {
+                    # Record everything vcvarsall outputs for LIB/INCLUDE/LIBPATH so
+                    # the next call can subtract these arch-specific entries from pre_unload.
+                    if ($name -ine 'PATH') {
+                        $vc_set = [System.Collections.Generic.HashSet[string]]::new(
+                            [System.StringComparer]::OrdinalIgnoreCase)
+                        $value -split $path_sep | %{
+                            $n = ($_ -replace '[/\\]{2,}', '\').trim().trimend('\')
+                            if ($n) { [void]$vc_set.add($n) }
+                        }
+                        $state.vcvarsall_additions[$name] = $vc_set
                     }
-                    if ($new_entries) {
-                        $state.path_entries = $new_entries
-                        $env:PATH = $current_path + $path_sep + ($new_entries -join $path_sep)
+
+                    $saved = $state.saved_lists[$name]
+                    # saved is the user baseline; split into entries for merging.
+                    # Strip VS/SDK/WinKits/.NET paths that may have leaked in, plus
+                    # VCPKG_ROOT from PATH (it will be re-added from new_entries).
+                    $saved_entries = @($saved -split $path_sep | ?{
+                        $_ -and $_ -inotmatch $vs_strip_re -and
+                        (-not ($name -ieq 'PATH' -and $vcpkg_root_trimmed -and $_.trimend('/\') -ieq $vcpkg_root_trimmed))
+                    })
+                    # Build a set of all saved entry identities: both resolved path and
+                    # raw string (trimmed), so deduplication works whether or not the
+                    # directory exists and regardless of trailing-backslash differences.
+                    $seen = [System.Collections.Generic.HashSet[string]]::new(
+                        [System.StringComparer]::OrdinalIgnoreCase)
+                    $saved_entries | %{
+                        $rp = (resolve-path $_ -ea ignore).path
+                        if ($rp) { [void]$seen.add($rp.trim().trimend('\')) }
+                        [void]$seen.add($_.trim().trimend('\'))
+                    }
+                    $new_entries = @($value -split $path_sep | %{ $_ -replace '[/\\]{2,}', '\' } | ?{
+                        $norm = $_.trim().trimend('\')
+                        if (-not $norm) { return $false }
+                        $rp   = (resolve-path $norm -ea ignore).path
+                        $check = if ($rp) { $rp.trim().trimend('\') } else { $norm }
+                        -not $seen.contains($check)
+                    })
+                    # Replace VS-bundled vcpkg (...\VC\vcpkg) with $env:VCPKG_ROOT.
+                    if ($name -ieq 'PATH' -and $env:VCPKG_ROOT) {
+                        $new_entries = @($new_entries | %{
+                            if ($_ -imatch '[/\\]VC[/\\]vcpkg$') { $env:VCPKG_ROOT } else { $_ }
+                        })
+                    }
+                    # PATH: append VS entries after base entries.
+                    # LIB/INCLUDE/LIBPATH: VS entries first, user additions after.
+                    $all_entries = if ($name -ieq 'PATH') {
+                        @($saved_entries) + @($new_entries)
+                    } else {
+                        @($new_entries) + @($saved_entries)
+                    }
+                    # Final deduplication pass (first occurrence wins).
+                    $dedup_seen = [System.Collections.Generic.HashSet[string]]::new(
+                        [System.StringComparer]::OrdinalIgnoreCase)
+                    $all_entries = @($all_entries | ?{
+                        $dedup_seen.add($_.trim().trimend('\'))
+                    })
+                    if ($all_entries) {
+                        set-item -literalpath "env:$name" ($all_entries -join $path_sep)
                     }
                 }
+                elseif ($name -like '__VSCMD_PREINIT_*') {
+                    # vcvarsall records pre-call values of VS vars as __VSCMD_PREINIT_*
+                    # when it finds them already set (e.g. inherited from a parent shell).
+                    # vsenv manages its own state so these are unnecessary; discard them.
+                    remove-item -literalpath "env:$name" -ea ignore
+                }
                 else {
-                    $state.vars[$name] = [environment]::getenvironmentvariable(
-                        $name, 'Process'
-                    )
-                    [environment]::setenvironmentvariable($name, $value, 'Process')
+                    $state.vars[$name] = (get-item -literalpath "env:$name" -ea ignore).value
+                    set-item -literalpath "env:$name" $value
                 }
             }
 
             if ($saved_vcpkg_root) {
                 $env:VCPKG_ROOT = $saved_vcpkg_root
+            }
+
+            if ($toolkit -and -not $env:VCToolsVersion) {
+                write-warning "vsenv: toolset '$toolkit' was not selected by vcvarsall. Run with -verbose to see vcvarsall output."
             }
 
             $script:vsenv_state = $state
@@ -356,8 +522,11 @@ if ($env:VCPKG_ROOT -and (test-path $env:VCPKG_ROOT)) {
 
         $env:VCPKG_DEFAULT_TRIPLET = "${arch}-windows-static"
 
-        $env:LIB     = $env:LIB     + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
-        $env:INCLUDE = $env:INCLUDE + ';' + $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
+        $vcpkg_lib     = $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/lib'
+        $vcpkg_include = $env:VCPKG_ROOT + '/installed/' + $env:VCPKG_DEFAULT_TRIPLET + '/include'
+
+        if (($env:LIB     -split ';') -inotcontains $vcpkg_lib)     { $env:LIB     += ";$vcpkg_lib" }
+        if (($env:INCLUDE -split ';') -inotcontains $vcpkg_include) { $env:INCLUDE += ";$vcpkg_include" }
     }
 }
 
