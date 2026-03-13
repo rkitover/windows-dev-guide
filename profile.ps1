@@ -487,7 +487,9 @@ if ($iswindows) {
                     # vsenv manages its own state so these are unnecessary; discard them.
                     remove-item -literalpath "env:$name" -ea ignore
                 }
-                else {
+                elseif ($name -ine 'VCPKG_ROOT') {
+                    # VCPKG_ROOT is managed separately via $saved_vcpkg_root; excluding it
+                    # here prevents the unload phase from clobbering it between vsenv calls.
                     $state.vars[$name] = (get-item -literalpath "env:$name" -ea ignore).value
                     set-item -literalpath "env:$name" $value
                 }
