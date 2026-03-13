@@ -330,11 +330,6 @@ if ($iswindows) {
                 "${default_arch}_${arch}"
             }))
 
-            if (-not $toolkit -and $arch -ieq 'x86') {
-                # Default to v143 toolkit for 32-bit builds for Vista compatibility.
-                $toolkit = 'v143'
-            }
-
             if ($toolkit) {
                 # Convert vXYZ (e.g. v143, v145) to an exact installed MSVC version.
                 # vcvarsall -vcvars_ver needs a numeric prefix. VS2022 ships v143 as both
