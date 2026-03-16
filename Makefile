@@ -32,7 +32,10 @@ endif
 	@markdown-link-check -q README.md
 	@touch .link-check-stamp
 
-.PHONY: clean
+.PHONY: clean test
+
+test:
+	@pwsh -noprofile -command 'invoke-pester ./profile.tests.ps1 -output detailed'
 
 clean:
 	@rm .*-stamp
