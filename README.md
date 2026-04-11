@@ -3972,7 +3972,7 @@ the following at the very end:
 ```tmux
 orig_path="$PATH"
 set-environment -g PATH "/c/msys64/usr/bin:$PATH"
-set -g default-command "PATH='$orig_path' /c/progra~1/PowerShell/7/pwsh -nologo"
+set -g default-command "/c/progra~1/PowerShell/7/pwsh -nologo"
 ```
 . If you want to use a configuration that behaves like screen I have one
 [here](https://github.com/rkitover/tmux-screen-compat). You can load a
