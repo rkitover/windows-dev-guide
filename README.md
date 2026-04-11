@@ -878,9 +878,10 @@ if ($iswindows) {
         $global:profile = $profile -replace 'OneDrive\\',''
     }
 
-    # Remove Strawberry Perl MinGW stuff from PATH.
+    # Remove Strawberry Perl MinGW stuff and MSYS2 stuff from PATH.
     $env:Path = (split_env_path |
-        ?{ $_ -notmatch '\bStrawberry\\c\\bin$' }
+        ?{ ($_ -notmatch '\bStrawberry\\c\\bin$') -and
+           ($_ -notmatch '\\msys64\\') }
     ) -join $path_sep
 
     # Add npm module bin wrappers to PATH.
