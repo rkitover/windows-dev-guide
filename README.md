@@ -944,7 +944,9 @@ if (-not $env:ENV) {
 }
 
 if (-not $env:VCPKG_ROOT) {
-    $env:VCPKG_ROOT = resolve-path ~/source/repos/vcpkg -ea ignore
+    if ($vcpkg_root = resolve-path ~/source/repos/vcpkg -ea ignore) {
+        $env:VCPKG_ROOT = $vcpkg_root
+    }
 }
 
 if ((test-path ~/.local/bin) -and (-not $env:Path -match '\.local[/\\]bin')) {
