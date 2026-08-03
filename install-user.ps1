@@ -1,7 +1,7 @@
 ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
 
 if (-not (test-path ~/scoop)) {
-    iwr get.scoop.sh | iex
+    iwr -usebasicparsing get.scoop.sh | iex
 }
 
 function scoop { & ~/scoop/apps/scoop/current/bin/scoop.ps1 @args }

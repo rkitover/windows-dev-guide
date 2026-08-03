@@ -21,6 +21,5 @@ if (-not (test-path ~/.bash_profile)) {
 }
 
 if (-not (test-path ~/.bashrc)) {
-    # SET BACK TO MASTER ON FINAL COMMIT
-    iwr 'https://raw.githubusercontent.com/rkitover/windows-dev-guide/refs/heads/master/.bashrc' -out ~/.bashrc
+    iwr -usebasicparsing 'https://raw.githubusercontent.com/rkitover/windows-dev-guide/refs/heads/master/.bashrc' -out ~/.bashrc
 }

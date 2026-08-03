@@ -136,7 +136,7 @@ write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
 	winget install $_ --source winget
 }
 
-iwr https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
+iwr -usebasicparsing https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
 
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
 
@@ -182,7 +182,7 @@ Now run the user-mode install script:
 ni -it sym ~/.config -tar ($env:USERPROFILE + '\AppData\Local') -ea ignore
 
 if (-not (test-path ~/scoop)) {
-    iwr get.scoop.sh | iex
+    iwr -usebasicparsing get.scoop.sh | iex
 }
 
 function scoop { & ~/scoop/apps/scoop/current/bin/scoop.ps1 @args }
@@ -3700,8 +3700,7 @@ if (-not (test-path ~/.bash_profile)) {
 }
 
 if (-not (test-path ~/.bashrc)) {
-    # SET BACK TO MASTER ON FINAL COMMIT
-    iwr 'https://raw.githubusercontent.com/rkitover/windows-dev-guide/refs/heads/master/.bashrc' -out ~/.bashrc
+    iwr -usebasicparsing 'https://raw.githubusercontent.com/rkitover/windows-dev-guide/refs/heads/master/.bashrc' -out ~/.bashrc
 }
 ```
 . The script installs a basic `.bashrc` if you do not have one, this is the
@@ -4324,7 +4323,7 @@ that you may want to use, I will describe it here.
 To install the Chocolatey package manager, run this from an admin PowerShell:
 
 ```powershell
-iwr 'https://chocolatey.org/install.ps1' | % content | iex
+iwr -usebasicparsing 'https://chocolatey.org/install.ps1' | % content | iex
 ```
 , then relaunch your terminal session.
 

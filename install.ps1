@@ -10,7 +10,7 @@ write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
 	winget install $_ --source winget
 }
 
-iwr https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
+iwr -usebasicparsing https://aka.ms/vs/stable/vs_community.exe -outfile vs_community.exe
 
 ./vs_community.exe --passive --add 'Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended;includeOptional'
 
