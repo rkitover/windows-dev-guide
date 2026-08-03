@@ -4622,7 +4622,7 @@ software etc..
 
 To map the CapsLock key to another Control key, run the following in an admin
 PowerShell (this is taken from
-[here](https://zachrussell.net/blog/map-caps-lock-to-control-windows/):)
+[here](https://gist.github.com/cleemesser/e761a5e1ada4e1eff47303bf43c888e4):)
 
 ```powershell
 $hexified = "00,00,00,00,00,00,00,00,02,00,00,00,1d,00,3a,00,00,00,00,00".Split(',') | % { "0x$_"};
