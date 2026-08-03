@@ -13,7 +13,12 @@ choco install -y openssh --prerelease --force --params '/SSHServerFeature /PathS
 refreshenv
 sed -i 's/^[^#].*administrators.*/#&/g' /programdata/ssh/sshd_config
 restart-service sshd
-&(resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1)
-import-module -force (resolve-path /prog*s/openssh*/opensshutils.psd1)
-repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+$sshfixperms = resolve-path /prog*s/openssh*/fixuserfilepermissions.ps1 -ea ignore | select -first 1
+$sshutils    = resolve-path /prog*s/openssh*/opensshutils.psd1 -ea ignore | select -first 1
+
+if ($sshfixperms -and $sshutils) {
+    &$sshfixperms
+    import-module -force $sshutils
+    repair-authorizedkeypermission -file ~/.ssh/authorized_keys
+}
 ni -it sym ~/.config -tar (resolve-path ~/AppData/Local)
