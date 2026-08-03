@@ -47,6 +47,7 @@
   - [Using tmux with PowerShell](#using-tmux-with-powershell)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
+    - [Using ssh-agent With the Port Forwarding Task](#using-ssh-agent-with-the-port-forwarding-task)
   - [Using X11 Forwarding Over SSH](#using-x11-forwarding-over-ssh)
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes)
@@ -4043,13 +4044,14 @@ $action  = new-scheduledtaskaction `
 	"-command ""& '$(join-path $psscriptroot build-nightly.ps1)'""" + `
 	" *>> /logs/build-nightly.log")
 
-$password = (get-credential $env:username).getnetworkcredential().password
+$principal = new-scheduledtaskprincipal `
+    -userid $env:username `
+    -logontype s4u
 
 register-scheduledtask -force `
     -taskname $taskname `
     -trigger $trigger -action $action `
-    -user $env:username `
-    -password $password `
+    -principal $principal `
     -ea stop | out-null
 
 "Task '$taskname' successfully registered to run daily at $runat."
@@ -4058,8 +4060,17 @@ register-scheduledtask -force `
 update your task settings and re-run the script and the task will be
 updated.
 
-With `-runlevel` set to `highest` the task runs elevated, omit this
-parameter to run with standard permissions.
+The `-principal` parameter takes a principal object created with
+`new-scheduledtaskprincipal`, and with `-logontype` set to `s4u` the
+task runs whether or not you are logged on without having to store
+your password. This also works when your account has no password at
+all, such as a Microsoft account you sign into with Windows Hello or
+the Microsoft Authenticator app. Such a task runs non-interactively,
+so no console window appears, but it also has no access to network
+shares or to your Windows Credential Manager entries.
+
+With `-runlevel` set to `highest` on the principal the task runs
+elevated, omit this parameter to run with standard permissions.
 
 You can also pass a `-settings` parameter to
 `register-scheduledtask` taking a task settings object created with
@@ -4156,13 +4167,14 @@ $action  = new-scheduledtaskaction `
     -execute (get-command ssh).source `
     -argument '-NT server-ports'
 
-$password = (get-credential $env:username).getnetworkcredential().password
+$principal = new-scheduledtaskprincipal `
+    -userid $env:username `
+    -logontype s4u
 
 register-scheduledtask -force `
     -taskname $taskname `
     -trigger $trigger -action $action `
-    -user $env:username `
-    -password $password `
+    -principal $principal `
     -ea stop | out-null
 
 "Task '$taskname' successfully registered to run at logon."
@@ -4180,6 +4192,52 @@ the shortcut and set the target to something like:
 "C:\Program Files\PowerShell\7\pwsh.exe" -windowstyle hidden -c "ssh -NT server-ports"
 ```
 . Make sure `Run:` is changed from `Normal window` to `Minimized`.
+
+#### Using ssh-agent With the Port Forwarding Task
+
+A task registered with `-logontype s4u` runs without your
+credentials, and so it cannot decrypt anything protected with DPAPI.
+The Windows `ssh-agent` service keeps the keys you add to it in the
+registry encrypted this way, which means the task above cannot use
+them.
+
+If your key has no passphrase this does not matter, `ssh` reads it
+straight out of `~/.ssh` and the task works. But if you keep a
+passphrase on your key and load it with `ssh-add`, register the task
+with `-user` and `-password` instead, so that it runs with a full
+token:
+
+[//]: # "BEGIN INCLUDED ports-task-password.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+$taskname = 'Forward Server Ports'
+
+$trigger = new-scheduledtasktrigger -atlogon
+
+$action  = new-scheduledtaskaction `
+    -execute (get-command ssh).source `
+    -argument '-NT server-ports'
+
+$password = (get-credential $env:username).getnetworkcredential().password
+
+register-scheduledtask -force `
+    -taskname $taskname `
+    -trigger $trigger -action $action `
+    -user $env:username `
+    -password $password `
+    -ea stop | out-null
+
+"Task '$taskname' successfully registered to run at logon."
+```
+. This prompts you for your password when you run it, and requires
+that your account actually has one, it fails with an `incorrect
+password` error on an account you only sign into with Windows Hello
+or the Microsoft Authenticator app.
+
+The startup folder shortcut described above is not affected either
+way, as it runs in your own interactive session.
 
 Once that is done, the last step is to install `virt-viewer` from WinGet using
 the id `RedHat.VirtViewer` and add the functions to your
