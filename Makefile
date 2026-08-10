@@ -30,8 +30,11 @@ else
     NPM=npm
 endif
 
+# 403 means the site refused the checker, not that the link is broken, which
+# github.com and learn.microsoft.com both do. The list replaces the defaults
+# rather than adding to them, so 200 and 206 have to be repeated here.
 .link-check-stamp: README.md
-	@markdown-link-check -q README.md
+	@markdown-link-check -q -a 200,206,403 README.md
 	@touch .link-check-stamp
 
 .PHONY: clean test

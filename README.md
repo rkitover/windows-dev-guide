@@ -144,7 +144,12 @@ iwr -usebasicparsing https://aka.ms/vs/stable/vs_community.exe -outfile vs_commu
 start-process powershell '-noprofile', '-windowstyle', 'hidden', `
     '-command', "while (test-path $pwd/vs_community.exe) { sleep 5; ri -fo $pwd/vs_community.exe }"
 
-new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Program Files/PowerShell/7/pwsh.exe' -propertytype string -force > $null
+# The shell for incoming ssh connections. This is the app execution alias, which
+# Windows keeps pointed at the pwsh you have installed, written out in full
+# because sshd needs a literal path and does not expand anything.
+new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell `
+    -value "$env:localappdata\Microsoft\WindowsApps\pwsh.exe" `
+    -propertytype string -force > $null
 
 $sshd_conf = '/programdata/ssh/sshd_config'
 $conf = gc $sshd_conf | %{ $_ -replace '^([^#].*administrators.*)','#$1' }
@@ -163,6 +168,9 @@ https://apps.microsoft.com/detail/9nblggh4nns1
 
 . If something fails in the script, run it again until everything
 succeeds.
+
+The `DefaultShell` value the script sets at the end is the shell the
+OpenSSH server starts for incoming connections.
 
 Make sure your network adapter is marked as a private network, or ssh
 connections will not pass through the firewall.
@@ -1750,6 +1758,15 @@ function map_alias {
             }
         }
 
+        # When a glob matches more than one, use the highest version, treating
+        # anything without version info as the oldest.
+        if (@($path).count -gt 1) {
+            $path = gi $path -ea ignore | sort {
+                if ($v = $_.versioninfo.fileversion -as [version]) { $v }
+                else { [version]'0.0' }
+            } | select -last 1 | % fullname
+        }
+
         if ($cmd = get-command $path -ea ignore) {
             rmalias $_.key
 
@@ -1776,7 +1793,7 @@ if ($iswindows) {
     @{
         patch   = '/prog*s/git/usr/bin/patch'
         wordpad = '/prog*s/win*nt/accessories/wordpad'
-        ssh     = '/prog*s/OpenSSH-*/ssh.exe'
+        ssh     = '/prog*s/OpenSSH*/ssh.exe'
         '7zfm'  = '/prog*s/7-zip/7zfm.exe'
     } | map_alias
 }
@@ -3325,10 +3342,18 @@ you will need to manually delete module directories, preferably in
 an admin cmd prompt not running PowerShell, core or Windows.
 
 In PowerShell Core, your modules are written to the
-`~/Documents/PowerShell/Modules` directory, with each module written
+`Documents/PowerShell/Modules` directory, with each module written
 to a `<Module>/<Version>` tree. You can delete them if they are not
-in use. The system-wide directory is
-`$env:programfiles/PowerShell/7/Modules`.
+in use. Keep in mind that `Documents` is often redirected, into
+OneDrive for example, so check `$env:PSModulePath` instead of
+assuming that it is under `~`. The system-wide directory, which is
+where `-scope allusers` installs, is
+`$env:programfiles/PowerShell/Modules`.
+
+The modules that ship with PowerShell itself are in a `Modules`
+directory next to `pwsh.exe`, so under `$env:programfiles/PowerShell/7`
+for a traditional install, or inside the versioned, read-only package
+directory when PowerShell is installed as an MSIX package.
 
 For Windows PowerShell the location of modules is
 `$env:programfiles/WindowsPowerShell/Modules`.
@@ -3987,7 +4012,8 @@ the following at the very end:
 ```tmux
 orig_path="$PATH"
 set-environment -g PATH "/c/msys64/usr/bin:$PATH"
-set -g default-command "/c/progra~1/PowerShell/7/pwsh -nologo"
+# Check that this is where your pwsh.exe is.
+set -g default-command 'exec ~/AppData/Local/Microsoft/WindowsApps/pwsh.exe -nologo'
 ```
 . If you want to use a configuration that behaves like screen I have one
 [here](https://github.com/rkitover/tmux-screen-compat). You can load a
@@ -4185,11 +4211,11 @@ folder shortcut, first open the folder:
 ```powershell
 explorer shell:startup
 ```
-, create a shortcut to `pwsh`, then open the properties for
+, create a shortcut to `powershell`, then open the properties for
 the shortcut and set the target to something like:
 
 ```powershell
-"C:\Program Files\PowerShell\7\pwsh.exe" -windowstyle hidden -c "ssh -NT server-ports"
+powershell.exe -windowstyle hidden -c "ssh -NT server-ports"
 ```
 . Make sure `Run:` is changed from `Normal window` to `Minimized`.
 
@@ -4558,6 +4584,15 @@ virtual machine.
 
 Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
 configuration of choice including this statement:
+
+```tmux
+# Check that this is where your pwsh.exe is.
+set -g default-command 'exec "$(wslpath "$(cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d "\r")")/Microsoft/WindowsApps/pwsh.exe" -nologo -noexit -c sl'
+```
+. WSL does not get `$LOCALAPPDATA` from Windows, so unlike the MSYS2
+config this one asks Windows for it and converts the result with
+`wslpath`. If you have a traditional install instead of an MSIX package,
+use its path instead:
 
 ```tmux
 set -g default-command "'/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo -noexit -c sl"

@@ -17,7 +17,12 @@ iwr -usebasicparsing https://aka.ms/vs/stable/vs_community.exe -outfile vs_commu
 start-process powershell '-noprofile', '-windowstyle', 'hidden', `
     '-command', "while (test-path $pwd/vs_community.exe) { sleep 5; ri -fo $pwd/vs_community.exe }"
 
-new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell -value '/Program Files/PowerShell/7/pwsh.exe' -propertytype string -force > $null
+# The shell for incoming ssh connections. This is the app execution alias, which
+# Windows keeps pointed at the pwsh you have installed, written out in full
+# because sshd needs a literal path and does not expand anything.
+new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell `
+    -value "$env:localappdata\Microsoft\WindowsApps\pwsh.exe" `
+    -propertytype string -force > $null
 
 $sshd_conf = '/programdata/ssh/sshd_config'
 $conf = gc $sshd_conf | %{ $_ -replace '^([^#].*administrators.*)','#$1' }

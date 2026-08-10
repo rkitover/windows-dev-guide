@@ -1028,6 +1028,15 @@ function map_alias {
             }
         }
 
+        # When a glob matches more than one, use the highest version, treating
+        # anything without version info as the oldest.
+        if (@($path).count -gt 1) {
+            $path = gi $path -ea ignore | sort {
+                if ($v = $_.versioninfo.fileversion -as [version]) { $v }
+                else { [version]'0.0' }
+            } | select -last 1 | % fullname
+        }
+
         if ($cmd = get-command $path -ea ignore) {
             rmalias $_.key
 
@@ -1054,7 +1063,7 @@ if ($iswindows) {
     @{
         patch   = '/prog*s/git/usr/bin/patch'
         wordpad = '/prog*s/win*nt/accessories/wordpad'
-        ssh     = '/prog*s/OpenSSH-*/ssh.exe'
+        ssh     = '/prog*s/OpenSSH*/ssh.exe'
         '7zfm'  = '/prog*s/7-zip/7zfm.exe'
     } | map_alias
 }
