@@ -24,6 +24,13 @@ new-itemproperty -path "HKLM:\SOFTWARE\OpenSSH" -name DefaultShell `
     -value "$env:localappdata\Microsoft\WindowsApps\pwsh.exe" `
     -propertytype string -force > $null
 
+# Open ssh on all networks, the rule the OpenSSH package adds only covers
+# private ones. Remove first so that re-running this does not fail.
+remove-netfirewallrule -name sshd -ea ignore
+new-netfirewallrule -name sshd -displayname 'OpenSSH Server (sshd)' `
+    -direction inbound -action allow -protocol tcp -localport 22 -profile any `
+    > $null
+
 $sshd_conf = '/programdata/ssh/sshd_config'
 $conf = gc $sshd_conf | %{ $_ -replace '^([^#].*administrators.*)','#$1' }
 $conf | set-content $sshd_conf
