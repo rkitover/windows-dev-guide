@@ -1040,6 +1040,9 @@ function map_alias {
         if ($cmd = get-command $path -ea ignore) {
             rmalias $_.key
 
+            # Resolve through any aliases, a target like 'gci' is one itself.
+            while ($cmd.commandtype -eq 'Alias') { $cmd = $cmd.resolvedcommand }
+
             $type = $cmd.commandtype
 
             $cmd = if ($type `
