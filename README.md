@@ -993,9 +993,10 @@ if ($iswindows) {
         }
     }
 
-    if ($vs_path) {
+    $vcvarsall = resolve-path -ea ignore "$vs_path/../../VC/Auxiliary/Build/vcvarsall.bat"
+
+    if ($vcvarsall) {
         $default_arch = $env:PROCESSOR_ARCHITECTURE.tolower()
-        $vcvarsall = resolve-path "$vs_path/../../VC/Auxiliary/Build/vcvarsall.bat"
 
         $script:vsenv_state = $null
         $script:vsenv_vcpkg_in_path = $null
