@@ -2081,6 +2081,25 @@ containing for example:
 This way, anyone cloning the repo will have the correct line
 endings.
 
+Changing `core.autocrlf` does not affect clones you already have,
+because git only applies the line ending filter when it checks a
+file out, and it considers the files in your working tree to be up
+to date. To re-apply the setting to an existing clone without
+re-cloning it, commit or stash your work in progress, then run:
+
+```powershell
+git rm --cached -r .
+git reset --hard
+```
+. This drops the index entries and checks everything out again
+through the new filter. Check the result with `git ls-files --eol`,
+which shows the line endings of each file in the index and in the
+working tree. Keep in mind that a `.gitattributes` file takes
+precedence over `core.autocrlf`, and that files with CRLF committed
+into them stay that way, because a checkout cannot change what is
+in the index. For those, run `git add --renormalize .` and commit
+the result.
+
 ### Setting up gpg
 
 Make this symlink:
