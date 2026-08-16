@@ -16,6 +16,7 @@
     - [Setting up nano](#setting-up-nano)
   - [Setting up PowerShell](#setting-up-powershell)
   - [Setting up ssh](#setting-up-ssh)
+    - [Ctrl Key Combos Inserting the Wrong Characters](#ctrl-key-combos-inserting-the-wrong-characters)
   - [Setting up and Using Git](#setting-up-and-using-git)
     - [Git Setup](#git-setup)
     - [Using Git](#using-git)
@@ -2002,6 +2003,43 @@ if ($sshfixperms -and $sshutils) {
 }
 ```
 .
+
+#### Ctrl Key Combos Inserting the Wrong Characters
+
+If you have more than one keyboard layout installed, `Ctrl` key combos in an
+ssh session can insert letters from the layout you did not want instead of
+doing what they should, while the very same keys work correctly in a local
+session.
+
+This happens because sshd runs as a service, so the session it starts for you
+takes its keyboard layout from the `.DEFAULT` registry hive rather than from
+your `HKCU`, and that hive keeps its own layout order that does not follow the
+one you set for your account.
+
+To see which layout an ssh session is really using, run:
+
+```powershell
+$sig = '[DllImport("user32.dll")] public static extern IntPtr GetKeyboardLayout(uint idThread);'
+$kbd = add-type -memberdefinition $sig -name kbd -namespace probe -passthru
+'0x{0:X8}' -f $kbd::GetKeyboardLayout(0).ToInt64()
+```
+. The low word is the language id, for example `0x0409` is US English and
+`0x0419` is Russian. To put US English first for ssh sessions, run the
+following in an admin shell:
+
+```powershell
+$preload = 'registry::HKEY_USERS\.DEFAULT\Keyboard Layout\Preload'
+
+sp $preload -name 1 -value '00000409'
+sp $preload -name 2 -value '00000419'
+```
+. Then reboot. Reconnecting is not enough, because the layout is bound to the
+session sshd created when you logged in, and an existing session keeps the old
+one for its whole life.
+
+The same thing can be done in the `Region` control panel under `Administrative
+-> Copy settings` by checking `Welcome screen and system accounts`. Note that
+this also sets the layout for the sign-in screen.
 
 ### Setting up and Using Git
 
@@ -4700,6 +4738,12 @@ uncheck `Recycle Bin` and click `Apply`.
 If you have multiple languages installed, go to `Settings -> Time & Language ->
 Typing -> Advanced keyboard settings` and set the primary keyboard layout to the
 one you prefer. It will be enabled on boot.
+
+It is best not to install more keyboard layouts than you actually need. Windows
+keeps a separate layout order for services and the sign-in screen that does not
+follow the one you set for your account, and when a layout you did not intend
+ends up first there it breaks `Ctrl` key combos over ssh, see
+[Ctrl Key Combos Inserting the Wrong Characters](#ctrl-key-combos-inserting-the-wrong-characters).
 
 ##### Taskbar
 
