@@ -4037,8 +4037,9 @@ the following at the very end:
 
 [//]: # "BEGIN INCLUDED .tmux-pwsh.conf"
 ```tmux
-orig_path="$PATH"
 set-environment -g PATH "/c/msys64/usr/bin:$PATH"
+# Over ssh $SHELL can be pwsh; sh also avoids sourcing ~/.bashrc.
+set -g default-shell /usr/bin/sh
 # Check that this is where your pwsh.exe is.
 set -g default-command 'exec ~/AppData/Local/Microsoft/WindowsApps/pwsh.exe -nologo'
 ```
