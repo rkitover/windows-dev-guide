@@ -32,9 +32,56 @@ if ($iswindows) {
         import-module $chocolatey_profile
     }
 
-    if (get-command -ea ignore update-sessionenvironment) {
-        update-sessionenvironment
+    # Chocolatey's profile exports refreshenv as an alias for
+    # update-sessionenvironment, and aliases shadow functions.
+    while (test-path alias:refreshenv) { ri -force alias:refreshenv }
+
+    # Re-merge the machine and user environments from the registry into this
+    # session, so that a shell picks up variables set by installers after its
+    # terminal was started. This is what Chocolatey's refreshenv does, without
+    # needing Chocolatey.
+    function global:refreshenv {
+        # The machine and user values of these do not apply to a running
+        # process, e.g. USERNAME is SYSTEM in the machine environment.
+        $process_vars = 'USERNAME','PROCESSOR_ARCHITECTURE'
+
+        # These are merged below instead of being overridden.
+        $path_vars = 'Path','PSModulePath'
+
+        # The user environment overrides the machine environment, and both
+        # override the process environment.
+        foreach ($scope in 'machine','user') {
+            [environment]::getenvironmentvariables($scope).getenumerator() |
+                ?{ ($process_vars + $path_vars) -notcontains $_.key } | %{
+                    [environment]::setenvironmentvariable($_.key, $_.value)
+                }
+        }
+
+        # The path variables are concatenated instead, keeping what the
+        # session added to them, and the module directories PowerShell adds
+        # to PSModulePath at startup, none of which are in the registry.
+        $sep = [system.io.path]::pathseparator
+
+        foreach ($var in $path_vars) {
+            $paths = ,[environment]::getenvironmentvariable($var) +
+                ('machine','user' | %{
+                    [environment]::getenvironmentvariable($var, $_)
+                })
+
+            # The registry entries often differ from the ones already in the
+            # process only by a trailing separator, so compare without it,
+            # but keep each entry in the form and the position it was first
+            # seen in. Do not use group-object here, it sorts.
+            $seen = [System.Collections.Generic.HashSet[string]]::new(
+                [System.StringComparer]::OrdinalIgnoreCase)
+
+            [environment]::setenvironmentvariable($var,
+                (($paths -join $sep) -split $sep | %{ $_.trim() } | ? length |
+                    ?{ $seen.add($_.trimend('/\')) }) -join $sep)
+        }
     }
+
+    refreshenv
 
     # Tell Chocolatey to not add code to $profile.
     $env:ChocolateyNoProfile = 'yes'
@@ -284,11 +331,33 @@ if ($iswindows) {
             # Grab the record of what vcvarsall added last session before we clear state.
             $prev_additions = if ($script:vsenv_state) { $script:vsenv_state.vcvarsall_additions } else { $null }
 
+            # Regex matching VS/SDK/WinKits/.NET/.NET-adjacent PATH entries added by
+            # vcvarsall, used to strip the inherited PATH when starting a new shell
+            # that already has a vsenv'd PATH from its parent process, and to strip
+            # any that are left in PATH when unloading.
+            $vs_strip_re = '[/\\]Microsoft Visual Studio[/\\]|[/\\]Microsoft SDKs[/\\]|[/\\]Windows Kits[/\\](?:[^/\\]+[/\\](?:bin|lib|include|UnionMetadata|References)[/\\]|NETFXSDK[/\\])|[/\\]Microsoft\.NET[/\\]|[/\\]HTML Help Workshop'
+
             # Unload previous vsenv state.
             if ($script:vsenv_state) {
                 # Restore PATH and list vars (INCLUDE, LIB, LIBPATH).
                 $script:vsenv_state.saved_lists.getenumerator() | %{
-                    if ($null -ne $_.value) {
+                    # For PATH subtract what vcvarsall added instead of
+                    # restoring the saved baseline, which would also discard
+                    # entries added to PATH since, e.g. by refreshenv. Also
+                    # strip any VS entries that are not in the record, e.g.
+                    # ones inherited from a parent shell.
+                    if ($_.key -ieq 'PATH' -and $prev_additions -and
+                        $prev_additions['PATH']) {
+
+                        $added = $prev_additions['PATH']
+
+                        $env:Path = (($env:Path -split $path_sep |
+                            %{ $_.trim() } | ?{
+                                $_ -and $_ -inotmatch $vs_strip_re -and
+                                    -not $added.contains($_.trimend('/\'))
+                            }) -join $path_sep)
+                    }
+                    elseif ($null -ne $_.value) {
                         set-item -literalpath "env:$($_.key)" $_.value
                     } else {
                         remove-item -literalpath "env:$($_.key)" -ea ignore
@@ -308,11 +377,6 @@ if ($iswindows) {
             }
 
             if ($unload) { return }
-
-            # Regex matching VS/SDK/WinKits/.NET/.NET-adjacent PATH entries added by
-            # vcvarsall, used to strip the inherited PATH when starting a new shell
-            # that already has a vsenv'd PATH from its parent process.
-            $vs_strip_re = '[/\\]Microsoft Visual Studio[/\\]|[/\\]Microsoft SDKs[/\\]|[/\\]Windows Kits[/\\](?:[^/\\]+[/\\](?:bin|lib|include|UnionMetadata|References)[/\\]|NETFXSDK[/\\])|[/\\]Microsoft\.NET[/\\]|[/\\]HTML Help Workshop'
 
             # Strip stale VCPKG_ROOT from PATH if it changed since last vsenv
             # call — must happen before $post_unload_path AND before vcvarsall
@@ -481,6 +545,18 @@ if ($iswindows) {
                         $new_entries = @($new_entries | %{
                             if ($_ -imatch '[/\\]VC[/\\]vcpkg$') { $env:VCPKG_ROOT } else { $_ }
                         })
+                    }
+                    if ($name -ieq 'PATH') {
+                        # Record the entries appended to PATH, so the unload
+                        # above can subtract exactly these on the next call.
+                        # VCPKG_ROOT is part of the baseline, not an addition.
+                        $vc_set = [System.Collections.Generic.HashSet[string]]::new(
+                            [System.StringComparer]::OrdinalIgnoreCase)
+                        $new_entries | ?{ $_ -ine $vcpkg_root_trimmed } | %{
+                            $n = $_.trim().trimend('/\')
+                            if ($n) { [void]$vc_set.add($n) }
+                        }
+                        $state.vcvarsall_additions['PATH'] = $vc_set
                     }
                     # PATH: append VS entries after base entries.
                     # LIB/INCLUDE/LIBPATH: VS entries first, user additions after.

@@ -59,6 +59,32 @@ if exist "$($script:mock_response)" call "$($script:mock_response)"
         }
     }
 
+    # ── user environment variables for refreshenv tests ─────────────
+    # [environment]::setenvironmentvariable($name, $null, 'user') leaves an
+    # empty value behind in the registry instead of deleting it, which a
+    # later refreshenv would then apply, so delete the value directly.
+    # Read and write the raw value, and keep the value kind, so that
+    # saving and restoring Path cannot expand a REG_EXPAND_SZ value or
+    # change its type.
+    function script:get_user_env_var_raw($name) {
+        (gi -literalpath HKCU:\Environment).getvalue(
+            $name, '', 'donotexpandenvironmentnames')
+    }
+
+    function script:set_user_env_var($name, $value) {
+        $kind = try {
+            (gi -literalpath HKCU:\Environment).getvaluekind($name)
+        }
+        catch { 'String' }
+
+        sp -literalpath HKCU:\Environment -name $name -value $value -type $kind
+    }
+
+    function script:remove_user_env_var($name) {
+        rp -literalpath HKCU:\Environment -name $name -ea ignore
+        ri -literalpath "env:$name" -ea ignore
+    }
+
     # ── build a standard mock vcvarsall response for a given arch ───
     function script:new_vcvarsall_response {
         param(
@@ -510,6 +536,98 @@ describe 'tac' -skip:(-not (get-command tac -ea ignore)) {
         $r[0] | should -be 'c'
         $r[1] | should -be 'b'
         $r[2] | should -be 'a'
+    }
+}
+
+# ════════════════════════════════════════════════════════════════════════
+#  refreshenv
+# ════════════════════════════════════════════════════════════════════════
+describe 'refreshenv' -tag 'Windows' -skip:(-not $iswindows) {
+
+    it 'does not clobber the per-process variables' {
+        $username = $env:USERNAME
+        $arch     = $env:PROCESSOR_ARCHITECTURE
+
+        refreshenv
+
+        $env:USERNAME               | should -be $username
+        $env:PROCESSOR_ARCHITECTURE | should -be $arch
+    }
+
+    it 'keeps variables that are only in the process environment' {
+        $env:PROFILE_TESTS_PROCESS_VAR = 'kept'
+
+        try {
+            refreshenv
+
+            $env:PROFILE_TESTS_PROCESS_VAR | should -be 'kept'
+        }
+        finally { ri env:PROFILE_TESTS_PROCESS_VAR -ea ignore }
+    }
+
+    it 'picks up a variable added to the user environment' {
+        try {
+            set_user_env_var 'PROFILE_TESTS_USER_VAR' 'added'
+
+            refreshenv
+
+            $env:PROFILE_TESTS_USER_VAR | should -be 'added'
+        }
+        finally { remove_user_env_var 'PROFILE_TESTS_USER_VAR' }
+    }
+
+    it 'keeps paths added to the session' {
+        $saved_path = $env:Path
+        $env:Path   = $script:temp_dir + $script:path_sep + $env:Path
+
+        try {
+            refreshenv
+
+            ($env:Path -split $script:path_sep) |
+                should -contain $script:temp_dir
+        }
+        finally { $env:Path = $saved_path }
+    }
+
+    it 'deduplicates the path variables' {
+        $saved_path = $env:Path
+        $env:Path   = $env:Path + $script:path_sep + $env:Path
+
+        try {
+            refreshenv
+
+            $entries = $env:Path -split $script:path_sep | ? length |
+                %{ $_.trimend('/\') }
+
+            ($entries | select -unique).count | should -be $entries.count
+        }
+        finally { $env:Path = $saved_path }
+    }
+
+    it 'ignores a trailing separator when deduplicating' {
+        $saved_path = $env:Path
+        $entry      = ($env:Path -split $script:path_sep | ? length)[0]
+        $env:Path   = $entry.trimend('/\') + '\' + $script:path_sep + $env:Path
+
+        try {
+            refreshenv
+
+            $entries = $env:Path -split $script:path_sep | ? length |
+                %{ $_.trimend('/\') }
+
+            ($entries | select -unique).count | should -be $entries.count
+        }
+        finally { $env:Path = $saved_path }
+    }
+
+    it 'is idempotent' {
+        refreshenv
+        $once = $env:Path, $env:PSModulePath
+
+        refreshenv
+
+        $env:Path         | should -be $once[0]
+        $env:PSModulePath | should -be $once[1]
     }
 }
 
@@ -1190,6 +1308,180 @@ describe 'vsenv' -tag 'Windows' -skip:(-not $iswindows) {
             $env:Path | should -not -match '\\Microsoft Visual Studio\\'
             $env:Path | should -not -match '\\Microsoft SDKs\\'
             $env:Path | should -not -match '\\Microsoft\.NET\\'
+        }
+    }
+
+    # ── refreshenv Interaction ──────────────────────────────────────
+    describe 'refreshenv Interaction' {
+
+        it 'keeps the vcvarsall PATH entries' {
+            invoke_vsenv -arch x64
+            $before = ($env:Path -split ';' |
+                ?{ $_ -match 'Microsoft Visual Studio' }) -join ';'
+
+            refreshenv
+
+            ($env:Path -split ';' |
+                ?{ $_ -match 'Microsoft Visual Studio' }) -join ';' |
+                    should -be $before
+        }
+
+        it 'keeps the list vars set by vcvarsall' {
+            invoke_vsenv -arch x64
+            $include = $env:INCLUDE
+            $lib     = $env:LIB
+            $libpath = $env:LIBPATH
+
+            refreshenv
+
+            $env:INCLUDE | should -be $include
+            $env:LIB     | should -be $lib
+            $env:LIBPATH | should -be $libpath
+        }
+
+        it 'keeps the scalar vars set by vcvarsall' {
+            invoke_vsenv -arch x64
+            $vsinstalldir = $env:VSINSTALLDIR
+            $tgt_arch     = $env:VSCMD_ARG_TGT_ARCH
+
+            refreshenv
+
+            $env:VSINSTALLDIR        | should -be $vsinstalldir
+            $env:VSCMD_ARG_TGT_ARCH  | should -be $tgt_arch
+        }
+
+        it 'does not duplicate the vsenv PATH entries' {
+            invoke_vsenv -arch x64
+
+            refreshenv
+
+            $entries = $env:Path -split ';' | ? length | %{ $_.trimend('/\') }
+
+            ($entries | select -unique).count | should -be $entries.count
+        }
+
+        it 'does not grow $env:Path when run repeatedly' {
+            invoke_vsenv -arch x64
+            refreshenv
+            $once = $env:Path
+
+            refreshenv
+            refreshenv
+
+            $env:Path | should -be $once
+        }
+
+        it 'merges a new user path entry without disturbing the VS entries' {
+            invoke_vsenv -arch x64
+            $vs_entries = ($env:Path -split ';' |
+                ?{ $_ -match 'Microsoft Visual Studio' }) -join ';'
+
+            $user_path = get_user_env_var_raw 'Path'
+            $new_dir   = join-path $script:temp_dir 'installed-after-vsenv'
+
+            try {
+                set_user_env_var 'Path' (@($user_path, $new_dir) -join ';')
+
+                refreshenv
+
+                ($env:Path -split ';') | should -contain $new_dir
+
+                ($env:Path -split ';' |
+                    ?{ $_ -match 'Microsoft Visual Studio' }) -join ';' |
+                        should -be $vs_entries
+            }
+            finally { set_user_env_var 'Path' $user_path }
+        }
+
+        it 'leaves vsenv able to switch arch with no stale entries' {
+            invoke_vsenv -arch x64
+            refreshenv
+            invoke_vsenv -arch arm64
+
+            $env:Path | should -match 'arm64'
+            $env:Path | should -not -match 'HostX64\\x64'
+
+            $entries = $env:Path -split ';' | ? length
+            ($entries | select -unique).count | should -be $entries.count
+        }
+
+        it 'leaves vsenv able to unload to the pre-vsenv baseline' {
+            $baseline = $env:Path
+
+            invoke_vsenv -arch x64
+            refreshenv
+            vsenv -unload
+
+            $env:Path | should -not -match '\\Microsoft Visual Studio\\'
+
+            # vsenv restores the baseline it captured at load time, so this is
+            # only the same set of entries if refreshenv found nothing new.
+            ($env:Path -split ';' | ? length | sort) -join ';' |
+                should -be (($baseline -split ';' | ? length | sort) -join ';')
+        }
+
+        it 'survives in $env:Path across later vsenv calls' {
+            # vsenv subtracts what vcvarsall added rather than restoring the
+            # PATH baseline it captured when it loaded, so entries merged in
+            # by a refreshenv in between are kept.
+            $user_path = get_user_env_var_raw 'Path'
+            $new_dir   = join-path $script:temp_dir 'installed-during-vsenv'
+
+            try {
+                invoke_vsenv -arch x64
+
+                set_user_env_var 'Path' (@($user_path, $new_dir) -join ';')
+                refreshenv
+
+                ($env:Path -split ';') | should -contain $new_dir
+
+                invoke_vsenv -arch x64
+                ($env:Path -split ';') | should -contain $new_dir
+
+                invoke_vsenv -arch arm64
+                ($env:Path -split ';') | should -contain $new_dir
+
+                vsenv -unload
+                ($env:Path -split ';') | should -contain $new_dir
+
+                $env:Path | should -not -match '\\Microsoft Visual Studio\\'
+            }
+            finally { set_user_env_var 'Path' $user_path }
+        }
+
+        it 'survives a plain session addition across vsenv calls' {
+            $new_dir = join-path $script:temp_dir 'added-by-hand'
+
+            invoke_vsenv -arch x64
+            $env:Path = $new_dir + ';' + $env:Path
+
+            invoke_vsenv -arch arm64
+            ($env:Path -split ';') | should -contain $new_dir
+
+            vsenv -unload
+            ($env:Path -split ';') | should -contain $new_dir
+        }
+
+        it 'is undone for a list var that is in the user environment' {
+            # vcvarsall sets INCLUDE, but the registry wins on the next
+            # refreshenv, re-run vsenv (or . $profile) to get it back.
+            invoke_vsenv -arch x64
+            $vcvars_include = $env:INCLUDE
+
+            try {
+                set_user_env_var 'INCLUDE' 'C:\registry\include'
+
+                refreshenv
+
+                $env:INCLUDE | should -be 'C:\registry\include'
+
+                invoke_vsenv -arch x64
+
+                $env:INCLUDE | should -match 'MSVC'
+                $env:INCLUDE | should -not -be $vcvars_include
+                $env:INCLUDE | should -match 'registry\\include'
+            }
+            finally { remove_user_env_var 'INCLUDE' }
         }
     }
 }
