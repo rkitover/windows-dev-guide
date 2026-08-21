@@ -2133,6 +2133,7 @@ git config --global core.autocrlf  false
 git config --global push.default   simple
 git config --global pull.rebase    true
 git config --global commit.gpgsign true
+git config --global gpg.program 'C:\Program Files\GnuPG\bin\gpg.exe'
 ```
 .
 
@@ -2230,7 +2231,7 @@ To configure git to use it, do the following:
 
 ```powershell
 git config --global commit.gpgsign true
-git config --global gpg.program 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
+git config --global gpg.program 'C:\Program Files\GnuPG\bin\gpg.exe'
 ```
 .
 
