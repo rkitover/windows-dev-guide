@@ -8,8 +8,13 @@ $trigger = new-scheduledtasktrigger -at $runat -daily
 
 if (-not (test-path /logs)) { mkdir /logs *> $null }
 
+# Windows PowerShell rather than pwsh, because it is always present at a fixed
+# path that is on the machine PATH, which a task running as SYSTEM can resolve.
+# pwsh is installed per user, under a versioned WindowsApps path that SYSTEM
+# cannot find by name and that changes whenever PowerShell updates.
+
 $action  = new-scheduledtaskaction `
-    -execute 'pwsh' `
+    -execute 'powershell' `
     -argument ("-noprofile -executionpolicy remotesigned " + `
 	"-command ""& '$(join-path $psscriptroot compress-installation.ps1)'""" + `
 	" *>> /logs/compress-installation.log")

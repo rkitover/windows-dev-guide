@@ -75,8 +75,10 @@
       - [Map CapsLock to Another Control](#map-capslock-to-another-control)
       - [Background Image Switcher](#background-image-switcher)
       - [Compressing Your Installation to Save Space](#compressing-your-installation-to-save-space)
+      - [Keeping your Linux Bootloader First in the Boot Order](#keeping-your-linux-bootloader-first-in-the-boot-order)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 ## Windows Native Development Environment Setup Guide for Linux Users
 
@@ -5079,8 +5081,13 @@ $trigger = new-scheduledtasktrigger -at $runat -daily
 
 if (-not (test-path /logs)) { mkdir /logs *> $null }
 
+# Windows PowerShell rather than pwsh, because it is always present at a fixed
+# path that is on the machine PATH, which a task running as SYSTEM can resolve.
+# pwsh is installed per user, under a versioned WindowsApps path that SYSTEM
+# cannot find by name and that changes whenever PowerShell updates.
+
 $action  = new-scheduledtaskaction `
-    -execute 'pwsh' `
+    -execute 'powershell' `
     -argument ("-noprofile -executionpolicy remotesigned " + `
 	"-command ""& '$(join-path $psscriptroot compress-installation.ps1)'""" + `
 	" *>> /logs/compress-installation.log")
@@ -5121,6 +5128,150 @@ compact.exe /u /a /i /q /s:'C:\Program Files'
 
 ```powershell
 compact.exe /compactos:never
+```
+
+##### Keeping your Linux Bootloader First in the Boot Order
+
+If you dual boot, anything that writes UEFI NVRAM tends to put `Windows Boot
+Manager` back at the front of the firmware boot order, and the machine then
+boots straight past GRUB into Windows. Firmware updates delivered through
+Windows Update do it, in place upgrades do it, and so do their failed attempts,
+so on the Insider channel it happens fairly often.
+
+The entry itself survives, only its position is lost, so there is no need to
+recreate it. Check with:
+
+```powershell
+bcdedit /enum firmware
+```
+. The list under `{fwbootmgr}` is the boot order, and your distribution appears
+further down as a `Firmware Application` with an identifier of its own. To put
+it back at the front:
+
+```powershell
+bcdedit /set '{fwbootmgr}' displayorder '{your-identifier-here}' /addfirst
+```
+. Here is a script that does that for you. It looks the entry up by its
+description rather than its identifier, so that it still works if the entry was
+recreated with a new one rather than merely moved:
+
+[//]: # "BEGIN INCLUDED restore-boot-order.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+# Anything that writes UEFI NVRAM tends to put Windows Boot Manager back at the
+# front of the firmware boot order, and the machine then boots straight past
+# GRUB. Firmware updates delivered through Windows Update do it, and so do in
+# place upgrades and their failed attempts. The Fedora entry itself survives,
+# only its position is lost.
+#
+# The entry is looked up by description rather than by its identifier, because
+# an entry that has been recreated rather than reordered has a new one.
+
+$wanted = 'Fedora'
+
+$lines = bcdedit /enum firmware
+
+# Map each entry identifier to its description.
+$descriptions = @{}
+$identifier   = $null
+
+foreach ($line in $lines) {
+    if ($line -match '^identifier\s+(\{[^}]+\})') {
+        $identifier = $matches[1]
+    }
+    elseif ($identifier -and $line -match '^description\s+(.+?)\s*$') {
+        $descriptions[$identifier] = $matches[1]
+        $identifier = $null
+    }
+}
+
+# The first displayorder in the output is the one belonging to {fwbootmgr},
+# which is the firmware boot order. {bootmgr} has one of its own further down.
+$order   = @()
+$inorder = $false
+
+foreach ($line in $lines) {
+    if (-not $inorder -and $line -match '^displayorder\s+(\{[^}]+\})') {
+        $inorder = $true
+        $order  += $matches[1]
+    }
+    elseif ($inorder) {
+        if ($line -match '^\s+(\{[^}]+\})\s*$') { $order += $matches[1] }
+        else { break }
+    }
+}
+
+$target = $descriptions.keys |
+    where-object { $descriptions[$_] -eq $wanted } |
+    select-object -first 1
+
+if (-not $target) {
+    "No firmware boot entry called $wanted, leaving the boot order alone."
+    return
+}
+
+if ($order[0] -eq $target) {
+    "$wanted is already first in the firmware boot order."
+    return
+}
+
+"Moving $wanted to the front of the firmware boot order ..."
+
+bcdedit /set '{fwbootmgr}' displayorder $target /addfirst
+```
+. It does nothing at all when the order is already correct, so it is safe to
+run at every boot, and here is a script to register a task that does that:
+
+[//]: # "BEGIN INCLUDED boot-order-task.ps1"
+
+```powershell
+$taskname = 'Restore Boot Order'
+
+# At startup rather than at logon, so that a boot order reset by a firmware
+# update or an upgrade is put back before you next reboot, whether or not you
+# sign in.
+$trigger = new-scheduledtasktrigger -atstartup
+
+if (-not (test-path /logs)) { mkdir /logs }
+
+# Windows PowerShell rather than pwsh, because it is always present at a fixed
+# path that is on the machine PATH, which a task running as SYSTEM can resolve.
+# pwsh is installed per user, under a versioned WindowsApps path that SYSTEM
+# cannot find by name and that changes whenever PowerShell updates.
+
+$action  = new-scheduledtaskaction `
+    -execute 'powershell' `
+    -argument ("-noprofile -executionpolicy remotesigned " + `
+	"-command ""& '$(join-path $psscriptroot restore-boot-order.ps1)'""" + `
+	" *>> /logs/restore-boot-order.log")
+
+# bcdedit needs elevation, so this runs as SYSTEM rather than as you.
+$principal = new-scheduledtaskprincipal `
+    -userid 'SYSTEM' `
+    -logontype serviceaccount `
+    -runlevel highest
+
+$settings = new-scheduledtasksettingsset `
+    -startwhenavailable `
+    -executiontimelimit (new-timespan -minutes 5)
+
+register-scheduledtask -force `
+    -taskname $taskname `
+    -trigger $trigger -action $action `
+    -principal $principal `
+    -settings $settings `
+    -ea stop | out-null
+
+"Task '$taskname' successfully registered to run at startup."
+```
+. Windows Setup can also leave a one time boot override behind on `{bootmgr}`
+that points at nothing. It is harmless, but if `bcdedit /enum "{bootmgr}"`
+shows a `bootsequence` line you do not recognise, clear it with:
+
+```powershell
+bcdedit /deletevalue '{bootmgr}' bootsequence
 ```
 
 <!--- vim:set et sw=4 tw=80: --->
