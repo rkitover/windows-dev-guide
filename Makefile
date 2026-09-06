@@ -9,7 +9,9 @@ README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
 	.install-msys2.ps1-include-stamp ..bashrc-include-stamp \
 	.install-msys2-buildenv.ps1-include-stamp .make-msys2.cmd-include-stamp \
 	.fix-ssh-perms.ps1-include-stamp \
-	.ports-task-password.ps1-include-stamp
+	.ports-task-password.ps1-include-stamp \
+	.compress-installation.ps1-include-stamp \
+	.compression-task.ps1-include-stamp
 
 .%-include-stamp: %
 	@echo Inserting updated $<

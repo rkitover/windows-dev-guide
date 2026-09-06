@@ -74,6 +74,7 @@
       - [Uninstall Bloatware](#uninstall-bloatware)
       - [Map CapsLock to Another Control](#map-capslock-to-another-control)
       - [Background Image Switcher](#background-image-switcher)
+      - [Compressing Your Installation to Save Space](#compressing-your-installation-to-save-space)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -4937,5 +4938,189 @@ winget install johnsadventures.johnsbackgroundswitcher
 ```
 . On running the program for the first time, you can configure your sources for
 images.
+
+##### Compressing Your Installation to Save Space
+
+Windows can compress the files it reads often and writes rarely, using the
+Windows Overlay Filter. Reads decompress transparently, and writing to a file
+drops it back out of compression, so the cost is CPU on read and nothing at all
+on the files you actually change. On a device with a fast NVMe drive and cores
+to spare, that is close to free.
+
+On a fresh installation set up as described in this guide, the script below
+took disk usage from 138 GB down to 104 GB.
+
+There are two mechanisms worth using. `CompactOS` compresses Windows itself.
+`LZX` is the strongest algorithm `compact.exe` offers and applies to the
+directories you name, which is where nearly all of the saving comes from,
+because on a development machine your applications and toolchains together are
+much larger than Windows is.
+
+Check the current state first:
+
+```powershell
+compact.exe /compactos:query
+```
+. Windows decides for itself whether to compact the OS while it installs, and on
+a device with a fast disk and plenty of free space it will tell you it has
+decided this is not beneficial. That judgement covers `CompactOS` only, it says
+nothing about your toolchains, and you can override it.
+
+Do not point the `LZX` pass at `C:\Windows`, servicing owns those files and
+`CompactOS` is the supported way to compress them. Compression is also the wrong
+thing for anything written continuously, so keep database data directories,
+virtual machine disks and logs out of the directories you compress.
+
+WSL is a tempting target here, because each distribution lives in an
+`ext4.vhdx` that grows as you use it and never shrinks on its own when you
+delete files inside it. Marking that disk sparse would let Windows reclaim that
+space automatically, but do not do it. Microsoft has disabled sparse VHDs, and
+`wsl.exe` will tell you why if you try:
+
+```text
+Sparse VHD support is currently disabled due to potential data corruption.
+```
+. There is an `--allow-unsafe` flag that forces it past that check. The name is
+accurate, and a filesystem holding your work is the wrong place to take that
+bet.
+
+To reclaim space from a distribution safely, run `sudo fstrim -av` inside it to
+release the blocks it no longer uses, shut it down with `wsl --shutdown`, and
+compact the image with `diskpart`:
+
+```text
+select vdisk file="C:\Users\you\AppData\Local\wsl\{guid}\ext4.vhdx"
+attach vdisk readonly
+compact vdisk
+detach vdisk
+```
+. Check what there is to gain before bothering. A distribution using 2 GB
+inside a 3 GB image has very little to give back, and this is only worth doing
+after deleting something substantial.
+
+Here is a script to compress the installation:
+
+[//]: # "BEGIN INCLUDED compress-installation.ps1"
+
+```powershell
+$erroractionpreference = 'stop'
+
+# Compress the parts of the installation that are read constantly and written
+# rarely, using the Windows Overlay Filter. Reads decompress transparently and
+# writing a file drops it back out of compression, so nothing here slows down
+# the files you actually change.
+#
+# Re-running only compresses what has been added since the last run, which is
+# what makes this safe to schedule.
+
+# C:\Windows is deliberately absent. Servicing owns those files and CompactOS
+# below is the supported way to compress them.
+$targets = @(
+    $env:programfiles
+    ${env:programfiles(x86)}
+    $env:programdata
+    '/msys64'
+)
+
+function get-freebytes {
+    (get-ciminstance win32_logicaldisk `
+        -filter "deviceid = '$env:systemdrive'").freespace
+}
+
+$before = get-freebytes
+
+"Compacting Windows itself ..."
+
+# Windows opts out of this on devices with a fast disk and plenty of free
+# space. Asking for it explicitly overrides that.
+compact.exe /compactos:always
+
+foreach ($target in $targets) {
+    if (-not (test-path -literalpath $target)) {
+        "Skipping $target, it is not installed."
+        continue
+    }
+
+    "Compressing $target ..."
+
+    # LZX is the strongest algorithm compact.exe offers. Without /f it skips
+    # files that are already compressed, so a second run is cheap.
+    compact.exe /c /a /i /q /exe:lzx "/s:$target" |
+        select-string -pattern 'are stored in|compression ratio' |
+        foreach-object { "  $($_.line.trim())" }
+}
+
+$after = get-freebytes
+
+"Free space went from {0:N2} GB to {1:N2} GB, a saving of {2:N2} GB." -f `
+    ($before / 1gb), ($after / 1gb), (($after - $before) / 1gb)
+```
+. Run it from an admin PowerShell. The first pass over a large installation
+takes twenty to forty minutes and will use every core you have. It skips files
+that are already compressed, so running it again is cheap and later passes
+finish quickly.
+
+Compression decays, because Windows Update, application installers and `pacman
+-Syu` all write their new files uncompressed. MSYS2 decays fastest of the three,
+since a toolchain update rewrites much of `/clang64` and `/usr` at once.
+Re-running the script restores it, and here is a script to register a task that
+does that for you:
+
+[//]: # "BEGIN INCLUDED compression-task.ps1"
+
+```powershell
+$taskname = 'Restore Compression'
+$runat    = '03:00'
+
+# Nightly. Compression decays because Windows Update, application installers
+# and pacman all write their new files uncompressed, and a pass that finds
+# nothing new to do costs very little, so there is no reason to wait.
+$trigger = new-scheduledtasktrigger -at $runat -daily
+
+if (-not (test-path /logs)) { mkdir /logs *> $null }
+
+$action  = new-scheduledtaskaction `
+    -execute 'pwsh' `
+    -argument ("-noprofile -executionpolicy remotesigned " + `
+	"-command ""& '$(join-path $psscriptroot compress-installation.ps1)'""" + `
+	" *>> /logs/compress-installation.log")
+
+# Compressing Program Files needs elevation, so unlike the other tasks here
+# this one runs as SYSTEM rather than as you.
+$principal = new-scheduledtaskprincipal `
+    -userid 'SYSTEM' `
+    -logontype serviceaccount `
+    -runlevel highest
+
+# The defaults already keep a task from starting on battery, which is what you
+# want for something that will use every core for a while.
+$settings = new-scheduledtasksettingsset `
+    -startwhenavailable `
+    -executiontimelimit (new-timespan -hours 4)
+
+register-scheduledtask -force `
+    -taskname $taskname `
+    -trigger $trigger -action $action `
+    -principal $principal `
+    -settings $settings `
+    -ea stop | out-null
+
+"Task '$taskname' successfully registered to run nightly at $runat."
+```
+. See [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron) for how
+tasks work here. This one runs as `SYSTEM` rather than as you, because
+compressing `C:\Program Files` needs elevation, and Windows will not start it
+while you are on battery.
+
+To undo compression on a directory, run:
+
+```powershell
+compact.exe /u /a /i /q /s:'C:\Program Files'
+```
+. and to take Windows itself back out of the compact state, run:
+
+```powershell
+compact.exe /compactos:never
+```
 
 <!--- vim:set et sw=4 tw=80: --->
