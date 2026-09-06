@@ -5031,11 +5031,17 @@ function get-freebytes {
 
 $before = get-freebytes
 
-"Compacting Windows itself ..."
-
 # Windows opts out of this on devices with a fast disk and plenty of free
-# space. Asking for it explicitly overrides that.
-compact.exe /compactos:always
+# space, and asking for it explicitly overrides that. Once it is on there is
+# nothing left to do, and the conversion takes long enough to be worth
+# skipping.
+if ((compact.exe /compactos:query) -match 'is in the Compact state') {
+    "Windows itself is already compacted."
+}
+else {
+    "Compacting Windows itself ..."
+    compact.exe /compactos:always
+}
 
 foreach ($target in $targets) {
     if (-not (test-path -literalpath $target)) {
