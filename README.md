@@ -5091,12 +5091,16 @@ if (-not (test-path /logs)) { mkdir /logs *> $null }
 # path that is on the machine PATH, which a task running as SYSTEM can resolve.
 # pwsh is installed per user, under a versioned WindowsApps path that SYSTEM
 # cannot find by name and that changes whenever PowerShell updates.
+#
+# It also writes *>> redirection as UTF-16, which MSYS2 tools will not read, so
+# the streams are merged and piped through out-file with an explicit encoding
+# instead. That gives UTF-8 with a BOM, as 5.1 has no utf8NoBOM.
 
 $action  = new-scheduledtaskaction `
     -execute 'powershell' `
     -argument ("-noprofile -executionpolicy remotesigned " + `
-	"-command ""& '$(join-path $psscriptroot compress-installation.ps1)'""" + `
-	" *>> /logs/compress-installation.log")
+	"-command ""& '$(join-path $psscriptroot compress-installation.ps1)' " + `
+	"*>&1 | out-file -append -encoding utf8 /logs/compress-installation.log""")
 
 # Compressing Program Files needs elevation, so unlike the other tasks here
 # this one runs as SYSTEM rather than as you.
@@ -5288,12 +5292,16 @@ if (-not (test-path /logs)) { mkdir /logs }
 # path that is on the machine PATH, which a task running as SYSTEM can resolve.
 # pwsh is installed per user, under a versioned WindowsApps path that SYSTEM
 # cannot find by name and that changes whenever PowerShell updates.
+#
+# It also writes *>> redirection as UTF-16, which MSYS2 tools will not read, so
+# the streams are merged and piped through out-file with an explicit encoding
+# instead. That gives UTF-8 with a BOM, as 5.1 has no utf8NoBOM.
 
 $action  = new-scheduledtaskaction `
     -execute 'powershell' `
     -argument ("-noprofile -executionpolicy remotesigned " + `
-	"-command ""& '$(join-path $psscriptroot restore-boot-order.ps1)'""" + `
-	" *>> /logs/restore-boot-order.log")
+	"-command ""& '$(join-path $psscriptroot restore-boot-order.ps1)' " + `
+	"*>&1 | out-file -append -encoding utf8 /logs/restore-boot-order.log""")
 
 # bcdedit needs elevation, so this runs as SYSTEM rather than as you.
 $principal = new-scheduledtaskprincipal `
