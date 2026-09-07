@@ -5125,6 +5125,18 @@ tasks work here. This one runs as `SYSTEM` rather than as you, because
 compressing `C:\Program Files` needs elevation, and Windows will not start it
 while you are on battery.
 
+Compression is not the only thing worth doing here. Turning off hibernation
+deletes `hiberfil.sys`, which Windows sizes as a fraction of your RAM and which
+was 6 GB on this machine:
+
+```powershell
+powercfg /hibernate off
+```
+. That also turns off Fast Startup, which is worth doing on a machine that dual
+boots regardless of the space it frees. With Fast Startup on, shutting down is
+really a hibernation, so Windows has to boot itself next in order to resume,
+and it leaves the NTFS filesystem in a state Linux will not mount read-write.
+
 To undo compression on a directory, run:
 
 ```powershell
