@@ -13,7 +13,8 @@ README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
 	.compress-installation.ps1-include-stamp \
 	.compression-task.ps1-include-stamp \
 	.restore-boot-order.ps1-include-stamp \
-	.boot-order-task.ps1-include-stamp
+	.boot-order-task.ps1-include-stamp \
+	.restore-boot-order.service-include-stamp
 
 .%-include-stamp: %
 	@echo Inserting updated $<

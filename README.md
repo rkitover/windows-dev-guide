@@ -5150,27 +5150,47 @@ compact.exe /compactos:never
 
 ##### Keeping your Linux Bootloader First in the Boot Order
 
-If you dual boot, anything that writes UEFI NVRAM tends to put `Windows Boot
-Manager` back at the front of the firmware boot order, and the machine then
-boots straight past GRUB into Windows. Firmware updates delivered through
-Windows Update do it, in place upgrades do it, and so do their failed attempts,
-so on the Insider channel it happens fairly often.
+If you dual boot, the machine may boot straight past GRUB into Windows. There
+are two separate causes, and it is worth knowing which one you have, because
+only one of them can be fixed by reordering anything.
 
-The entry itself survives, only its position is lost, so there is no need to
-recreate it. Check with:
+`Windows Boot Manager` puts itself back at the front of the firmware boot order
+every time it runs. Firmware updates delivered through Windows Update and in
+place upgrades do the same, they are simply not the common case. On firmware
+that reads the boot order, moving your distribution back to the front is the
+whole fix.
+
+Some firmware does not read the order at all. The Insyde firmware on this
+machine boots `Windows Boot Manager` whenever it exists, whatever the order
+says. That was established by setting the order from Linux, where nothing can
+rewrite it afterwards, rebooting, and finding that Windows still loaded with
+`BootCurrent` naming the Windows entry. On firmware like that, moving the entry
+to the front achieves nothing at all.
+
+What both kinds of firmware do honour is `BootNext`, a UEFI one shot override
+that takes precedence over the boot order and that the firmware consumes and
+clears as it boots. `bcdedit` calls it the bootsequence of `{fwbootmgr}`.
+
+List the entries with:
 
 ```powershell
 bcdedit /enum firmware
 ```
 . The list under `{fwbootmgr}` is the boot order, and your distribution appears
-further down as a `Firmware Application` with an identifier of its own. To put
-it back at the front:
+further down as a `Firmware Application` with an identifier of its own. Moving
+it to the front is worth doing, and is the entire fix on firmware that reads
+the order:
 
 ```powershell
 bcdedit /set '{fwbootmgr}' displayorder '{your-identifier-here}' /addfirst
 ```
-. Here is a script that does that for you. It looks the entry up by its
-description rather than its identifier, so that it still works if the entry was
+. Setting `BootNext` is the part that works either way:
+
+```powershell
+bcdedit /set '{fwbootmgr}' bootsequence '{your-identifier-here}'
+```
+. Here is a script that sets both. It looks the entry up by its description
+rather than by its identifier, so that it still works if the entry was
 recreated with a new one rather than merely moved:
 
 [//]: # "BEGIN INCLUDED restore-boot-order.ps1"
@@ -5178,11 +5198,16 @@ recreated with a new one rather than merely moved:
 ```powershell
 $erroractionpreference = 'stop'
 
-# Anything that writes UEFI NVRAM tends to put Windows Boot Manager back at the
-# front of the firmware boot order, and the machine then boots straight past
-# GRUB. Firmware updates delivered through Windows Update do it, and so do in
-# place upgrades and their failed attempts. The Fedora entry itself survives,
-# only its position is lost.
+# Windows Boot Manager puts itself back at the front of the firmware boot order
+# on every boot, so setting the order alone never survives to the next one and
+# the machine boots straight past GRUB into Windows. Firmware updates and in
+# place upgrades do the same thing, they are just not the common case.
+#
+# BootNext is a one shot override that the firmware consumes and clears, and it
+# takes precedence over the boot order, so setting it on every boot is what
+# actually guarantees the next one reaches GRUB. The order is put back as well,
+# so that a boot which does not run this first, e.g. straight after a firmware
+# update, still has a chance of landing in the right place.
 #
 # The entry is looked up by description rather than by its identifier, because
 # an entry that has been recreated rather than reordered has a new one.
@@ -5230,26 +5255,31 @@ if (-not $target) {
     return
 }
 
+# bcdedit calls BootNext the bootsequence of {fwbootmgr}. This is the part that
+# matters, so it is done unconditionally.
+"Setting the next boot to $wanted ..."
+
+bcdedit /set '{fwbootmgr}' bootsequence $target
+
 if ($order[0] -eq $target) {
     "$wanted is already first in the firmware boot order."
-    return
 }
-
-"Moving $wanted to the front of the firmware boot order ..."
-
-bcdedit /set '{fwbootmgr}' displayorder $target /addfirst
+else {
+    "Moving $wanted to the front of the firmware boot order ..."
+    bcdedit /set '{fwbootmgr}' displayorder $target /addfirst
+}
 ```
-. It does nothing at all when the order is already correct, so it is safe to
-run at every boot, and here is a script to register a task that does that:
+. It leaves the order alone when it is already correct but always sets
+`BootNext`, so it is safe to run at every boot. Here is a script to register a
+task that does that:
 
 [//]: # "BEGIN INCLUDED boot-order-task.ps1"
 
 ```powershell
 $taskname = 'Restore Boot Order'
 
-# At startup rather than at logon, so that a boot order reset by a firmware
-# update or an upgrade is put back before you next reboot, whether or not you
-# sign in.
+# At startup rather than at logon, so that the next boot is pointed back at
+# GRUB before you reboot again, whether or not you sign in.
 $trigger = new-scheduledtasktrigger -atstartup
 
 if (-not (test-path /logs)) { mkdir /logs }
@@ -5284,9 +5314,57 @@ register-scheduledtask -force `
 
 "Task '$taskname' successfully registered to run at startup."
 ```
-. Windows Setup can also leave a one time boot override behind on `{bootmgr}`
-that points at nothing. It is harmless, but if `bcdedit /enum "{bootmgr}"`
-shows a `bootsequence` line you do not recognise, clear it with:
+. See [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron) for how
+tasks work here. This one runs as `SYSTEM` rather than as you, because
+`bcdedit` needs elevation.
+
+Because `BootNext` is a one shot, every boot has to arm the next one, and the
+task above only runs when you boot Windows. Boot into Linux, reboot from there,
+and nothing has armed anything, so the firmware falls back to its own
+preference and you land in Windows. Linux needs the mirror of that task:
+
+[//]: # "BEGIN INCLUDED restore-boot-order.service"
+
+```ini
+[Unit]
+Description=Point the next boot at the Fedora firmware boot entry
+Documentation=man:efibootmgr(8)
+ConditionPathExists=/sys/firmware/efi/efivars
+After=local-fs.target
+
+[Service]
+Type=oneshot
+# BootNext is a one shot that the firmware consumes as it boots, so every boot
+# has to arm the next one. The entry number is looked up by description so that
+# this keeps working if the entry is ever recreated. In a unit file a literal
+# dollar sign is written twice.
+ExecStart=/bin/sh -c 'n=$$(efibootmgr | grep -m1 " Fedora" | cut -c5-8); [ -n "$$n" ] && exec efibootmgr -n "$$n"'
+
+[Install]
+WantedBy=multi-user.target
+```
+. Install it with:
+
+```bash
+sudo cp restore-boot-order.service /etc/systemd/system/
+sudo systemctl enable --now restore-boot-order.service
+```
+. It takes the first entry whose description contains `Fedora` and does nothing
+when there is none, so change that string if your distribution names its entry
+something else. `ConditionPathExists` keeps it quiet on a machine that was not
+booted through UEFI.
+
+None of this is needed if your firmware setup lets you fix the order there
+instead. On Acer you generally have to set a Supervisor Password before the
+boot order becomes editable at all, and there is a `Select an UEFI file as
+trusted for executing` option that can be pointed straight at
+`\EFI\fedora\shim.efi`.
+
+Note that the bootsequence above belongs to `{fwbootmgr}` and is the one the
+script sets on purpose. `{bootmgr}` has a bootsequence of its own, which is a
+different thing: Windows Setup can leave a one time boot override there that
+points at nothing. That one is harmless, but if `bcdedit /enum "{bootmgr}"`
+shows a `bootsequence` line you did not put there, clear it with:
 
 ```powershell
 bcdedit /deletevalue '{bootmgr}' bootsequence

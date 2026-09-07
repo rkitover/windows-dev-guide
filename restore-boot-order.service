@@ -1,0 +1,16 @@
+[Unit]
+Description=Point the next boot at the Fedora firmware boot entry
+Documentation=man:efibootmgr(8)
+ConditionPathExists=/sys/firmware/efi/efivars
+After=local-fs.target
+
+[Service]
+Type=oneshot
+# BootNext is a one shot that the firmware consumes as it boots, so every boot
+# has to arm the next one. The entry number is looked up by description so that
+# this keeps working if the entry is ever recreated. In a unit file a literal
+# dollar sign is written twice.
+ExecStart=/bin/sh -c 'n=$$(efibootmgr | grep -m1 " Fedora" | cut -c5-8); [ -n "$$n" ] && exec efibootmgr -n "$$n"'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,10 +1,15 @@
 $erroractionpreference = 'stop'
 
-# Anything that writes UEFI NVRAM tends to put Windows Boot Manager back at the
-# front of the firmware boot order, and the machine then boots straight past
-# GRUB. Firmware updates delivered through Windows Update do it, and so do in
-# place upgrades and their failed attempts. The Fedora entry itself survives,
-# only its position is lost.
+# Windows Boot Manager puts itself back at the front of the firmware boot order
+# on every boot, so setting the order alone never survives to the next one and
+# the machine boots straight past GRUB into Windows. Firmware updates and in
+# place upgrades do the same thing, they are just not the common case.
+#
+# BootNext is a one shot override that the firmware consumes and clears, and it
+# takes precedence over the boot order, so setting it on every boot is what
+# actually guarantees the next one reaches GRUB. The order is put back as well,
+# so that a boot which does not run this first, e.g. straight after a firmware
+# update, still has a chance of landing in the right place.
 #
 # The entry is looked up by description rather than by its identifier, because
 # an entry that has been recreated rather than reordered has a new one.
@@ -52,11 +57,16 @@ if (-not $target) {
     return
 }
 
+# bcdedit calls BootNext the bootsequence of {fwbootmgr}. This is the part that
+# matters, so it is done unconditionally.
+"Setting the next boot to $wanted ..."
+
+bcdedit /set '{fwbootmgr}' bootsequence $target
+
 if ($order[0] -eq $target) {
     "$wanted is already first in the firmware boot order."
-    return
 }
-
-"Moving $wanted to the front of the firmware boot order ..."
-
-bcdedit /set '{fwbootmgr}' displayorder $target /addfirst
+else {
+    "Moving $wanted to the front of the firmware boot order ..."
+    bcdedit /set '{fwbootmgr}' displayorder $target /addfirst
+}

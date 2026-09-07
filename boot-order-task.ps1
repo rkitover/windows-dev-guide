@@ -1,8 +1,7 @@
 $taskname = 'Restore Boot Order'
 
-# At startup rather than at logon, so that a boot order reset by a firmware
-# update or an upgrade is put back before you next reboot, whether or not you
-# sign in.
+# At startup rather than at logon, so that the next boot is pointed back at
+# GRUB before you reboot again, whether or not you sign in.
 $trigger = new-scheduledtasktrigger -atstartup
 
 if (-not (test-path /logs)) { mkdir /logs }
