@@ -4268,6 +4268,29 @@ shares or to your Windows Credential Manager entries.
 With `-runlevel` set to `highest` on the principal the task runs
 elevated, omit this parameter to run with standard permissions.
 
+For a task that has to do something you cannot, set `-userid` to `SYSTEM` with
+`-logontype` set to `serviceaccount` instead of naming your account. `SYSTEM`
+is the local machine account, so there is no password to store and nothing to
+prompt for, and it holds privileges no ordinary account has, which is what you
+want for anything touching machine wide state. Pass `-runlevel highest` with
+it, so that the elevation is explicit rather than relying on the account.
+
+The cost is that such a task is not you. It has its own profile under
+`C:\Windows\System32\config\systemprofile`, so `~` and `$env:USERPROFILE` do
+not point where you expect, your user environment variables and your
+[`$profile`](#setting-up-powershell) are not loaded, and anything installed
+per user is missing from its `PATH`. `pwsh` is the example that will catch you
+out: installed from the Store it lives under a per user `WindowsApps` path, so
+a `SYSTEM` task cannot find it by name and fails with `0x80070002`, and has to
+be given a literal path or use Windows PowerShell, which is always present at
+a fixed location on the machine `PATH`. Network shares and Credential Manager
+entries are no more available than they are under `s4u`.
+
+The [compression task](#compressing-your-installation-to-save-space) is an
+example of both. It runs as `SYSTEM` because compressing `C:\Program Files`
+needs elevation, and it invokes Windows PowerShell rather than `pwsh` for the
+reason above.
+
 You can also pass a `-settings` parameter to
 `register-scheduledtask` taking a task settings object created with
 `new-scheduledtasksettingsset`, which allows you to change many
