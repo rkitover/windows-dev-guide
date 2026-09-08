@@ -135,7 +135,7 @@ set-service beep -startuptype disabled
 
 write Microsoft.VisualStudio.Community 7zip.7zip gsass1.NTop Git.Git `
     GnuPG.GnuPG SourceFoundry.HackFonts Neovim.Neovim OpenJS.NodeJS NASM.NASM `
-    Notepad++.Notepad++ Microsoft.Powershell Python.Python.3.14 Ccache.Ccache `
+    Microsoft.Powershell Python.Python.3.14 Ccache.Ccache `
     KitWare.CMake Ninja-build.Ninja `
     SSHFS-Win.SSHFS-Win Microsoft.OpenSSH.Preview Microsoft.WindowsTerminal | %{
 	winget install $_ --source winget
@@ -473,8 +473,7 @@ In this section I will describe how to set up a couple of editors.
 
 You can also edit files in the Visual Studio IDE using the `devenv` command.
 
-You can use `notepad` which is in your `$env:PATH` already or
-`notepad++`.
+You can use `notepad` which is in your `$env:PATH` already.
 
 If you want a very simple terminal editor that is easy to use, you
 can use [nano](#setting-up-nano), it has nice syntax highlighting
@@ -499,7 +498,7 @@ Another option is to set it in Git config, which will override the
 environment variables, for example:
 
 ```powershell
-get config --global core.editor (get-command notepad++).source
+git config --global core.editor (get-command nvim).source
 ```
 .
 
@@ -4616,7 +4615,7 @@ choco feature enable --name 'useRememberedArgumentsForUpgrades'
 choco install -y visualstudio2022community --params '--locale en-US'
 choco install -y visualstudio2022-workload-nativedesktop
 choco install -y vim --params '/NoDesktopShortcuts'
-choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim netcat nodejs notepadplusplus powershell-core python ripgrep sed sshfs unzip xxd zip
+choco install -y 7zip NTop.Portable StrawberryPerl bzip2 dejavufonts diffutils dos2unix file gawk git gpg4win grep gzip hackfont less make neovim netcat nodejs powershell-core python ripgrep sed sshfs unzip xxd zip
 ## Only run this on Windows 10 or older, this package is managed by Windows 11.
 #choco install -y microsoft-windows-terminal
 ## If you had previously installed it and are now using Windows 11, run:
