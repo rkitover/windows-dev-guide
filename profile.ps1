@@ -219,6 +219,50 @@ if ($iswindows) {
     if (resolve-path ~/AppData/Roaming/npm -ea ignore) {
         $env:Path += ';' + (gi ~/AppData/Roaming/npm)
     }
+
+    # Android SDK and NDK, in the location Android Studio uses, whether or
+    # not you installed it that way. Use realpath and not shortpath here,
+    # because shortpath strips the current drive letter and the java and
+    # cmake tools that read these need a full path.
+    if (-not $env:ANDROID_HOME -and (test-path ~/AppData/Local/Android/Sdk)) {
+        $env:ANDROID_HOME = realpath ~/AppData/Local/Android/Sdk
+
+        # Superseded by ANDROID_HOME, but older Gradle plugins and cmake
+        # toolchain files still read this one.
+        $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+
+        # Newest installed NDK, so bumping it needs no edit here.
+        # ANDROID_NDK_HOME is the older name, still read by ndk-build.
+        if ($ndk = gci $env:ANDROID_HOME/ndk -ea ignore |
+                sort { [version]$_.name } | select -last 1) {
+
+            $env:ANDROID_NDK_ROOT = $env:ANDROID_NDK_HOME = realpath $ndk.fullname
+        }
+
+        # emulator is only present if you asked for it. Duplicates do not
+        # matter, $env:Path is uniquified at the end of this profile.
+        foreach ($sdk_dir in 'cmdline-tools/latest/bin','platform-tools','emulator') {
+            if (resolve-path "$env:ANDROID_HOME/$sdk_dir" -ea ignore) {
+                $env:Path += $path_sep + (realpath "$env:ANDROID_HOME/$sdk_dir")
+            }
+        }
+    }
+
+    # Point GRADLE_USER_HOME at the conventional ~/.gradle that CI images,
+    # Android Studio and every Gradle doc assume. Scoop's gradle package
+    # buries it in that package's own app directory instead, so take it
+    # over when scoop got there first, and claim it when nothing has set
+    # it at all. Any other value is someone's deliberate choice, so leave
+    # it be. This is written to the user environment, which is both where
+    # scoop's post_install hook looks -- it only writes the variable when
+    # it reads back unset, so our value sticks across scoop updates -- and
+    # where GUI tools that never load a profile can still see it.
+    $gradle_home = [environment]::getenvironmentvariable('GRADLE_USER_HOME', 'user')
+
+    if ((-not $gradle_home) -or ($gradle_home -match '[\\/]scoop[\\/]apps[\\/]gradle[\\/]')) {
+        [environment]::setenvironmentvariable('GRADLE_USER_HOME', "$home\.gradle", 'user')
+        $env:GRADLE_USER_HOME = "$home\.gradle"
+    }
 }
 
 $global:profile = $profile | shortpath
