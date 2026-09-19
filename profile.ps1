@@ -1082,12 +1082,7 @@ if ($iswindows) {
         clear-host
     }
 
-    if ((test-path ~/.tmux-pwsh.conf) -and (test-path /msys64/usr/bin/tmux.exe)) {
-        function global:tmux {
-            /msys64/usr/bin/tmux -f ~/.tmux-pwsh.conf @args
-        }
-    }
-    elseif ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+    if ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
             wsl -- tmux -f '~/.tmux-pwsh.conf' @args
         }

@@ -45,7 +45,7 @@
   - [Using BusyBox](#using-busybox)
   - [Using MSYS2](#using-msys2)
   - [Using GNU Make](#using-gnu-make)
-  - [Using tmux with PowerShell](#using-tmux-with-powershell)
+  - [Using tmux with PowerShell from WSL](#using-tmux-with-powershell-from-wsl)
   - [Creating Scheduled Tasks (cron)](#creating-scheduled-tasks-cron)
   - [Working With virt-manager VMs Using virt-viewer](#working-with-virt-manager-vms-using-virt-viewer)
     - [Using ssh-agent With the Port Forwarding Task](#using-ssh-agent-with-the-port-forwarding-task)
@@ -53,8 +53,7 @@
   - [Mounting SMB/SSHFS Folders](#mounting-smbsshfs-folders)
   - [Appendix A: Chocolatey Usage Notes](#appendix-a-chocolatey-usage-notes)
     - [Chocolatey Filesystem Structure](#chocolatey-filesystem-structure)
-  - [Appendix B: Using tmux with PowerShell from WSL](#appendix-b-using-tmux-with-powershell-from-wsl)
-  - [Appendix C: Windows Installation and Post-Installation](#appendix-c-windows-installation-and-post-installation)
+  - [Appendix B: Windows Installation and Post-Installation](#appendix-b-windows-installation-and-post-installation)
     - [Installing Windows](#installing-windows)
     - [Post-Installation](#post-installation)
       - [Hostname](#hostname)
@@ -105,8 +104,8 @@ Your feedback via issues or pull requests on Github is appreciated.
 ### Installing Visual Studio, Some Packages and Scoop
 
 If you just have or are going to install Windows on a device, you may find
-[Appendix C: Windows Installation and
-Post-Installation](#appendix-c-windows-installation-and-post-installation)
+[Appendix B: Windows Installation and
+Post-Installation](#appendix-b-windows-installation-and-post-installation)
 helpful.
 
 Make sure developer mode is turned on in Windows settings, this is necessary for
@@ -956,6 +955,50 @@ if ($iswindows) {
     if (resolve-path ~/AppData/Roaming/npm -ea ignore) {
         $env:Path += ';' + (gi ~/AppData/Roaming/npm)
     }
+
+    # Android SDK and NDK, in the location Android Studio uses, whether or
+    # not you installed it that way. Use realpath and not shortpath here,
+    # because shortpath strips the current drive letter and the java and
+    # cmake tools that read these need a full path.
+    if (-not $env:ANDROID_HOME -and (test-path ~/AppData/Local/Android/Sdk)) {
+        $env:ANDROID_HOME = realpath ~/AppData/Local/Android/Sdk
+
+        # Superseded by ANDROID_HOME, but older Gradle plugins and cmake
+        # toolchain files still read this one.
+        $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+
+        # Newest installed NDK, so bumping it needs no edit here.
+        # ANDROID_NDK_HOME is the older name, still read by ndk-build.
+        if ($ndk = gci $env:ANDROID_HOME/ndk -ea ignore |
+                sort { [version]$_.name } | select -last 1) {
+
+            $env:ANDROID_NDK_ROOT = $env:ANDROID_NDK_HOME = realpath $ndk.fullname
+        }
+
+        # emulator is only present if you asked for it. Duplicates do not
+        # matter, $env:Path is uniquified at the end of this profile.
+        foreach ($sdk_dir in 'cmdline-tools/latest/bin','platform-tools','emulator') {
+            if (resolve-path "$env:ANDROID_HOME/$sdk_dir" -ea ignore) {
+                $env:Path += $path_sep + (realpath "$env:ANDROID_HOME/$sdk_dir")
+            }
+        }
+    }
+
+    # Point GRADLE_USER_HOME at the conventional ~/.gradle that CI images,
+    # Android Studio and every Gradle doc assume. Scoop's gradle package
+    # buries it in that package's own app directory instead, so take it
+    # over when scoop got there first, and claim it when nothing has set
+    # it at all. Any other value is someone's deliberate choice, so leave
+    # it be. This is written to the user environment, which is both where
+    # scoop's post_install hook looks -- it only writes the variable when
+    # it reads back unset, so our value sticks across scoop updates -- and
+    # where GUI tools that never load a profile can still see it.
+    $gradle_home = [environment]::getenvironmentvariable('GRADLE_USER_HOME', 'user')
+
+    if ((-not $gradle_home) -or ($gradle_home -match '[\\/]scoop[\\/]apps[\\/]gradle[\\/]')) {
+        [environment]::setenvironmentvariable('GRADLE_USER_HOME', "$home\.gradle", 'user')
+        $env:GRADLE_USER_HOME = "$home\.gradle"
+    }
 }
 
 $global:profile = $profile | shortpath
@@ -1775,12 +1818,7 @@ if ($iswindows) {
         clear-host
     }
 
-    if ((test-path ~/.tmux-pwsh.conf) -and (test-path /msys64/usr/bin/tmux.exe)) {
-        function global:tmux {
-            /msys64/usr/bin/tmux -f ~/.tmux-pwsh.conf @args
-        }
-    }
-    elseif ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+    if ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
             wsl -- tmux -f '~/.tmux-pwsh.conf' @args
         }
@@ -4163,27 +4201,32 @@ backslashes as that is an escape character in POSIX shells, you can enclose them
 in single quotes or use forward slashes, which work for the vast majority of
 Windows programs.
 
-### Using tmux with PowerShell
+### Using tmux with PowerShell from WSL
 
-Recent changes in the Cygwin runtime allow for using a Cygwin runtime-based tmux
-like the one in MSYS2.
+It is possible to use tmux from WSL with PowerShell.
 
-First follow the instructions in the [Using MSYS2](#using-msys2) section to
-install MSYS2, which also install its tmux package.
+This section is based on the guide by [superuser.com](https://superuser.com/)
+member NotTheDr01ds [here](https://superuser.com/a/1643117/226829).
 
-If you would prefer to use tmux from WSL, see [Appendix B: Using tmux with
-PowerShell from WSL](#appendix-b-using-tmux-with-powershell-from-wsl).
+First set up WSL with your distribution of choice, I won't cover this here as
+there are many excellent guides available. If for some reason you are not able
+to use virtual machines with Hyper-V, you can use WSL version 1 which is not a
+virtual machine.
 
-Then, create a `~/.tmux-pwsh.conf` with your tmux configuration of choice, with
-the following at the very end:
+Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
+configuration of choice including this statement:
 
 [//]: # "BEGIN INCLUDED .tmux-pwsh.conf"
 ```tmux
-set-environment -g PATH "/c/msys64/usr/bin:$PATH"
-# Over ssh $SHELL can be pwsh; sh also avoids sourcing ~/.bashrc.
-set -g default-shell /usr/bin/sh
 # Check that this is where your pwsh.exe is.
-set -g default-command 'exec ~/AppData/Local/Microsoft/WindowsApps/pwsh.exe -nologo'
+set -g default-command 'exec "$(wslpath "$(cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d "\r")")/Microsoft/WindowsApps/pwsh.exe" -nologo -noexit -c sl'
+```
+. WSL does not get `$LOCALAPPDATA` from Windows, so this asks Windows for it
+and converts the result with `wslpath`. If you have a traditional install
+instead of an MSIX package, use its path instead:
+
+```tmux
+set -g default-command "'/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo -noexit -c sl"
 ```
 . If you want to use a configuration that behaves like screen I have one
 [here](https://github.com/rkitover/tmux-screen-compat). You can load a
@@ -4193,7 +4236,7 @@ the tmux config.
 To run tmux, run:
 
 ```powershell
-/msys64/usr/bin/tmux -f '~/.tmux-pwsh.conf'
+wsl -- tmux -f '~/.tmux-pwsh.conf'
 ```
 . The included [profile](#setting-up-powershell) function `tmux` will do this,
 and also run tmux commands for your current session.
@@ -4775,47 +4818,7 @@ Many packages simply run an installer and do not install to any
 specific location, however various package metadata will still be
 available under `/ProgramData/chocolatey/lib/<package>`.
 
-### Appendix B: Using tmux with PowerShell from WSL
-
-It is possible to use tmux from WSL with PowerShell.
-
-This section is based on the guide by [superuser.com](https://superuser.com/)
-member NotTheDr01ds [here](https://superuser.com/a/1643117/226829).
-
-First set up WSL with your distribution of choice, I won't cover this here as
-there are many excellent guides available. If for some reason you are not able
-to use virtual machines with Hyper-V, you can use WSL version 1 which is not a
-virtual machine.
-
-Then create a `~/.tmux-pwsh.conf` in your WSL home with your tmux
-configuration of choice including this statement:
-
-```tmux
-# Check that this is where your pwsh.exe is.
-set -g default-command 'exec "$(wslpath "$(cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d "\r")")/Microsoft/WindowsApps/pwsh.exe" -nologo -noexit -c sl'
-```
-. WSL does not get `$LOCALAPPDATA` from Windows, so unlike the MSYS2
-config this one asks Windows for it and converts the result with
-`wslpath`. If you have a traditional install instead of an MSIX package,
-use its path instead:
-
-```tmux
-set -g default-command "'/mnt/c/Program Files/PowerShell/7/pwsh.exe' -nologo -noexit -c sl"
-```
-. If you want to use a configuration that behaves like screen I have one
-[here](https://github.com/rkitover/tmux-screen-compat). You can load a
-configuration file before the preceding statement with the `source` statement in
-the tmux config.
-
-To run tmux, run:
-
-```powershell
-wsl -- tmux -f '~/.tmux-pwsh.conf'
-```
-. The included [profile](#setting-up-powershell) function `tmux` will do this,
-and also run tmux commands for your current session.
-
-### Appendix C: Windows Installation and Post-Installation
+### Appendix B: Windows Installation and Post-Installation
 
 #### Installing Windows
 
