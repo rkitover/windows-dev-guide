@@ -1820,7 +1820,16 @@ if ($iswindows) {
 
     if ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
-            wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+            # With no arguments attach to the session the systemd user service
+            # starts, which outlives this terminal, rather than starting a
+            # server this terminal owns and takes down with it. -A creates the
+            # session if the service is not running.
+            if (-not $args) {
+                wsl -- tmux -f '~/.tmux-pwsh.conf' new-session -A -s main
+            }
+            else {
+                wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+            }
         }
     }
 }
@@ -4218,8 +4227,10 @@ configuration of choice including this statement:
 
 [//]: # "BEGIN INCLUDED .tmux-pwsh.conf"
 ```tmux
-# Check that this is where your pwsh.exe is.
-set -g default-command 'exec "$(wslpath "$(cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d "\r")")/Microsoft/WindowsApps/pwsh.exe" -nologo -noexit -c sl'
+# Check that this is where your pwsh.exe is. cmd.exe is called by absolute path
+# because the Windows entries are missing from $PATH when the server is started
+# by the systemd user service.
+set -g default-command 'exec "$(wslpath "$(/mnt/c/Windows/system32/cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d "\r")")/Microsoft/WindowsApps/pwsh.exe" -nologo -noexit -c sl'
 ```
 . WSL does not get `$LOCALAPPDATA` from Windows, so this asks Windows for it
 and converts the result with `wslpath`. If you have a traditional install
@@ -4238,8 +4249,89 @@ To run tmux, run:
 ```powershell
 wsl -- tmux -f '~/.tmux-pwsh.conf'
 ```
-. The included [profile](#setting-up-powershell) function `tmux` will do this,
-and also run tmux commands for your current session.
+. That works, but the server then belongs to the terminal that started it. WSL
+kills the processes owned by a terminal's `wsl.exe` when the terminal closes, so
+closing the window takes the server down with it and every session goes with it,
+detached or not. The panes would not survive on their own either, because a
+Windows process is killed along with the WSL session whose interop socket
+started it.
+
+Have systemd own the server instead, so that it belongs to the distribution
+rather than to any terminal. Enable systemd in `/etc/wsl.conf`:
+
+```ini
+[boot]
+systemd=true
+```
+. and let your user keep services running with no session open, otherwise the
+user manager stops shortly after you close the last terminal and takes the
+server with it:
+
+```bash
+loginctl enable-linger $USER
+```
+. Then create `~/.config/systemd/user/tmux.service`:
+
+[//]: # "BEGIN INCLUDED tmux.service"
+
+```ini
+[Unit]
+Description=tmux server holding the PowerShell panes
+Documentation=man:tmux(1)
+After=default.target
+
+[Service]
+# tmux forks twice, so systemd cannot follow it as a Type=forking service: it
+# decides the service has already exited and runs ExecStop on the server it
+# just started. Let the launch command exit and keep the unit active instead.
+Type=oneshot
+RemainAfterExit=yes
+# Windows processes are killed along with the WSL session whose interop socket
+# launched them, so point the panes at the socket that lasts as long as the
+# distribution rather than the one belonging to some terminal.
+Environment=WSL_INTEROP=/run/WSL/1_interop
+# That socket does not exist yet when the user manager starts at boot.
+ExecStartPre=/bin/sh -c 'until [ -e /run/WSL/1_interop ]; do sleep 1; done'
+TimeoutStartSec=30
+ExecStart=/usr/bin/tmux -f %h/.tmux-pwsh.conf new-session -d -s main
+ExecStop=/usr/bin/tmux kill-server
+
+[Install]
+WantedBy=default.target
+```
+. creating the directory first if it is not there, and enable it with:
+
+```bash
+mkdir -p ~/.config/systemd/user
+systemctl --user enable --now tmux.service
+```
+. Note that `cmd.exe` is called by absolute path in the configuration above
+because the Windows entries are missing from `$PATH` in a systemd user service.
+Called by name it fails, `%LOCALAPPDATA%` comes back empty, and the pane command
+dies at startup, which destroys the session and exits the server.
+
+Attach to the session the service starts with:
+
+```powershell
+wsl -- tmux attach -t main
+```
+. The included [profile](#setting-up-powershell) function `tmux` does this when
+called with no arguments, creating the session if the service is not running,
+and otherwise passes what you give it to tmux, so `tmux ls` and the rest still
+run against that server.
+
+Lingering starts the user manager early enough to lose a race with WSL, which
+then reports `Failed to start the systemd user session` on the first launch and
+logs `Failed to spawn executor: Device or resource busy`. It works on the next
+attempt, so have systemd make that attempt in
+`/etc/systemd/system/user@1000.service.d/wsl-retry.conf`, replacing `1000` with
+your uid if it differs:
+
+```ini
+[Service]
+Restart=on-failure
+RestartSec=1
+```
 
 ### Creating Scheduled Tasks (cron)
 

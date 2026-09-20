@@ -1084,7 +1084,16 @@ if ($iswindows) {
 
     if ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
-            wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+            # With no arguments attach to the session the systemd user service
+            # starts, which outlives this terminal, rather than starting a
+            # server this terminal owns and takes down with it. -A creates the
+            # session if the service is not running.
+            if (-not $args) {
+                wsl -- tmux -f '~/.tmux-pwsh.conf' new-session -A -s main
+            }
+            else {
+                wsl -- tmux -f '~/.tmux-pwsh.conf' @args
+            }
         }
     }
 }

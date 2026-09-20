@@ -1,0 +1,23 @@
+[Unit]
+Description=tmux server holding the PowerShell panes
+Documentation=man:tmux(1)
+After=default.target
+
+[Service]
+# tmux forks twice, so systemd cannot follow it as a Type=forking service: it
+# decides the service has already exited and runs ExecStop on the server it
+# just started. Let the launch command exit and keep the unit active instead.
+Type=oneshot
+RemainAfterExit=yes
+# Windows processes are killed along with the WSL session whose interop socket
+# launched them, so point the panes at the socket that lasts as long as the
+# distribution rather than the one belonging to some terminal.
+Environment=WSL_INTEROP=/run/WSL/1_interop
+# That socket does not exist yet when the user manager starts at boot.
+ExecStartPre=/bin/sh -c 'until [ -e /run/WSL/1_interop ]; do sleep 1; done'
+TimeoutStartSec=30
+ExecStart=/usr/bin/tmux -f %h/.tmux-pwsh.conf new-session -d -s main
+ExecStop=/usr/bin/tmux kill-server
+
+[Install]
+WantedBy=default.target
