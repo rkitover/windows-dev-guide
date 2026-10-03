@@ -1384,7 +1384,17 @@ if ($iswindows) {
             $script:vsenv_state = $state
         }
 
-        vsenv $default_arch
+        # Visual Studio installed without the C++ tools for this architecture
+        # still has a vcvarsall.bat, and it exits non-zero. A shell that cannot
+        # load the VS environment is still a usable shell, so report it and
+        # carry on rather than failing the profile; vsenv stays defined to run
+        # by hand.
+        try {
+            vsenv $default_arch
+        }
+        catch {
+            write-warning "vsenv: $($_.exception.message). The Visual Studio environment is not loaded."
+        }
     }
 }
 
