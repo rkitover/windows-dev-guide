@@ -337,8 +337,12 @@ if ($iswindows) {
     # Load VS env only once.
     :OUTER foreach ($vs_year in '18','2022','2019','2017') {
         foreach ($vs_type in 'preview','buildtools','community') {
-            foreach ($x86 in '',' (x86)') {
-                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
+            # Anchored to the environment rather than a drive-relative
+            # /program files, which resolves against the UNC root and matches
+            # nothing in a shell that starts where there is no current drive,
+            # such as a tmux pane started from the WSL home directory.
+            foreach ($program_files in $env:ProgramFiles,${env:ProgramFiles(x86)} | ? length) {
+                $vs_path="$program_files/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
 
                 if (test-path $vs_path) {
                     break OUTER

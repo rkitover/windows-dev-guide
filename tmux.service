@@ -13,6 +13,11 @@ RemainAfterExit=yes
 # launched them, so point the panes at the socket that lasts as long as the
 # distribution rather than the one belonging to some terminal.
 Environment=WSL_INTEROP=/run/WSL/1_interop
+# A Windows process started from a directory with no drive letter, such as the
+# Linux home directory, begins at \\wsl.localhost\<distro>\..., where a
+# drive-relative path like /program files resolves against the UNC root and is
+# not found. Start the panes on a drive instead.
+WorkingDirectory=/mnt/c
 # That socket does not exist yet when the user manager starts at boot.
 ExecStartPre=/bin/sh -c 'until [ -e /run/WSL/1_interop ]; do sleep 1; done'
 TimeoutStartSec=30

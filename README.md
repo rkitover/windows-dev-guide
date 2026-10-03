@@ -1073,8 +1073,12 @@ if ($iswindows) {
     # Load VS env only once.
     :OUTER foreach ($vs_year in '18','2022','2019','2017') {
         foreach ($vs_type in 'preview','buildtools','community') {
-            foreach ($x86 in '',' (x86)') {
-                $vs_path="/program files${x86}/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
+            # Anchored to the environment rather than a drive-relative
+            # /program files, which resolves against the UNC root and matches
+            # nothing in a shell that starts where there is no current drive,
+            # such as a tmux pane started from the WSL home directory.
+            foreach ($program_files in $env:ProgramFiles,${env:ProgramFiles(x86)} | ? length) {
+                $vs_path="$program_files/microsoft visual studio/${vs_year}/${vs_type}/Common7/Tools"
 
                 if (test-path $vs_path) {
                     break OUTER
@@ -4290,6 +4294,11 @@ RemainAfterExit=yes
 # launched them, so point the panes at the socket that lasts as long as the
 # distribution rather than the one belonging to some terminal.
 Environment=WSL_INTEROP=/run/WSL/1_interop
+# A Windows process started from a directory with no drive letter, such as the
+# Linux home directory, begins at \\wsl.localhost\<distro>\..., where a
+# drive-relative path like /program files resolves against the UNC root and is
+# not found. Start the panes on a drive instead.
+WorkingDirectory=/mnt/c
 # That socket does not exist yet when the user manager starts at boot.
 ExecStartPre=/bin/sh -c 'until [ -e /run/WSL/1_interop ]; do sleep 1; done'
 TimeoutStartSec=30
@@ -4305,7 +4314,13 @@ WantedBy=default.target
 mkdir -p ~/.config/systemd/user
 systemctl --user enable --now tmux.service
 ```
-. Note that `cmd.exe` is called by absolute path in the configuration above
+. `WorkingDirectory` matters more than it looks. A Windows process started from
+a directory that has no drive letter, which is what the Linux home directory is,
+starts at `\\wsl.localhost\<distro>\...`, and anything in your profile that
+resolves a drive-relative path such as `/program files/...` then looks under the
+UNC root and finds nothing, silently.
+
+Note that `cmd.exe` is called by absolute path in the configuration above
 because the Windows entries are missing from `$PATH` in a systemd user service.
 Called by name it fails, `%LOCALAPPDATA%` comes back empty, and the pane command
 dies at startup, which destroys the session and exits the server.
