@@ -1019,7 +1019,9 @@ if ($iswindows) {
 $extra_paths = @{
     prepend = '~/.local/bin'
     append  = '~/AppData/Roaming/Python/Python*/Scripts',
-              '/program files/VcXsrv'
+              # Drive-anchored, so that it still resolves in a shell that
+              # starts where there is no current drive.
+              "$env:ProgramFiles/VcXsrv"
 }
 
 foreach ($section in $extra_paths.keys) {
@@ -1413,7 +1415,7 @@ if (-not $env:XAUTHORITY) {
     if (-not (test-path $env:XAUTHORITY) `
         -and (
           ($xauth = (get-command -commandtype application xauth -ea ignore).source) `
-          -or ($xauth = (gi '/program files/VcXsrv/xauth.exe' -ea ignore).fullname) `
+          -or ($xauth = (gi "$env:ProgramFiles/VcXsrv/xauth.exe" -ea ignore).fullname) `
         )) {
 
         $cookie = (1..4 | %{ "{0:x8}" -f (get-random) }) -join ''
@@ -1666,12 +1668,14 @@ function global:rmlink {
 if ($iswindows) {
     $vim = ''
 
+    # The scoop locations are drive-anchored, so that they still resolve in a
+    # shell that starts where there is no current drive.
     $locs =
         { (get-command nvim.exe @args).source },
-        { resolve-path /tools/neovim/nvim*/bin/nvim.exe @args },
+        { resolve-path "$env:SystemDrive/tools/neovim/nvim*/bin/nvim.exe" @args },
         { (get-command vim.exe @args).source },
         { (get-command vim.bat @args).source },
-        { resolve-path /tools/vim/vim*/vim.exe @args }
+        { resolve-path "$env:SystemDrive/tools/vim/vim*/vim.exe" @args }
 
     foreach ($loc in $locs) {
         if ($vim = &$loc -ea ignore) { break }
@@ -1936,41 +1940,43 @@ if ($iswindows) {
     } | map_alias
 }
 
-# Alias the MSYS2 environments if MSYS2 is installed.
-if ($iswindows -and (test-path /msys64)) {
+# Alias the MSYS2 environments if MSYS2 is installed. The paths are
+# drive-anchored, so that they still resolve in a shell that starts where there
+# is no current drive.
+if ($iswindows -and (test-path "$env:SystemDrive/msys64")) {
     function global:msys2 {
         $env:MSYSTEM = 'MSYS'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:msys {
         $env:MSYSTEM = 'MSYS'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:clang64 {
         $env:MSYSTEM = 'CLANG64'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:ucrt64 {
         $env:MSYSTEM = 'UCRT64'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:mingw64 {
         $env:MSYSTEM = 'MINGW64'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 
     function global:mingw32 {
         $env:MSYSTEM = 'MINGW32'
-        /msys64/usr/bin/bash -l $(if ($args) { '-c',"$args" })
+        & "$env:SystemDrive/msys64/usr/bin/bash" -l $(if ($args) { '-c',"$args" })
         ri env:MSYSTEM
     }
 }
