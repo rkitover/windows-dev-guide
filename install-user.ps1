@@ -27,3 +27,18 @@ if ($sshfixperms -and $sshutils) {
     import-module -force $sshutils
     repair-authorizedkeypermission -file ~/.ssh/authorized_keys
 }
+
+# Documents redirected into OneDrive means the PowerShell directories are
+# Files On-Demand placeholders, and nothing can hydrate one from a
+# non-interactive session: `ssh host command ...` fails with "Access to the
+# cloud file is denied" and the profile silently does not load. Pin them,
+# which is what "Always keep on this device" does, so they stay on disk.
+$docs = [Environment]::GetFolderPath('MyDocuments')
+
+if ($docs -match 'OneDrive') {
+    'PowerShell','WindowsPowerShell' | %{ join-path $docs $_ } |
+        ?{ test-path $_ } | %{
+            attrib +p -u $_
+            attrib +p -u (join-path $_ *) /s /d
+        }
+}
