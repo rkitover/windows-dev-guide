@@ -1836,7 +1836,12 @@ if ($iswindows) {
         clear-host
     }
 
-    if ((gcm -ea ignore wsl) -and (wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+    # wsl.exe drains this process's stdin whatever the guest command does with
+    # it, so hand it an empty pipe to drain instead of the real one. Without
+    # this the profile leaves stdin at EOF, and a pwsh set as OpenSSH's
+    # DefaultShell then breaks scp and sftp: the remote scp or sftp-server
+    # reads nothing from the client and both ends wait forever.
+    if ((gcm -ea ignore wsl) -and ($null | wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
             # With no arguments attach to the session the systemd user service
             # starts, which outlives this terminal, rather than starting a
