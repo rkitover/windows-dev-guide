@@ -1,3 +1,14 @@
+# sshd runs the file transfer helpers through DefaultShell: the sftp
+# subsystem, which is what a modern scp speaks too, as `pwsh -c sftp-server.exe`,
+# and `scp -O` as `pwsh -c "scp.exe -f ..."`. Both talk a binary protocol on
+# stdin and stdout from their first byte, so nothing in here may run ahead of
+# them, and loading the profile would only add seconds to every file copy.
+# `ssh host command ...` is not matched and still gets the profile.
+if ([Environment]::GetCommandLineArgs() `
+    -match '^"?(?:[^"]*[\\/])?(?:sftp-server|scp)(?:\.exe)?"?(?:\s|$)') {
+    return
+}
+
 # Windows PowerShell does not have OS automatic variables.
 if (-not (test-path variable:global:iswindows)) {
     $global:IsWindows = $false
