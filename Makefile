@@ -19,11 +19,11 @@ README.md: .profile.ps1-include-stamp .nanosetup.ps1-include-stamp \
 
 .%-include-stamp: %
 	@echo Inserting updated $<
-	@dos2unix $< 2>/dev/null
+	@# Strip CRs from the source, rewriting it only if it had any.
+	@tr -d '\r' < $< > $<.new; cmp -s $< $<.new || cp $<.new $<; rm $<.new
 	@awk -v include_file=$< -f insert-file.awk ./README.md > ./README.md.new
 	@cp README.md.new README.md
 	@rm README.md.new
-	@dos2unix ./README.md 2>/dev/null
 	@touch $@
 
 .doctoc-stamp: README.md

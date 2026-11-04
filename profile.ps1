@@ -32,7 +32,17 @@ if ($iswindows) {
     [Console]::OutputEncoding = [Console]::InputEncoding `
         = $OutputEncoding = new-object System.Text.UTF8Encoding
 
-    set-executionpolicy -scope currentuser remotesigned
+    # Set-ExecutionPolicy throws when a policy at a scope that takes
+    # precedence over CurrentUser overrides it, so only set it when none does
+    # and the effective policy would not already run local scripts.
+    $private:policy_overrides = 'MachinePolicy','UserPolicy','Process' |
+        ?{ (get-executionpolicy -scope $_) -ne 'Undefined' }
+
+    if (-not $policy_overrides `
+        -and (get-executionpolicy) -notin 'RemoteSigned','Unrestricted','Bypass') {
+
+        set-executionpolicy -scope currentuser remotesigned
+    }
 
     [System.Globalization.CultureInfo]::CurrentCulture = 'en-US'
 
@@ -699,7 +709,7 @@ if (-not $env:XAUTHORITY) {
 
     if (-not (test-path $env:XAUTHORITY) `
         -and (
-          ($xauth = (get-command -commandtype application xauth -ea ignore).source) `
+          ($xauth = (get-command -commandtype application xauth -totalcount 1 -ea ignore).source) `
           -or ($xauth = (gi "$env:ProgramFiles/VcXsrv/xauth.exe" -ea ignore).fullname) `
         )) {
 
@@ -753,7 +763,7 @@ function ext_cmd_works($exe) {
 function global:%? { $input | %{ $_ } | ?{ $_ } }
 
 function global:which {
-    $cmd = try { get-command @args -ea stop | select -first 1 }
+    $cmd = try { get-command @args -totalcount 1 -ea stop }
            catch { write-error $_ -ea stop }
 
     if (is_ext_cmd $cmd) {
@@ -953,13 +963,16 @@ function global:rmlink {
 if ($iswindows) {
     $vim = ''
 
+    # Only look for applications, so that a function or alias named like the
+    # editor cannot shadow it.
+    #
     # The scoop locations are drive-anchored, so that they still resolve in a
     # shell that starts where there is no current drive.
     $locs =
-        { (get-command nvim.exe @args).source },
+        { (get-command -commandtype application nvim.exe -totalcount 1 @args).source },
         { resolve-path "$env:SystemDrive/tools/neovim/nvim*/bin/nvim.exe" @args },
-        { (get-command vim.exe @args).source },
-        { (get-command vim.bat @args).source },
+        { (get-command -commandtype application vim.exe -totalcount 1 @args).source },
+        { (get-command -commandtype application vim.bat -totalcount 1 @args).source },
         { resolve-path "$env:SystemDrive/tools/vim/vim*/vim.exe" @args }
 
     foreach ($loc in $locs) {
@@ -1080,7 +1093,7 @@ if ($iswindows) {
         if (-not $args) { $args = $input }
 
         $args | %{ $_ } |
-            %{ get-command $_ -commandtype application `
+            %{ get-command $_ -commandtype application -totalcount 1 `
                 -ea ignore } | %{ $_.source } | `
                 # WinGet symlinks
             %{ if ($link_target = (gi $_).target) {
@@ -1116,7 +1129,8 @@ if ($iswindows) {
     # this the profile leaves stdin at EOF, and a pwsh set as OpenSSH's
     # DefaultShell then breaks scp and sftp: the remote scp or sftp-server
     # reads nothing from the client and both ends wait forever.
-    if ((gcm -ea ignore wsl) -and ($null | wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
+    if ((gcm -commandtype application -totalcount 1 -ea ignore wsl) `
+        -and ($null | wsl -- ls '~/.tmux-pwsh.conf' 2>$null)) {
         function global:tmux {
             # With no arguments attach to the session the systemd user service
             # starts, which outlives this terminal, rather than starting a
@@ -1276,7 +1290,7 @@ $cmds = @{}
 foreach ($cmd in 'perl','diff','colordiff','tac') {
     $cmds[$cmd] = try {
         get-command -commandtype application,externalscript $cmd `
-            -ea ignore | select -first 1 | % source
+            -totalcount 1 -ea ignore | % source
     }
     catch { $null }
 }
@@ -1341,6 +1355,12 @@ set-alias s -value select-object -scope global
 $env:Path = (split_env_path | select -unique) -join $path_sep
 
 } | import-module
+
+# Windows PowerShell copies its AllScope aliases, like type, into every scope,
+# so removing one in the module above leaves copies in the scope that loads
+# this profile and the scopes above it, which hide the function replacing it.
+gci alias: | ?{ $_.options -match 'AllScope' -and (test-path "function:$($_.name)") } |
+    %{ while (test-path "alias:$($_.name)") { ri -force "alias:$($_.name)" } }
 
 # This is my posh-git prompt theme:
 if (get-module -listavailable posh-git-theme-bluelotus) {

@@ -4,10 +4,9 @@ $taskname = 'Forward Server Ports'
 
 $trigger = new-scheduledtasktrigger -atlogon
 
-# If the $profile maps an alias for ssh, get-command returns that alias, whose
-# source is the module it came from and not the path a task action needs.
-$ssh = get-command ssh
-while ($ssh.commandtype -eq 'Alias') { $ssh = $ssh.resolvedcommand }
+# Ask for the application, the $profile may map an alias or function for ssh,
+# whose source is not the path a task action needs.
+$ssh = get-command -commandtype application ssh -totalcount 1
 
 $action  = new-scheduledtaskaction `
     -execute $ssh.source `
